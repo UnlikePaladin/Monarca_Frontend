@@ -1,3 +1,10 @@
+/**
+ * Button.tsx
+ * 
+ * Reusable button component with consistent styling.
+ * Extends native HTML button with custom design system colors.
+ */
+
 import React from "react";
 import clsx from "clsx";
 
@@ -5,6 +12,13 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   className?: string;
 };
 
+/**
+ * Renders a styled button with primary color scheme.
+ * @param children - Button content (text, icons, etc.)
+ * @param className - Additional CSS classes for customization
+ * @param props - Native button HTML attributes
+ * @returns Styled button component
+ */
 export const Button: React.FC<ButtonProps> = ({
   children,
   className,
@@ -18,3 +32,9 @@ export const Button: React.FC<ButtonProps> = ({
     </button>
   );
 };
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

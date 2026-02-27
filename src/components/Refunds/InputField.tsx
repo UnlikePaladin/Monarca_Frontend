@@ -1,6 +1,13 @@
+/**
+ * InputField.tsx
+ * 
+ * Versatile input field component supporting multiple input types.
+ * Handles text, file, checkbox, date inputs with validation and error display.
+ */
+
 import React, { ChangeEvent, useState } from "react";
 
-/*
+/**
  * InputFieldProps interface to define the structure of the props for the InputField component.
  */
 interface InputFieldProps {
@@ -307,3 +314,9 @@ const InputField: React.FC<InputFieldProps> = ({
 };
 
 export default InputField;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and added missing export.
+*/

@@ -1,6 +1,13 @@
+/**
+ * TextArea.tsx
+ * 
+ * Textarea field component supporting various input types and validation.
+ * Handles multi-line text input with error display and file upload capabilities.
+ */
+
 import React, { ChangeEvent, useState } from "react";
 
-/*
+/**
  * TextAreaFieldProps interface to define the structure of the props for the TextAreaField component.
  */
 interface TextAreaFieldProps {
@@ -258,3 +265,9 @@ const TextAreaField: React.FC<TextAreaFieldProps> = ({
 };
 
 export default TextAreaField;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

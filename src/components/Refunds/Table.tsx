@@ -1,30 +1,27 @@
-/*
- * Table component that renders data in a customizable table format with pagination.
- *
- * Last edit: April 20, 2025
- * Authors: José Manuel García Zumaya
+/**
+ * Table.tsx
+ * 
+ * Paginated table component with customizable columns for refunds.
+ * Displays data in a table format with pagination controls.
  */
+
 import React, { ReactNode, useState } from "react";
 
-/*
- * Column interface SCHEMA to define the structure of each column in the table.
- * key: The key in the data object that corresponds to this column, this is very
- * important due allows to access the data dynamically in our object data.
- * header: The header text to display for this column.
+/**
+ * Column interface schema to define the structure of each column in the table.
+ * @property key - The key in the data object that corresponds to this column
+ * @property header - The header text to display for this column
  */
 interface Column {
   key: string;
   header: string;
 }
 
-/*
+/**
  * TableProps interface to define the structure of the props for the Table component.
- * columns: An array of Column objects defining the table's columns.
- * data: An array of objects representing the rows of the table, each object MUST
- * contain keys that match the column keys.
- * itemsPerPage: Number of items to display per page (default: 5).
- *
- * You can reach an example of how to use this in the src/pages/Refunds/Refunds.tsx file.
+ * @property columns - Array of Column objects defining the table's columns
+ * @property data - Array of objects representing the rows of the table
+ * @property itemsPerPage - Number of items to display per page (default: 5)
  */
 interface TableProps {
   columns: Array<Column>;
@@ -201,3 +198,10 @@ const Table: React.FC<TableProps> = ({ columns, data, itemsPerPage = 5, }) => {
 };
 
 export default Table;
+
+/*
+Modification History:
+
+- 2025-04-20 | José Manuel García Zumaya | Initial creation.
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

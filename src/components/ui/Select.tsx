@@ -1,3 +1,10 @@
+/**
+ * Select.tsx
+ * 
+ * Dropdown select component built with Headless UI.
+ * Provides an accessible select menu with search and loading states.
+ */
+
 import {
   Listbox,
   ListboxButton,
@@ -22,6 +29,18 @@ type SelectProps = {
   id?: string;
 };
 
+/**
+ * Renders an accessible dropdown select menu.
+ * @param options - Array of selectable options
+ * @param value - Currently selected option
+ * @param onChange - Callback when selection changes
+ * @param direction - Dropdown direction (up or down)
+ * @param isLoading - Shows loading state
+ * @param isDisabled - Disables the select
+ * @param placeholder - Placeholder text when no option selected
+ * @param id - HTML id attribute
+ * @returns Dropdown select component
+ */
 export default function Select({
   options,
   value,
@@ -106,3 +125,9 @@ export default function Select({
     </Listbox>
   );
 }
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated text to English.
+*/

@@ -1,11 +1,23 @@
+/**
+ * Sidebar.tsx
+ * 
+ * Main sidebar navigation component with user info and menu options.
+ * Displays user profile information and dynamically renders menu items based on permissions.
+ */
+
 // ***************** images *****************
 import logo from "../assets/logo.png";
 
 // ***************** components *****************
-import SidebarOption from "./SiderbarOption";
+import SidebarOption from "./SidebarOption";
 
 import { AuthState, Permission } from "../hooks/auth/authContext";
 
+/**
+ * Renders the sidebar with user info and permission-based navigation menu.
+ * @param user - Authenticated user state including permissions and profile info
+ * @returns Sidebar component with logo, user info, and navigation menu
+ */
 function Sidebar({ user }: { user: AuthState }) {
   return (
     <aside
@@ -67,3 +79,9 @@ function Sidebar({ user }: { user: AuthState }) {
 }
 
 export default Sidebar;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and fixed import path.
+*/
