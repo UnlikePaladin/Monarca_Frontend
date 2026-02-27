@@ -1,3 +1,5 @@
+/*This component (Bookings) renders the “Viajes por Reservar” (Trips to Book) page by fetching booking-pending travel requests from the API and showing them in a table with an action link. When it mounts, it calls GET /requests/to-reserve and maps each trip into a table-ready format: it converts the backend status into a styled Spanish badge using renderStatus, sets the “Lugar de Salida” field from trip.destination.city, and calculates the departure date by sorting requests_destinations by destination_order, taking the first destination’s departure_date, and formatting it with formatDate. It also adds an action column that renders a React Router Link to /bookings/{trip.id} labeled “Reservar.” A second effect integrates the tutorial/first-visit logic using useApp: it checks localStorage for visited pages, enables the tutorial on first visit, and records the page visit via handleVisitPage. The UI includes a back button (GoBack), a refresh control (RefreshButton), and wraps the page in a Tutorial component. */
+
 import { useEffect, useState } from "react";
 import RefreshButton from "../components/RefreshButton";
 import Table from "../components/Refunds/Table";
@@ -108,36 +110,38 @@ const Bookings = () => {
   }, []);
 
   useEffect(() => {
-      // Get the visited pages from localStorage
-      const visitedPages = JSON.parse(localStorage.getItem("visitedPages") || "[]");
-      // Check if the current page is already in the visited pages
-      const isPageVisited = visitedPages.includes(location.pathname);
-  
-      // If the page is not visited, set the tutorial to true
-      if (!isPageVisited) {
-        setTutorial(true);
-      }
-      // Add the current page to the visited pages
-      handleVisitPage();
-    }, []);
+    // Get the visited pages from localStorage
+    const visitedPages = JSON.parse(
+      localStorage.getItem("visitedPages") || "[]"
+    );
+    // Check if the current page is already in the visited pages
+    const isPageVisited = visitedPages.includes(location.pathname);
+
+    // If the page is not visited, set the tutorial to true
+    if (!isPageVisited) {
+      setTutorial(true);
+    }
+    // Add the current page to the visited pages
+    handleVisitPage();
+  }, []);
 
   return (
     <>
-    <Tutorial page="bookings" run={tutorial}>
-      <GoBack />
-      <div className="flex-1 p-6 bg-[#eaeced] rounded-lg shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-[#0a2c6d]">
-            Viajes por Reservar
-          </h2>
-          <RefreshButton />
-        </div>
+      <Tutorial page="bookings" run={tutorial}>
+        <GoBack />
+        <div className="flex-1 p-6 bg-[#eaeced] rounded-lg shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-[#0a2c6d]">
+              Viajes por Reservar
+            </h2>
+            <RefreshButton />
+          </div>
 
-        <div id="list_requests">
-          <Table columns={columns} data={dataWithActions} itemsPerPage={5} />
+          <div id="list_requests">
+            <Table columns={columns} data={dataWithActions} itemsPerPage={5} />
+          </div>
         </div>
-      </div>
-    </Tutorial>
+      </Tutorial>
     </>
   );
 };

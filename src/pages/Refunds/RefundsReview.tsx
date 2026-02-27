@@ -1,3 +1,5 @@
+/*This component (RefundsReview) displays a list of travel requests that are waiting for voucher/refund review and lets the user open each one to approve its receipts. On mount, it calls GET /requests/all, filters the results to only those with status "Pending Vouchers Approval", and enriches each trip with table-friendly fields: it converts the backend status into a styled Spanish badge (renderStatus), sorts requests_destinations by destination_order to take the first destination’s departure_date as the trip date (formatted with formatDate), formats the advance amount with formatMoney, sets the origin city from trip.destination.city, and formats the request creation date. It then builds dataWithActions to render in a Refunds/Table, adding a “Ver comprobantes” button per row that navigates to /refunds-review/{trip.id}. The page also shows a loading state, includes GoBack and RefreshButton, wraps everything in a Tutorial step, and records the page visit using handleVisitPage with localStorage-based visited-page tracking. */
+
 import { useEffect, useState } from "react";
 import Table from "../../components/Refunds/Table";
 import RefreshButton from "../../components/RefreshButton";
@@ -92,24 +94,22 @@ const renderStatus = (status: string) => {
       statusText = "En progreso";
       styles = "text-[var(--dark-blue)] bg-[#b7f1f1]";
       break;
-    case "Pending Refund Approval": 
+    case "Pending Refund Approval":
       statusText = "Reembolso pendiente";
       styles = "text-[#575107] bg-[#f0eaa5]";
       break;
-    case "Completed": 
+    case "Completed":
       statusText = "Completado";
       styles = "text-[#24390d] bg-[#c7e6ab]";
       break;
     default:
       statusText = status;
       styles = "text-white bg-[#6c757d]";
-    }
-    return (
-      <span className={`text-xs p-1 rounded-sm ${styles}`}>
-        {statusText}
-      </span>
-    )
-}
+  }
+  return (
+    <span className={`text-xs p-1 rounded-sm ${styles}`}>{statusText}</span>
+  );
+};
 
 export const RefundsReview = () => {
   const navigate = useNavigate();
@@ -126,27 +126,29 @@ export const RefundsReview = () => {
         const response = await getRequest("/requests/all");
 
         // Process the data to add formatted fields
-        const processedTrips = response.filter((trip: Trip) => trip.status === "Pending Vouchers Approval").map((trip: Trip) => {
-          // Sort destinations by order
-          const sortedDestinations = [...trip.requests_destinations].sort(
-            (a, b) => a.destination_order - b.destination_order
-          );
+        const processedTrips = response
+          .filter((trip: Trip) => trip.status === "Pending Vouchers Approval")
+          .map((trip: Trip) => {
+            // Sort destinations by order
+            const sortedDestinations = [...trip.requests_destinations].sort(
+              (a, b) => a.destination_order - b.destination_order
+            );
 
-          // Get the first destination for departure date
-          const firstDestination =
-            sortedDestinations.length > 0 ? sortedDestinations[0] : null;
+            // Get the first destination for departure date
+            const firstDestination =
+              sortedDestinations.length > 0 ? sortedDestinations[0] : null;
 
-          return {
-            ...trip,
-            status: renderStatus(trip.status),
-            date: firstDestination
-              ? formatDate(firstDestination.departure_date)
-              : "N/A",
-            formattedAdvance: formatMoney(trip.advance_money),
-            origin: trip.destination.city,
-            formattedCreatedAt: formatDate(trip.createdAt),
-          };
-        });
+            return {
+              ...trip,
+              status: renderStatus(trip.status),
+              date: firstDestination
+                ? formatDate(firstDestination.departure_date)
+                : "N/A",
+              formattedAdvance: formatMoney(trip.advance_money),
+              origin: trip.destination.city,
+              formattedCreatedAt: formatDate(trip.createdAt),
+            };
+          });
 
         setTrips(processedTrips);
       } catch (err) {
@@ -166,18 +168,20 @@ export const RefundsReview = () => {
   }, []);
 
   useEffect(() => {
-      // Get the visited pages from localStorage
-      const visitedPages = JSON.parse(localStorage.getItem("visitedPages") || "[]");
-      // Check if the current page is already in the visited pages
-      const isPageVisited = visitedPages.includes(location.pathname);
-  
-      // If the page is not visited, set the tutorial to true
-      if (!isPageVisited) {
-        // setTutorial(true);
-      }
-      // Add the current page to the visited pages
-      handleVisitPage();
-    }, []);
+    // Get the visited pages from localStorage
+    const visitedPages = JSON.parse(
+      localStorage.getItem("visitedPages") || "[]"
+    );
+    // Check if the current page is already in the visited pages
+    const isPageVisited = visitedPages.includes(location.pathname);
+
+    // If the page is not visited, set the tutorial to true
+    if (!isPageVisited) {
+      // setTutorial(true);
+    }
+    // Add the current page to the visited pages
+    handleVisitPage();
+  }, []);
 
   const columnsSchemaTrips = [
     { key: "status", header: "Estatus" },
@@ -216,25 +220,25 @@ export const RefundsReview = () => {
 
   return (
     <>
-    <Tutorial page="refundsReview" run={tutorial}>
-      <GoBack />
-      <div className="flex-1 p-6 bg-[#eaeced] rounded-lg shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-[var(--blue)]">
-            Solicitudes de Reembolso por Aprobar
-          </h2>
-          <RefreshButton />
-        </div>
+      <Tutorial page="refundsReview" run={tutorial}>
+        <GoBack />
+        <div className="flex-1 p-6 bg-[#eaeced] rounded-lg shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-[var(--blue)]">
+              Solicitudes de Reembolso por Aprobar
+            </h2>
+            <RefreshButton />
+          </div>
 
-        <div id="list_requests">
-          <Table
-            columns={columnsSchemaTrips}
-            data={dataWithActions}
-            itemsPerPage={7}
-          />
+          <div id="list_requests">
+            <Table
+              columns={columnsSchemaTrips}
+              data={dataWithActions}
+              itemsPerPage={7}
+            />
+          </div>
         </div>
-      </div>
-    </Tutorial>
+      </Tutorial>
     </>
   );
 };

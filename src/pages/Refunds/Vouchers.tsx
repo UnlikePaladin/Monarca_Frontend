@@ -1,3 +1,5 @@
+/*This component (Vouchers) renders a refund/voucher submission form for a specific trip request, allowing the user to enter multiple expense rows and upload the supporting XML/PDF files for each one. It reads the request id from the URL, fetches the trip details with GET /requests/{id}, and displays basic trip info (ID, title, destination city, and formatted advance amount). The core UI is a DynamicTable whose column schema defines how each cell is rendered: dropdowns for expense class and tax indicator (using spendOptions and taxIndicatorOptions), inputs for amount and voucher date, and file inputs for XML and PDF uploads that store the selected files into the formData state. When the user clicks “Enviar Solicitud,” it loops through each table row, builds a FormData payload (including request ID, class, amount, tax type, status, currency, and attached files), uploads each voucher via POST /vouchers/upload, then marks the request as finished uploading vouchers with PATCH /requests/finished-uploading-vouchers/{id} and navigates back to /refunds, showing success/error toasts as appropriate. The page also includes a comment input (stored locally), a cancel link, a back button, and is wrapped in a Tutorial flow. */
+
 import { Link, useNavigate } from "react-router-dom";
 import DynamicTable, {
   TableRow as DynamicTableRow,
@@ -67,10 +69,7 @@ export const Vouchers = () => {
       for (const rowData of formData) {
         formDataToSend = new FormData();
 
-        formDataToSend.append(
-          "id_request",
-          trip.id.toString()
-        );
+        formDataToSend.append("id_request", trip.id.toString());
         //formDataToSend.append("comment", commentDescriptionOfSpend);
         formDataToSend.append("date", new Date().toISOString());
         formDataToSend.append("class", rowData.spentClass);
@@ -271,79 +270,81 @@ export const Vouchers = () => {
 
   return (
     <>
-    <Tutorial page="vouchers">
-      <GoBack />
-      <div className="max-w-full p-6 bg-[#eaeced] rounded-lg shadow-xl">
-        <h2 className="text-2xl font-bold text-[#0a2c6d] mb-1">
-          Formato de solicitud de reembolso
-        </h2>
-        <div className="mb-4">
+      <Tutorial page="vouchers">
+        <GoBack />
+        <div className="max-w-full p-6 bg-[#eaeced] rounded-lg shadow-xl">
+          <h2 className="text-2xl font-bold text-[#0a2c6d] mb-1">
+            Formato de solicitud de reembolso
+          </h2>
+          <div className="mb-4">
+            {/*
+             * Display general information about the trip, such as ID, name, destination,
+             */}
+            <h3 className="text-lg font-bold text-[#0a2c6d] mb-2">
+              Información del viaje
+            </h3>
+            <p>
+              <strong>ID del viaje:</strong> {trip.id}
+            </p>
+            <p>
+              <strong>Nombre del viaje:</strong> {trip.title}
+            </p>
+            <p>
+              <strong>Destino:</strong> {trip.destination.city}
+            </p>
+            <p>
+              <strong>Anticipo:</strong> {formatMoney(trip.advance_money)}
+            </p>
+          </div>
           {/*
-          * Display general information about the trip, such as ID, name, destination,
-          */}
-          <h3 className="text-lg font-bold text-[#0a2c6d] mb-2">
-            Información del viaje
+           * which contains the schema of the table.
+           * The table is created initially with initially empty data,
+           * and the user can add new rows to the table.
+           * The formData array is updated with the handleFormDataChange function,
+           * which is passed as a prop to the DynamicTable component.
+           * The handleFormDataChange function updates the formData state with the new data.
+           */}
+          <div id="vouchers">
+            <DynamicTable
+              columns={columnsSchemaVauchers}
+              initialData={formData}
+              onDataChange={handleDynamicTableDataChange}
+            />
+          </div>
+          {/*
+           * Display a field to add a comment to the refund request.
+           * The comment is stored in the commentDescriptionOfSpend state,
+           * and is updated with the setCommentDescriptionOfSpend function.
+           */}
+          <h3 className="text-lg font-bold text-[#0a2c6d] mt-4 mb-2">
+            Comentario
           </h3>
-          <p>
-            <strong>ID del viaje:</strong> {trip.id}
-          </p>
-          <p>
-            <strong>Nombre del viaje:</strong> {trip.title}
-          </p>
-          <p>
-            <strong>Destino:</strong> {trip.destination.city}
-          </p>
-          <p>
-            <strong>Anticipo:</strong> {formatMoney(trip.advance_money)}
-          </p>
-        </div>
-        {/*
-        * which contains the schema of the table.
-        * The table is created initially with initially empty data,
-        * and the user can add new rows to the table.
-        * The formData array is updated with the handleFormDataChange function,
-        * which is passed as a prop to the DynamicTable component.
-        * The handleFormDataChange function updates the formData state with the new data.
-        */}
-        <div id="vouchers">
-          <DynamicTable
-            columns={columnsSchemaVauchers}
-            initialData={formData}
-            onDataChange={handleDynamicTableDataChange}
+          <InputField
+            id="comment-refund"
+            type="text"
+            value={commentValue}
+            placeholder="Ingrese un comentario"
+            onChange={(e) => setCommentValue(e.target.value)}
           />
+          <div className="mt-6 flex justify-between">
+            <Link
+              to="/refunds"
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors hover:cursor-pointer"
+            >
+              Cancelar
+            </Link>
+            <button
+              id="submit-refund"
+              className="px-4 py-2 bg-[#0a2c6d] text-white rounded-md hover:bg-[#0d3d94] transition-colors hover:cursor-pointer"
+              onClick={() => {
+                handleSubmitRefund();
+              }}
+            >
+              Enviar Solicitud
+            </button>
+          </div>
         </div>
-        {/*
-        * Display a field to add a comment to the refund request.
-        * The comment is stored in the commentDescriptionOfSpend state,
-        * and is updated with the setCommentDescriptionOfSpend function.
-        */}
-        <h3 className="text-lg font-bold text-[#0a2c6d] mt-4 mb-2">Comentario</h3>
-        <InputField 
-          id="comment-refund"
-          type="text"
-          value={commentValue}
-          placeholder="Ingrese un comentario"
-          onChange={(e) => setCommentValue(e.target.value)}
-        />
-        <div className="mt-6 flex justify-between">
-          <Link
-            to="/refunds"
-            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors hover:cursor-pointer"
-          >
-            Cancelar
-          </Link>
-          <button
-            id="submit-refund"
-            className="px-4 py-2 bg-[#0a2c6d] text-white rounded-md hover:bg-[#0d3d94] transition-colors hover:cursor-pointer"
-            onClick={() => {
-              handleSubmitRefund();
-            }}
-          >
-            Enviar Solicitud
-          </button>
-        </div>
-      </div>
-    </Tutorial>
+      </Tutorial>
     </>
   );
 };

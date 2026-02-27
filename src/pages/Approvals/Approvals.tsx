@@ -1,3 +1,5 @@
+/*This component renders the “Viajes por Aprobar” (Trips to Approve) page, fetching pending approval requests from the API and displaying them in a paginated table. When the component mounts, it calls GET /requests/to-approve, then transforms each trip to add UI-ready fields: it converts the backend status into a styled Spanish badge via renderStatus, sets the “Lugar de Salida” column using trip.destination.city, and formats the departure date by sorting requests_destinations by destination_order and taking the first destination’s departure_date, passing it through formatDate. It also integrates the app tutorial system using useApp and useLocation: it checks localStorage for previously visited pages, runs the tutorial if this page hasn’t been visited, and on unmount it records the visit via handleVisitPage. Finally, it wraps the content inside a Tutorial component and includes navigation (GoBack) and a RefreshButton above the Table component. */
+
 import React, { useEffect, useState } from "react";
 import Table from "../../components/Approvals/Table";
 import { getRequest } from "../../utils/apiService";
@@ -52,24 +54,22 @@ const renderStatus = (status: string) => {
       statusText = "En progreso";
       styles = "text-[var(--dark-blue)] bg-[#b7f1f1]";
       break;
-    case "Pending Refund Approval": 
+    case "Pending Refund Approval":
       statusText = "Reembolso pendiente";
       styles = "text-[#575107] bg-[#f0eaa5]";
       break;
-    case "Completed": 
+    case "Completed":
       statusText = "Completado";
       styles = "text-[#24390d] bg-[#c7e6ab]";
       break;
     default:
       statusText = status;
       styles = "text-white bg-[#6c757d]";
-    }
-    return (
-      <span className={`text-xs p-1 rounded-sm ${styles}`}>
-        {statusText}
-      </span>
-    )
-}
+  }
+  return (
+    <span className={`text-xs p-1 rounded-sm ${styles}`}>{statusText}</span>
+  );
+};
 
 export const Approvals: React.FC = () => {
   const [dataWithActions, setDataWithActions] = useState([]);
@@ -103,7 +103,9 @@ export const Approvals: React.FC = () => {
 
   useEffect(() => {
     // Get the visited pages from localStorage
-    const visitedPages = JSON.parse(localStorage.getItem("visitedPages") || "[]");
+    const visitedPages = JSON.parse(
+      localStorage.getItem("visitedPages") || "[]"
+    );
     // Check if the current page is already in the visited pages
     const isPageVisited = visitedPages.includes(location.pathname);
 
@@ -114,7 +116,6 @@ export const Approvals: React.FC = () => {
     // Add the current page to the visited pages
     return () => handleVisitPage();
   }, []);
-    
 
   return (
     <>

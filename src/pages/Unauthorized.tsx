@@ -1,3 +1,5 @@
+/*This Unauthorized component renders an access-denied page that is shown when a user attempts to access a route without the required permissions. It displays a clear “Acceso no autorizado” message, explains that the user does not have permission to view the page, and suggests contacting an administrator if it is an error. The page provides two navigation options using React Router Link: one to return to the dashboard and another to go back to the login page. The layout is styled with Tailwind CSS in a centered card design on a dark background, including an error icon for visual emphasis. */
+
 import { Link } from "react-router-dom";
 
 export const Unauthorized = () => {

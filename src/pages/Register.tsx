@@ -1,3 +1,5 @@
+/*This component renders a “Forgot Password” page styled similarly to the login screen. It displays a form where the user enters their email address to recover their password, along with a short explanatory message. When the form is submitted, it prevents the default behavior and simply redirects the user to /dashboard using useNavigate (without actually calling an API). It also includes a link back to the login page (/) for users who already have an account. The layout is split into a left panel with a background image and a right panel containing the recovery form and branding.*/
+
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 
