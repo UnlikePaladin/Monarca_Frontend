@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { historialData } from "./../../pages/Historial/local/dummyData.ts";
+import { historialData } from "../../pages/historial/local/dummyData.ts";
 
 describe("historialData", () => {
   it("exports array with 3 items", () => {
