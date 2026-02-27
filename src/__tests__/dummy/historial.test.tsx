@@ -1,16 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { historialData } from "../../pages/historial/local/dummyData.ts";
+import { HISTORIAL_DATA } from "../../pages/historial/local/dummyData.ts";
 
-describe("historialData", () => {
+describe("HISTORIAL_DATA", () => {
   it("exports array with 3 items", () => {
-    expect(Array.isArray(historialData)).toBe(true);
-    expect(historialData).toHaveLength(3);
+    expect(Array.isArray(HISTORIAL_DATA)).toBe(true);
+    expect(HISTORIAL_DATA).toHaveLength(3);
   });
 
   it("contains required properties", () => {
     const requiredProps = ["id", "title", "travelDate", "destination", "requestDate"];
     
-    historialData.forEach(item => {
+    HISTORIAL_DATA.forEach(item => {
       requiredProps.forEach(prop => {
         expect(item).toHaveProperty(prop);
         expect(typeof (item as any)[prop]).toBe("string");
@@ -19,7 +19,7 @@ describe("historialData", () => {
   });
 
   it("contains expected data", () => {
-    expect(historialData[0]).toEqual({
+    expect(HISTORIAL_DATA[0]).toEqual({
       id: "0001",
       title: "Viaje a Cancún",
       travelDate: "14/09/2020",
