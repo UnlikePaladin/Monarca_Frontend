@@ -1,6 +1,4 @@
-// src/pages/Historial/local/dummyData.ts
-
-export const historialData = [
+export const HISTORIAL_DATA = [
   {
     id: "0001",
     title: "Viaje a Cancún",

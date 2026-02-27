@@ -21,7 +21,7 @@ import "./App.css";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import Error from "./pages/Error.tsx";
-import Historial from "./pages/Historial/Historial.tsx";
+import Historial from "./pages/historial/Historial.tsx";
 import Bookings from "./pages/Bookings.tsx";
 import { Refunds } from "./pages/Refunds/Refunds.tsx";
 import { Vouchers } from "./pages/Refunds/Vouchers.tsx";

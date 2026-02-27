@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import HistorialPage from '../../pages/Historial/Historial';
+import HistorialPage from '../../pages/historial/Historial';
 
 /* ═════════════ 1. authContext manejado por variable ═════════════ */
 let mockAuth = { userId: '0', userPermissions: [] as string[] };
