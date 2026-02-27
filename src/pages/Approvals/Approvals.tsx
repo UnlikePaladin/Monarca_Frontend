@@ -1,3 +1,11 @@
+/**
+ * File: Approvals.tsx
+ * Description: This file contains the Approvals page component. It is responsible for 
+ * displaying a list of travel requests that require approval. It fetches data from the API, 
+ * formats the status badges, handles the tutorial walkthrough logic, and renders the 
+ * data in a table format.
+ */
+
 import React, { useEffect, useState } from "react";
 import Table from "../../components/Approvals/Table";
 import { getRequest } from "../../utils/apiService";
@@ -8,7 +16,7 @@ import { Tutorial } from "../../components/Tutorial";
 import { useLocation } from "react-router-dom";
 import { useApp } from "../../hooks/app/appContext";
 
-const columns = [
+const COLUMNS = [
   { key: "status", header: "Estado" },
   { key: "motive", header: "Viaje" },
   { key: "title", header: "Motivo" },
@@ -16,9 +24,17 @@ const columns = [
   { key: "country", header: "Lugar de Salida" },
 ];
 
+/**
+ * Renders the visual badge for a specific request status based on the API response.
+ * It maps the status string to a specific text and Tailwind CSS color class.
+ * 
+ * @param status - The raw status string received from the backend.
+ * @returns A JSX element containing the styled status badge.
+ */
 const renderStatus = (status: string) => {
   let statusText = "";
   let styles = "";
+
   switch (status) {
     case "Pending Review":
       statusText = "En revisión";
@@ -63,29 +79,40 @@ const renderStatus = (status: string) => {
     default:
       statusText = status;
       styles = "text-white bg-[#6c757d]";
-    }
-    return (
-      <span className={`text-xs p-1 rounded-sm ${styles}`}>
-        {statusText}
-      </span>
-    )
-}
+  }
 
+  return (
+    <span className={`text-xs p-1 rounded-sm ${styles}`}>
+      {statusText}
+    </span>
+  );
+};
+
+/**
+ * Main component for the Approvals page.
+ * Fetches pending travel requests, formats the data for the table, and handles
+ * the page-specific tutorial logic using localStorage.
+ * 
+ * @returns The rendered Approvals page structure.
+ */
 export const Approvals: React.FC = () => {
   const [dataWithActions, setDataWithActions] = useState([]);
   const location = useLocation();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
 
-  // Fetch travel records data from API
+  // Fetch travel records data from API and transform it for the table
   useEffect(() => {
     const fetchTravelRecords = async () => {
       try {
         const response = await getRequest("/requests/to-approve");
+        
+        // Transform API response to match table columns
         setDataWithActions(
           response.map((trip: any) => ({
             ...trip,
             status: renderStatus(trip.status),
             country: trip.destination.city,
+            // Sort destinations by order to get the first departure date
             departureDate: formatDate(
               trip.requests_destinations.sort(
                 (a: any, b: any) => a.destination_order - b.destination_order
@@ -101,21 +128,20 @@ export const Approvals: React.FC = () => {
     fetchTravelRecords();
   }, []);
 
+  // Handle tutorial visibility based on visited pages history
   useEffect(() => {
-    // Get the visited pages from localStorage
+    // Retrieve visited pages from local storage to prevent repeated tutorials
     const visitedPages = JSON.parse(localStorage.getItem("visitedPages") || "[]");
-    // Check if the current page is already in the visited pages
     const isPageVisited = visitedPages.includes(location.pathname);
 
-    // If the page is not visited, set the tutorial to true
     if (!isPageVisited) {
       setTutorial(true);
     }
-    // Add the current page to the visited pages
+    
+    // Register the current page as visited on unmount/update
     return () => handleVisitPage();
   }, []);
     
-
   return (
     <>
       <Tutorial page="approvals" run={tutorial}>
@@ -130,7 +156,7 @@ export const Approvals: React.FC = () => {
 
           <div id="list_requests">
             <Table
-              columns={columns}
+              columns={COLUMNS}
               data={dataWithActions}
               itemsPerPage={5}
               link={"/requests"}
@@ -143,3 +169,10 @@ export const Approvals: React.FC = () => {
 };
 
 export default Approvals;
+
+/*
+Modification History:
+
+- 2025-05-20 | Fabrizio Barrios | Refactored code to meet naming conventions and added documentation.
+
+*/
