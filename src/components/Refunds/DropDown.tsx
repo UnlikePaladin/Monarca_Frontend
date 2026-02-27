@@ -1,22 +1,51 @@
 /**
- * Reusable dropdown component with customizable styling and behavior.
- *
- * Last edit: April 20, 2025
- * Authors: José Manuel García Zumaya
+ * DropDown.tsx
+ * 
+ * Reusable dropdown select component with validation and error handling.
  */
- import React, { ChangeEvent } from "react";
 
- /**
-  * Option interface to define the structure of dropdown options
-  */
- interface Option {
-   value: string;
-   label: string;
- }
- 
- /**
-  * DropdownProps interface to define the structure of the props for the Dropdown component.
-  */
+import React, { ChangeEvent } from "react";
+
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface DropdownProps {
+  id?: string;
+  name?: string;
+  value: string;
+  options: Option[];
+  placeholder?: string;
+  className?: string;
+  wrapperClassName?: string;
+  disabled?: boolean;
+  required?: boolean;
+  label?: string;
+  error?: string;
+  onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+  onBlur?: () => void;
+  onFocus?: () => void;
+}
+
+/**
+ * Renders a dropdown select with labels, validation, and error messages.
+ * @param id - HTML id attribute
+ * @param name - Name attribute for the select element
+ * @param value - Currently selected value
+ * @param options - Array of selectable options
+ * @param placeholder - Placeholder text
+ * @param className - Custom CSS classes for the select
+ * @param wrapperClassName - Custom CSS classes for the wrapper
+ * @param disabled - Whether the dropdown is disabled
+ * @param required - Whether the field is required
+ * @param label - Label text for the dropdown
+ * @param error - Error message to display
+ * @param onChange - Change event handler
+ * @param onBlur - Blur event handler
+ * @param onFocus - Focus event handler
+ * @returns Dropdown select component
+ */
  interface DropdownProps {
    id?: string;
    name?: string;
@@ -90,3 +119,10 @@ const Dropdown: React.FC<DropdownProps> = ({
  };
  
  export default Dropdown;
+
+/*
+Modification History:
+
+- 2025-04-20 | José Manuel García Zumaya | Initial creation.
+- 2026-02-26 | Santiago Arista | Added complete JSDoc documentation and modification history.
+*/

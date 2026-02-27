@@ -1,3 +1,10 @@
+/**
+ * CreateTravelRequestForm.tsx
+ * 
+ * Form component for creating new travel requests.
+ * Handles multi-destination travel requests with validation and submission.
+ */
+
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { TextArea } from "../ui/TextArea";
@@ -438,3 +445,9 @@ function CreateTravelRequestForm() {
   );
 }
 export default CreateTravelRequestForm;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated validation messages to English.
+*/

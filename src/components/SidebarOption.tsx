@@ -1,3 +1,9 @@
+/**
+ * SidebarOption.tsx
+ * 
+ * Individual sidebar menu item component with icon and label.
+ * Renders a clickable menu item that navigates to a specified route.
+ */
 
 import { Link } from "react-router-dom";
 
@@ -7,6 +13,13 @@ interface SidebarOptionProps {
     link: string;
 }
 
+/**
+ * Renders a sidebar menu item with icon and label.
+ * @param label - Text to display for the menu item
+ * @param pathIcon - Path to the icon image
+ * @param link - Route to navigate to when clicked
+ * @returns Sidebar menu item component
+ */
 const SidebarOption = ({ label, pathIcon, link }: SidebarOptionProps) => {
 
     return (
@@ -28,3 +41,9 @@ const SidebarOption = ({ label, pathIcon, link }: SidebarOptionProps) => {
 
 
 export default SidebarOption;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

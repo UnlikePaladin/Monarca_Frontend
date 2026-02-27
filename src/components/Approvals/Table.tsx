@@ -1,3 +1,10 @@
+/**
+ * Table.tsx
+ * 
+ * Paginated table component with expandable rows for approvals.
+ * Displays data in a table format with pagination and row expansion functionality.
+ */
+
 import { Link } from "react-router-dom";
 import React, { ReactNode, useState, useEffect } from "react";
 
@@ -16,7 +23,14 @@ interface TableProps {
   link: string;
 }
 
-const Table: React.FC<TableProps> = ({
+/**
+ * Renders a paginated table with expandable rows.
+ * @param columns - Array of column definitions
+ * @param data - Array of data rows to display
+ * @param itemsPerPage - Number of items to show per page (default: 5)
+ * @param link - Base link for row navigation
+ * @returns Paginated table with expandable rows
+ */const Table: React.FC<TableProps> = ({
   columns,
   data,
   itemsPerPage = 5,
@@ -198,3 +212,9 @@ const Table: React.FC<TableProps> = ({
 };
 
 export default Table;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

@@ -1,14 +1,11 @@
 /**
+ * Button.tsx
+ * 
  * Reusable button component with customizable styling and behavior.
- *
- * Last edit: April 20, 2025
- * Authors: José Manuel García Zumaya
  */
+
 import React from "react";
 
-/**
- * ButtonProps interface to define the structure of the props for the Button component.
- */
 interface ButtonProps {
   id?: string;
   label: string;
@@ -18,8 +15,13 @@ interface ButtonProps {
 }
 
 /**
- * Button component that renders a customizable button with optional
- * styling, disabled state, and click handler functionality.
+ * Renders a customizable button with optional styling and click handler.
+ * @param id - Optional HTML id attribute
+ * @param label - Button text label
+ * @param className - Custom CSS classes for styling
+ * @param disabled - Whether the button is disabled
+ * @param onClickFunction - Click event handler function
+ * @returns Button component
  */
 const Button: React.FC<ButtonProps> = ({
   id,
@@ -36,3 +38,10 @@ const Button: React.FC<ButtonProps> = ({
 };
 
 export default Button;
+
+/*
+Modification History:
+
+- 2025-04-20 | José Manuel García Zumaya | Initial creation.
+- 2026-02-26 | Santiago Arista | Added complete JSDoc documentation and modification history.
+*/

@@ -1,9 +1,10 @@
-/*
- * DynamicTable component that renders a table with dynamic rows and columns.
-
- * Last edit: April 29, 2025
- * Authors: José Manuel García Zumaya
+/**
+ * DynamicTable.tsx
+ * 
+ * Dynamic table component with editable rows and columns for refunds.
+ * Supports custom cell rendering and row management.
  */
+
 import React, { useState, ReactNode } from "react";
 
 // Define a type for all possible cell values including File objects
@@ -16,12 +17,12 @@ export type CellValueType =
   | ReactNode
   | File;
 
-/*
- * Column interface SCHEMA to define the structure of each column in the table.
- * key: The key in the data object that corresponds to this column.
- * header: The header text to display for this column.
- * defaultValue: The default value to display in the cell or inside the component.
- * renderCell: A function that helps to render custom components inside the cell.
+/**
+ * Column interface schema to define the structure of each column in the table.
+ * @property key - The key in the data object that corresponds to this column
+ * @property header - The header text to display for this column
+ * @property defaultValue - The default value to display in the cell
+ * @property renderCell - Function to render custom components inside the cell
  */
 export interface Column {
   key: string;
@@ -206,3 +207,10 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
 };
 
 export default DynamicTable;
+
+/*
+Modification History:
+
+- 2025-04-29 | José Manuel García Zumaya | Initial creation.
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated text to English.
+*/

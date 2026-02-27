@@ -10,6 +10,8 @@ import GoBack from "../components/GoBack";
 import { Tutorial } from "../components/Tutorial";
 import { useApp } from "../hooks/app/appContext";
 
+//alksmd
+
 const columns = [
   { key: "status", header: "Estado" },
   { key: "motive", header: "Motivo" },

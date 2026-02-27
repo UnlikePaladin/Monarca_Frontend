@@ -1,3 +1,10 @@
+/**
+ * Layout.tsx
+ * 
+ * Main layout wrapper component for authenticated pages.
+ * Includes header, sidebar, footer, and handles authentication routing.
+ */
+
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/auth/authContext";
 import { ToastContainer} from 'react-toastify';
@@ -16,6 +23,13 @@ interface LayoutProps {
   title?: string;
 }
 
+/**
+ * Renders the main application layout with authentication check.
+ * Redirects unauthenticated users to login page.
+ * @param children - Page content to render within the layout
+ * @param title - Optional page title (currently unused)
+ * @returns Layout with header, sidebar, footer and page content
+ */
 function Layout({ children }: LayoutProps) {
   const { authState, loadingProfile } = useAuth();
   const { setTutorial } = useApp();
@@ -52,3 +66,9 @@ function Layout({ children }: LayoutProps) {
 }
 
 export default Layout;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

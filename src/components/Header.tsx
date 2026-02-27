@@ -1,7 +1,18 @@
+/**
+ * Header.tsx
+ * 
+ * Main navigation header component for the Monarca application.
+ * Displays the app logo, user profile dropdown with logout functionality.
+ */
+
 import { useState } from "react";
 import { useAuth } from "../hooks/auth/authContext";
 // import { useApp } from "../hooks/app/appContext";
 
+/**
+ * Renders the application header with user profile dropdown.
+ * @returns Header component with branding and user menu
+ */
 function Header() {
   const { handleLogout ,authState } = useAuth();
   // const { pageTitle } = useApp();
@@ -70,3 +81,9 @@ function Header() {
 }
 
 export default Header;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated text to English.
+*/

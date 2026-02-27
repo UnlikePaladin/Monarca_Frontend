@@ -1,3 +1,10 @@
+/**
+ * DropDown.tsx
+ * 
+ * Custom dropdown select component for approvals.
+ * Provides a clickable dropdown menu with options and automatic closing on outside click.
+ */
+
 import React, { useState, useRef, useEffect } from "react";
 
 interface Option {
@@ -12,6 +19,14 @@ interface DropdownProps {
   placeholder?: string;
 }
 
+/**
+ * Renders a custom dropdown select component.
+ * @param options - Array of selectable options
+ * @param value - Currently selected value
+ * @param onChange - Callback when selection changes
+ * @param placeholder - Placeholder text when no option selected
+ * @returns Custom dropdown component
+ */
 const Dropdown: React.FC<DropdownProps> = ({
   options,
   value,
@@ -21,7 +36,7 @@ const Dropdown: React.FC<DropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Cerrar dropdown si clic fuera
+  // Close dropdown if clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -43,7 +58,7 @@ const Dropdown: React.FC<DropdownProps> = ({
         className="w-full px-4 py-2 text-left bg-white border border-gray-300 rounded shadow-sm focus:outline-none focus:ring"
       >
         {selectedOption ? selectedOption.label : placeholder}
-        <span className="float-right">&#x25BC;</span> {/* Flecha ▼ */}
+        <span className="float-right">&#x25BC;</span> {/* Arrow ▼ */}
       </button>
 
       {isOpen && (
@@ -69,3 +84,9 @@ const Dropdown: React.FC<DropdownProps> = ({
 };
 
 export default Dropdown;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated text to English.
+*/

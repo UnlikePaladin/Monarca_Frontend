@@ -1,3 +1,10 @@
+/**
+ * Switch.tsx
+ * 
+ * Toggle switch component built with Headless UI.
+ * Provides an accessible on/off toggle control.
+ */
+
 import { Switch as HSwitch } from "@headlessui/react";
 import clsx from "clsx";
 
@@ -10,6 +17,16 @@ export interface SwitchProps {
   id?: string;
 }
 
+/**
+ * Renders an accessible toggle switch.
+ * @param checked - Current checked state
+ * @param onChange - Callback function when toggle state changes
+ * @param disabled - Whether the switch is disabled
+ * @param className - Additional CSS classes
+ * @param srLabel - Screen reader label
+ * @param id - HTML id attribute
+ * @returns Toggle switch component
+ */
 export default function Switch({
   checked,
   onChange,
@@ -43,3 +60,9 @@ export default function Switch({
     </HSwitch>
   );
 }
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

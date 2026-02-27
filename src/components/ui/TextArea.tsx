@@ -1,3 +1,10 @@
+/**
+ * TextArea.tsx
+ * 
+ * Reusable textarea component with consistent styling.
+ * Extends native HTML textarea with custom design system.
+ */
+
 import React from "react";
 import clsx from "clsx";
 
@@ -6,6 +13,13 @@ export type TextAreaProps =
     className?: string;
   };
 
+/**
+ * Renders a styled textarea field for multi-line text input.
+ * @param className - Additional CSS classes for customization
+ * @param props - Native textarea HTML attributes
+ * @param ref - Forwarded ref to the textarea element
+ * @returns Styled textarea component
+ */
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
   ({ className, ...props }, ref) => {
     const baseStyles =
@@ -15,3 +29,10 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     );
   }
 );
+TextArea.displayName = "TextArea";
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and displayName.
+*/
