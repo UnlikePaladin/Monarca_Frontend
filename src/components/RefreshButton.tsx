@@ -1,5 +1,16 @@
+/**
+ * RefreshButton.tsx
+ * 
+ * Reusable refresh button component with icon.
+ * Displays a refresh icon that can be used to trigger refresh actions.
+ */
+
 import { MdRefresh } from "react-icons/md";
 
+/**
+ * Renders a refresh button with icon.
+ * @returns Button component with refresh icon
+ */
 const RefreshButton = () => {
 
     return (
@@ -14,3 +25,9 @@ const RefreshButton = () => {
 
 
 export default RefreshButton;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/

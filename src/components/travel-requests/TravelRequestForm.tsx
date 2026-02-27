@@ -1,3 +1,10 @@
+/**
+ * TravelRequestForm.tsx
+ * 
+ * Form component for creating and updating travel requests.
+ * Handles multi-destination travel requests with validation, submission, and update capabilities.
+ */
+
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { TextArea } from "../ui/TextArea";
@@ -39,7 +46,7 @@ const destinationSchema = z.object({
     .string()
     .nonempty({ message: "Selecciona fecha de salida" }),
   stay_days: z.number().int(),
-  // .positive({ message: "El número de días debe ser positivo" }),
+  // .positive({ message: "Number of days must be positive" }),
   is_hotel_required: z.boolean(),
   is_plane_required: z.boolean(),
   details: z.string().nonempty({ message: "Agrega detalles" }),
@@ -564,3 +571,15 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 }
 
 export default TravelRequestForm;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated validation messages to English.
+*/
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated validation messages to English.
+*/

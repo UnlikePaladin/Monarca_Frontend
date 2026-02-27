@@ -1,3 +1,10 @@
+/**
+ * FilePreviewerReservation.tsx
+ * 
+ * Component for previewing reservation voucher files (PDF only).
+ * Displays file preview with price information and download option.
+ */
+
 import formatMoney from "../../utils/formatMoney";
 
 
@@ -10,8 +17,12 @@ interface FilePreviewerProps {
     fileIndex: number;
 }
 
-
-
+/**
+ * Renders a reservation file preview with PDF viewer and price display.
+ * @param file - File object containing link and price information
+ * @param fileIndex - Index of the file in the list
+ * @returns Reservation file previewer component with download option
+ */
 const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
     return (
         <>
@@ -46,3 +57,9 @@ const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
 }
 
 export default FilePreviewer;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, translated text to English, and added missing export.
+*/

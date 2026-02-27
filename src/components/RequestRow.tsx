@@ -1,8 +1,8 @@
 /**
- * @file RequestRow.tsx
- * @description Vista de solicitudes de viaje con tabla editable, dropdowns, inputs y acciones.
- * @lastEdited 2025-04-25
- * @author Isaac
+ * RequestRow.tsx
+ * 
+ * Travel request view component with editable table, dropdowns, inputs, and actions.
+ * Displays employee information and travel request details in an interactive table.
  */
 
 import { useState } from "react";
@@ -12,24 +12,25 @@ import InputField from "../components/Refunds/InputField";
 import Dropdown from "../components/Refunds/DropDown";
 // import { FaSyncAlt } from "react-icons/fa";
 
-// Opciones del dropdown para campo de estado
+// Dropdown options for status field
 const STATUS_OPTIONS = [
   { value: "autorizado", label: "Autorizado" },
   { value: "pendiente", label: "Pendiente" },
 ];
 
-// Opciones del dropdown para campo de moneda
+// Dropdown options for currency field
 const MONEDA_OPTIONS = [
   { value: "MXN", label: "MXN" },
   { value: "USD", label: "USD" },
 ];
 
 /**
- * Componente principal que renderiza una tabla editable con datos de viajes,
- * campos de entrada editables, controles de paginación y metainformación del empleado.
+ * Renders an editable table with travel request data.
+ * Includes editable fields, pagination controls, and employee metadata.
+ * @returns RequestRow component with table and employee information
  */
 const RequestRow = () => {
-  // Estado para almacenar los datos de cada fila de la tabla
+  // State to store data for each table row
   const [data, setData] = useState([
     {
       id: "0001",
@@ -229,3 +230,10 @@ const RequestRow = () => {
 };
 
 export default RequestRow;
+
+/*
+Modification History:
+
+- 2025-04-25 | Isaac | Initial creation with editable table.
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated text to English.
+*/
