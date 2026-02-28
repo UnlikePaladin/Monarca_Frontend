@@ -1,3 +1,5 @@
+/*This component (Reservations) renders a page for assigning hotel and/or flight reservations for each destination in a travel request. It reads the request id from the URL, fetches the request data with GET /requests/{id}, and transforms each requests_destinations entry into display-friendly fields (origin/destination strings, formatted departure/arrival dates, “Sí/No” flags for whether hotel/plane are required, and other details). The UI then iterates through each destination and shows a read-only summary grid plus conditional form sections: if a destination requires a hotel, it shows inputs for hotel title, comments, price, and a PDF upload; if it requires a flight, it shows the equivalent flight fields. User input is stored in a formData object keyed by destination ID, and file uploads store both the File and its name for display. On submit, it validates that all required reservation fields/files are provided according to what each destination needs, builds a reservations payload, and uploads each reservation as FormData via POST /reservations; if successful, it marks the request as finished with PATCH /requests/finished-reservations/{id}, shows a success toast, clears the form, and navigates back to the dashboard. The page is wrapped in a Tutorial flow and also tracks the page visit via handleVisitPage. */
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Input from "../../components/Refunds/InputField";
@@ -24,49 +26,60 @@ export const Reservations = () => {
         const response = await getRequest(`/requests/${id}`);
         setRequest({
           ...response,
-          requests_destinations: response.requests_destinations.map((destination: any) => ({
-            ...destination,
-            origin: response.destination.city + ", " + response.destination.country,
-            origin_city: response.destination.city,
-            origin_country: response.destination.country,
-            destination_full: destination.destination.city + ", " + destination.destination.country,
-            destination_city: destination.destination.city,
-            destination_country: destination.destination.country,
-            departure_date: formatDate(destination.departure_date),
-            arrival_date: formatDate(destination.arrival_date),
-            hotel_required: destination.is_hotel_required ? "Sí" : "No",
-            plane_required: destination.is_plane_required ? "Sí" : "No",
-            stay_days: destination.stay_days,
-            details: destination.details,
-          })),
+          requests_destinations: response.requests_destinations.map(
+            (destination: any) => ({
+              ...destination,
+              origin:
+                response.destination.city + ", " + response.destination.country,
+              origin_city: response.destination.city,
+              origin_country: response.destination.country,
+              destination_full:
+                destination.destination.city +
+                ", " +
+                destination.destination.country,
+              destination_city: destination.destination.city,
+              destination_country: destination.destination.country,
+              departure_date: formatDate(destination.departure_date),
+              arrival_date: formatDate(destination.arrival_date),
+              hotel_required: destination.is_hotel_required ? "Sí" : "No",
+              plane_required: destination.is_plane_required ? "Sí" : "No",
+              stay_days: destination.stay_days,
+              details: destination.details,
+            })
+          ),
         });
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Error fetching data");
       }
-    }
+    };
     fetchRequest();
   }, []);
 
   useEffect(() => {
-      // Get the visited pages from localStorage
-      const visitedPages = JSON.parse(localStorage.getItem("visitedPages") || "[]");
-      // Check if the current page is already in the visited pages
-      const isPageVisited = visitedPages.includes(location.pathname);
-  
-      // If the page is not visited, set the tutorial to true
-      if (!isPageVisited) {
-        // setTutorial(true);
-      }
-      // Add the current page to the visited pages
-      handleVisitPage();
-    }, []);
+    // Get the visited pages from localStorage
+    const visitedPages = JSON.parse(
+      localStorage.getItem("visitedPages") || "[]"
+    );
+    // Check if the current page is already in the visited pages
+    const isPageVisited = visitedPages.includes(location.pathname);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
+    // If the page is not visited, set the tutorial to true
+    if (!isPageVisited) {
+      // setTutorial(true);
+    }
+    // Add the current page to the visited pages
+    handleVisitPage();
+  }, []);
+
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    id: string
+  ) => {
     const { name, files } = e.target;
     const file = files ? files[0] : null;
     const fileName = file ? file.name : "";
-    
+
     const updatedFormData = {
       ...formData,
       [id]: {
@@ -74,116 +87,139 @@ export const Reservations = () => {
         [name]: file,
         // Guardar también el nombre del archivo para mostrarlo
         [`${name}_name`]: fileName,
-      }
+      },
     };
     setFormData(updatedFormData);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, id: string) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    id: string
+  ) => {
     const { name, value } = e.target;
     const updatedFormData = {
       ...formData,
       [id]: {
         ...formData[id],
         [name]: value,
-      }
+      },
     };
     setFormData(updatedFormData);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-      if (formData === null || Object.keys(formData).length === 0) {
-        toast.error("Por favor completa todos los campos requeridos.");
-        return;
-      }
-      // Format the formData to match the API requirements
-      const formattedData = {
-        reservations: Object.entries(formData).flatMap(([key, value]) => {
-          const hotelReservation = value.hotel_title && {
-            title: value.hotel_title,
-            comments: value.hotel_comments,
-            price: parseFloat(value.hotel_price),
-            file: value.hotel_file,
-            id_request_destination: key,
-          };
-          const planeReservation = value.plane_title && {
-            title: value.plane_title,
-            comments: value.plane_comments,
-            price: parseFloat(value.plane_price),
-            file: value.plane_file,
-            id_request_destination: key,
-          };
-          return [hotelReservation, planeReservation].filter(Boolean);
-        }),
-      };
-      // Compute the length depending if each request destination has hotel or plane or both
-      const hotelLength = request.requests_destinations.filter((destination: any) => destination.is_hotel_required).length;
-      const planeLength = request.requests_destinations.filter((destination: any) => destination.is_plane_required).length;
-      const totalLength = hotelLength + planeLength;
-      if (formattedData.reservations.length !== totalLength) {
-        toast.error("Por favor completa todos los campos requeridos.");
-        return;
-      }
-      // Check if the form is valid
-      const isValid = Object.values(formData).every((data, index) => {
-        // Get the key of the currrent value
-        const key = Object.keys(formData)[index];
-        const hotelValid = data.hotel_title && data.hotel_comments && data.hotel_file;
-        const planeValid = data.plane_title && data.plane_comments && data.plane_file;
-        const requestDestination = request.requests_destinations.find((destination: any) => destination.id === key);
-        if (!requestDestination) {
-          return false;
-        }
-        // Check if hotel or plane is required
-        if (requestDestination.is_hotel_required && requestDestination.is_plane_required) {
-          return hotelValid && planeValid;
-        } else if (requestDestination.is_hotel_required && !requestDestination.is_plane_required) {
-          return hotelValid;
-        } else if (requestDestination.is_plane_required && !requestDestination.is_hotel_required) {
-          return planeValid;
-        }
-        return true;
-      });
-      if (!isValid) {
-        toast.error("Por favor completa todos los campos requeridos.");
-        return;
-      }
-      // Send the data to the API
-      const responses = await Promise.all(
-        formattedData.reservations.map(async (reservation) => {
-          const formData = new FormData();
-          formData.append("title", reservation.title);
-          formData.append("comments", reservation.comments);
-          formData.append("price", reservation.price);
-          formData.append("file", reservation.file);
-          formData.append("id_request_destination", reservation.id_request_destination);
-          try {
-            await postRequest("/reservations", formData);
-          } catch (error) {
-            console.error("Error sending data:", error);
-          }
-        })
+    if (formData === null || Object.keys(formData).length === 0) {
+      toast.error("Por favor completa todos los campos requeridos.");
+      return;
+    }
+    // Format the formData to match the API requirements
+    const formattedData = {
+      reservations: Object.entries(formData).flatMap(([key, value]) => {
+        const hotelReservation = value.hotel_title && {
+          title: value.hotel_title,
+          comments: value.hotel_comments,
+          price: parseFloat(value.hotel_price),
+          file: value.hotel_file,
+          id_request_destination: key,
+        };
+        const planeReservation = value.plane_title && {
+          title: value.plane_title,
+          comments: value.plane_comments,
+          price: parseFloat(value.plane_price),
+          file: value.plane_file,
+          id_request_destination: key,
+        };
+        return [hotelReservation, planeReservation].filter(Boolean);
+      }),
+    };
+    // Compute the length depending if each request destination has hotel or plane or both
+    const hotelLength = request.requests_destinations.filter(
+      (destination: any) => destination.is_hotel_required
+    ).length;
+    const planeLength = request.requests_destinations.filter(
+      (destination: any) => destination.is_plane_required
+    ).length;
+    const totalLength = hotelLength + planeLength;
+    if (formattedData.reservations.length !== totalLength) {
+      toast.error("Por favor completa todos los campos requeridos.");
+      return;
+    }
+    // Check if the form is valid
+    const isValid = Object.values(formData).every((data, index) => {
+      // Get the key of the currrent value
+      const key = Object.keys(formData)[index];
+      const hotelValid =
+        data.hotel_title && data.hotel_comments && data.hotel_file;
+      const planeValid =
+        data.plane_title && data.plane_comments && data.plane_file;
+      const requestDestination = request.requests_destinations.find(
+        (destination: any) => destination.id === key
       );
-      if (responses) {
-        toast.success("Reservaciones enviadas correctamente.");
-        setFormData({});
-        await patchRequest(`/requests/finished-reservations/${id}`, {});
-        navigate("/dashboard");
-      } else {
-        toast.error("Error al enviar las reservaciones.");
+      if (!requestDestination) {
+        return false;
       }
-  }
+      // Check if hotel or plane is required
+      if (
+        requestDestination.is_hotel_required &&
+        requestDestination.is_plane_required
+      ) {
+        return hotelValid && planeValid;
+      } else if (
+        requestDestination.is_hotel_required &&
+        !requestDestination.is_plane_required
+      ) {
+        return hotelValid;
+      } else if (
+        requestDestination.is_plane_required &&
+        !requestDestination.is_hotel_required
+      ) {
+        return planeValid;
+      }
+      return true;
+    });
+    if (!isValid) {
+      toast.error("Por favor completa todos los campos requeridos.");
+      return;
+    }
+    // Send the data to the API
+    const responses = await Promise.all(
+      formattedData.reservations.map(async (reservation) => {
+        const formData = new FormData();
+        formData.append("title", reservation.title);
+        formData.append("comments", reservation.comments);
+        formData.append("price", reservation.price);
+        formData.append("file", reservation.file);
+        formData.append(
+          "id_request_destination",
+          reservation.id_request_destination
+        );
+        try {
+          await postRequest("/reservations", formData);
+        } catch (error) {
+          console.error("Error sending data:", error);
+        }
+      })
+    );
+    if (responses) {
+      toast.success("Reservaciones enviadas correctamente.");
+      setFormData({});
+      await patchRequest(`/requests/finished-reservations/${id}`, {});
+      navigate("/dashboard");
+    } else {
+      toast.error("Error al enviar las reservaciones.");
+    }
+  };
 
   const labels: { key: keyof typeof request; label: string }[] = [
-    { key: 'origin', label: 'Origen' },
-    { key: 'destination_full', label: 'Destino' },
-    { key: 'departure_date', label: 'Fecha de Salida' },
-    { key: 'arrival_date', label: 'Fecha de Llegada' },
-    { key: 'details', label: 'Detalles' },
-    { key: 'hotel_required', label: '¿Se necesita hotel?' },
-    { key: 'plane_required', label: '¿Se necesita avión?' },
-    { key: 'stay_days', label: 'Días de estancia' },
+    { key: "origin", label: "Origen" },
+    { key: "destination_full", label: "Destino" },
+    { key: "departure_date", label: "Fecha de Salida" },
+    { key: "arrival_date", label: "Fecha de Llegada" },
+    { key: "details", label: "Detalles" },
+    { key: "hotel_required", label: "¿Se necesita hotel?" },
+    { key: "plane_required", label: "¿Se necesita avión?" },
+    { key: "stay_days", label: "Días de estancia" },
   ];
 
   return (
@@ -193,21 +229,19 @@ export const Reservations = () => {
           <h2 className="text-2xl font-bold text-[var(--blue)] mb-4">
             Asignar reservaciones
           </h2>
-          <form 
-            className="space-y-6"
-            onSubmit={handleSubmit}
-          >
+          <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="">
               {request?.requests_destinations?.map((destination: any) => (
-                <div 
+                <div
                   key={destination.id}
                   className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm"
                 >
                   <h3>Destino #{destination.destination_order}</h3>
-                  <div>
-
-                  </div>
-                  <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8" id="reservation-info">
+                  <div></div>
+                  <section
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8"
+                    id="reservation-info"
+                  >
                     {labels.map(({ key, label }) => (
                       <div key={key as string}>
                         <label
@@ -228,10 +262,15 @@ export const Reservations = () => {
                   </section>
                   <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
                     {destination.is_hotel_required && (
-                      <div className="flex flex-col gap-y-4" id="hotel-reservation">
-                        <h3 className="text-[var(--blue)] mb-4 font-bold">Información del hotel</h3>
+                      <div
+                        className="flex flex-col gap-y-4"
+                        id="hotel-reservation"
+                      >
+                        <h3 className="text-[var(--blue)] mb-4 font-bold">
+                          Información del hotel
+                        </h3>
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`hotel_title_${destination.id}`}
                           >
@@ -247,7 +286,7 @@ export const Reservations = () => {
                         </div>
 
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`hotel_comments_${destination.id}`}
                           >
@@ -255,7 +294,9 @@ export const Reservations = () => {
                           </label>
                           <TextArea
                             placeholder="Escribe tus comentarios"
-                            value={formData[destination.id]?.hotel_comments || ""}
+                            value={
+                              formData[destination.id]?.hotel_comments || ""
+                            }
                             onChange={(e) => handleChange(e, destination.id)}
                             name="hotel_comments"
                             id={`hotel_comments_${destination.id}`}
@@ -263,7 +304,7 @@ export const Reservations = () => {
                         </div>
 
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`hotel_price_${destination.id}`}
                           >
@@ -280,29 +321,38 @@ export const Reservations = () => {
                         </div>
 
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`hotel_file_${destination.id}`}
                           >
                             Subir archivos de hotel
                           </label>
-                          
+
                           <Input
                             type="file"
                             accept=".pdf"
-                            onChange={(e) => handleFileChange(e, destination.id)}
+                            onChange={(e) =>
+                              handleFileChange(e, destination.id)
+                            }
                             name="hotel_file"
                             id={`hotel_file_${destination.id}`}
-                            selectedFileName={formData[destination.id]?.hotel_file_name}
+                            selectedFileName={
+                              formData[destination.id]?.hotel_file_name
+                            }
                           />
                         </div>
                       </div>
                     )}
                     {destination.is_plane_required && (
-                      <div className="flex flex-col gap-y-4" id="plane-reservation">
-                        <h3 className="text-[var(--blue)] mb-4 font-bold">Información del vuelo</h3>
+                      <div
+                        className="flex flex-col gap-y-4"
+                        id="plane-reservation"
+                      >
+                        <h3 className="text-[var(--blue)] mb-4 font-bold">
+                          Información del vuelo
+                        </h3>
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`plane_title_${destination.id}`}
                           >
@@ -318,7 +368,7 @@ export const Reservations = () => {
                         </div>
 
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`plane_comments_${destination.id}`}
                           >
@@ -326,7 +376,9 @@ export const Reservations = () => {
                           </label>
                           <TextArea
                             placeholder="Escribe tus comentarios"
-                            value={formData[destination.id]?.plane_comments || ""}
+                            value={
+                              formData[destination.id]?.plane_comments || ""
+                            }
                             onChange={(e) => handleChange(e, destination.id)}
                             name="plane_comments"
                             id={`plane_comments_${destination.id}`}
@@ -334,7 +386,7 @@ export const Reservations = () => {
                         </div>
 
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`plane_price_${destination.id}`}
                           >
@@ -351,7 +403,7 @@ export const Reservations = () => {
                         </div>
 
                         <div>
-                          <label 
+                          <label
                             className="block mb-2 text-sm font-medium text-gray-900"
                             htmlFor={`plane_file_${destination.id}`}
                           >
@@ -360,10 +412,14 @@ export const Reservations = () => {
                           <Input
                             type="file"
                             accept=".pdf"
-                            onChange={(e) => handleFileChange(e, destination.id)}
+                            onChange={(e) =>
+                              handleFileChange(e, destination.id)
+                            }
                             name="plane_file"
                             id={`plane_file_${destination.id}`}
-                            selectedFileName={formData[destination.id]?.plane_file_name}
+                            selectedFileName={
+                              formData[destination.id]?.plane_file_name
+                            }
                           />
                         </div>
                       </div>

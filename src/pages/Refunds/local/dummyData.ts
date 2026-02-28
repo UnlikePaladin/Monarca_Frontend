@@ -1,3 +1,4 @@
+/*Exports three sets of static data used for UI development or testing. tripData is an array of mock trip records, each containing an ID, trip name, amount spent, travel date, destination, and the date the request was made—useful for populating tables or lists without calling an API. spendOptions is a predefined list of expense category options (with value codes and human-readable labels) intended for dropdown/select components when classifying travel expenses. taxIndicatorOptions provides a smaller set of options for selecting the applicable VAT/IVA tax indicator, also formatted for use in select inputs. */
 export const tripData = [
   {
     id: 1,

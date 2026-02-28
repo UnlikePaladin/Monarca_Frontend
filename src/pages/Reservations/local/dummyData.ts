@@ -1,4 +1,4 @@
-// src/pages/Historial/local/dummyData.ts
+/*Exports a constant array called TravelAgencyFormData containing mock data for travel agency requests. Each object represents a trip with details such as request ID, title, travel date, destination, request date, number of days, number of passengers, type of transport, total price, and current status (e.g., Aprobado, Pendiente, Rechazado). This dataset is likely used for local development or UI testing in the “Historial” section, allowing the interface to display sample travel agency records without relying on a backend API. */
 
 export const TravelAgencyFormData = [
   {

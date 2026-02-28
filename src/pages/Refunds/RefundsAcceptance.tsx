@@ -1,18 +1,20 @@
+/*This component renders a voucher review (“RefundsAcceptance”) page for a specific travel request, loading the request details from the API and letting an approver approve or deny each uploaded voucher. When it mounts, it reads the request id from the URL, calls GET /requests/{id}, and builds a UI-friendly data object by formatting the creation date and advance amount (formatDate, formatMoney), concatenating the admin’s full name, setting the origin city from the request destination, and joining all destination cities into a single string. It displays the request info as read-only fields (with the status translated to Spanish via renderStatus), and shows the vouchers in a Swiper carousel with pagination and custom “Anterior/Siguiente” buttons driven by refs; each slide uses FilePreviewer and includes “Aprobar/Denegar” actions that call PATCH /vouchers/{id}/approve or /deny and update local state immediately. It also computes totals for approved vouchers, the advance amount, and the combined total, and only enables the “Completar Comprobación” button once there are no pending vouchers; clicking it calls PATCH /requests/finished-approving-vouchers/{id}, shows a success toast, and redirects the user to the dashboard, all wrapped inside a Tutorial flow and with page-visit tracking through useApp.*/
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getRequest } from "../../utils/apiService";
 import formatMoney from "../../utils/formatMoney";
 import formatDate from "../../utils/formatDate";
 import GoBack from "../../components/GoBack";
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination } from 'swiper/modules';
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination } from "swiper/modules";
 import FilePreviewer from "../../components/Refunds/FilePreviewer";
 import { patchRequest } from "../../utils/apiService";
 import { Tutorial } from "../../components/Tutorial";
 
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 import { toast } from "react-toastify";
 import { useApp } from "../../hooks/app/appContext";
 
@@ -80,19 +82,17 @@ export const renderStatus = (status: string) => {
     case "In Progress":
       statusText = "En progreso";
       break;
-    case "Pending Refund Approval": 
+    case "Pending Refund Approval":
       statusText = "Reembolso pendiente";
       break;
-    case "Completed": 
+    case "Completed":
       statusText = "Completado";
       break;
     default:
       statusText = status;
-    }
-    return (
-      statusText
-    )
-}
+  }
+  return statusText;
+};
 
 const RefundsAcceptance: React.FC = () => {
   const navigate = useNavigate();
@@ -135,18 +135,20 @@ const RefundsAcceptance: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-      // Get the visited pages from localStorage
-      const visitedPages = JSON.parse(localStorage.getItem("visitedPages") || "[]");
-      // Check if the current page is already in the visited pages
-      const isPageVisited = visitedPages.includes(location.pathname);
-  
-      // If the page is not visited, set the tutorial to true
-      if (!isPageVisited) {
-        // setTutorial(true);
-      }
-      // Add the current page to the visited pages
-      handleVisitPage();
-    }, []);
+    // Get the visited pages from localStorage
+    const visitedPages = JSON.parse(
+      localStorage.getItem("visitedPages") || "[]"
+    );
+    // Check if the current page is already in the visited pages
+    const isPageVisited = visitedPages.includes(location.pathname);
+
+    // If the page is not visited, set the tutorial to true
+    if (!isPageVisited) {
+      // setTutorial(true);
+    }
+    // Add the current page to the visited pages
+    handleVisitPage();
+  }, []);
 
   const labels: { key: keyof RequestData; label: string }[] = [
     { key: "id", label: "ID solicitud" },
@@ -171,11 +173,10 @@ const RefundsAcceptance: React.FC = () => {
         return voucher;
       });
       setData({ ...data, vouchers: updatedVouchers });
-    }
-    catch (error) { 
+    } catch (error) {
       console.error("Error approving voucher:", error);
     }
-  }
+  };
 
   const denyVoucher = async (id: string) => {
     try {
@@ -190,7 +191,7 @@ const RefundsAcceptance: React.FC = () => {
     } catch (error) {
       console.error("Error denying voucher:", error);
     }
-  } 
+  };
 
   const completeRequest = async () => {
     try {
@@ -212,7 +213,10 @@ const RefundsAcceptance: React.FC = () => {
               Información de Solicitud: <span>{id}</span>
             </div>
 
-            <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8" id="request-info">
+            <section
+              className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8"
+              id="request-info"
+            >
               {labels.map(({ key, label }) => (
                 <div key={key}>
                   <label
@@ -222,40 +226,47 @@ const RefundsAcceptance: React.FC = () => {
                     {label}
                   </label>
 
-                {key === 'status' ? (
+                  {key === "status" ? (
                     <input
-                    id={key}
-                    type="text"
-                    readOnly
-                    value={data[key] !== undefined ? String(renderStatus(data.status ?? '')) : ""}
-                    className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                  />
-                  
-                ) : (
-                  <input
-                    id={key}
-                    type="text"
-                    readOnly
-                    value={data[key] !== undefined ? String(data[key]) : ""}
-                    className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                  />
-                )}
+                      id={key}
+                      type="text"
+                      readOnly
+                      value={
+                        data[key] !== undefined
+                          ? String(renderStatus(data.status ?? ""))
+                          : ""
+                      }
+                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                    />
+                  ) : (
+                    <input
+                      id={key}
+                      type="text"
+                      readOnly
+                      value={data[key] !== undefined ? String(data[key]) : ""}
+                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                    />
+                  )}
                 </div>
               ))}
             </section>
 
-
             <div className="mb-4">
-              <div className="bg-white p-4 rounded-lg shadow-md relative" id="vouchers">
+              <div
+                className="bg-white p-4 rounded-lg shadow-md relative"
+                id="vouchers"
+              >
                 <section className="mb-10">
                   <h1 className="text-2xl font-bold text-gray-800 mb-4">
                     Información importante
                   </h1>
                   <p className="text-sm text-gray-600">
-                    - Se debe aprobar o denegar individualmente cada uno de los comprobantes
+                    - Se debe aprobar o denegar individualmente cada uno de los
+                    comprobantes
                   </p>
                   <p className="text-sm text-gray-600">
-                    - Al finalizar la aprobación de comprobantes, se debe dar click en el botón "Completar Comprobación"
+                    - Al finalizar la aprobación de comprobantes, se debe dar
+                    click en el botón "Completar Comprobación"
                   </p>
                 </section>
                 <h2 className="text-lg font-semibold text-gray-700 mb-4">
@@ -264,153 +275,177 @@ const RefundsAcceptance: React.FC = () => {
                 </h2>
                 {/* Display the existing PDF using an iframe */}
                 <Swiper
-                    modules={[Navigation, Pagination]}
-                    spaceBetween={50}
-                    slidesPerView={1}
-                    pagination={{ clickable: true }}
-                    onBeforeInit={(swiper: any) => {
-                      if (typeof swiper.params.navigation !== 'boolean') {
-                        swiper.params.navigation.prevEl = prevRef.current;
-                        swiper.params.navigation.nextEl = nextRef.current;
-                      }
-                    }}
-                    onSlideChange={(swiper: any) => setCurrentIndex(swiper.activeIndex)}
+                  modules={[Navigation, Pagination]}
+                  spaceBetween={50}
+                  slidesPerView={1}
+                  pagination={{ clickable: true }}
+                  onBeforeInit={(swiper: any) => {
+                    if (typeof swiper.params.navigation !== "boolean") {
+                      swiper.params.navigation.prevEl = prevRef.current;
+                      swiper.params.navigation.nextEl = nextRef.current;
+                    }
+                  }}
+                  onSlideChange={(swiper: any) =>
+                    setCurrentIndex(swiper.activeIndex)
+                  }
                 >
                   {data?.vouchers?.map((file, index) => (
                     <SwiperSlide key={index}>
-                      <FilePreviewer 
-                          file={file} 
-                          fileIndex={index}
-                      />
+                      <FilePreviewer file={file} fileIndex={index} />
                       <div className="flex space-x-4 justify-end mt-6 absolute z-50 bottom-0 right-4">
-                          <button 
-                            disabled={file?.status !== "comprobante_pendiente"}
-                            className={`px-4 py-2 text-white rounded-md  hover:cursor-pointer 
-                              ${file?.status !== "comprobante_pendiente" 
-                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                : "bg-red-600 hover:bg-red-700"
-                              }`}
-                              onClick={() => denyVoucher(file?.id)}
-                            id="deny-button"
-                          >
-                              Denegar
-                          </button>
-                          <button 
-                              disabled={file?.status !== "comprobante_pendiente"}
-                              className={`px-4 py-2  text-white rounded-md  hover:cursor-pointer
-                                ${file?.status !== "comprobante_pendiente"
+                        <button
+                          disabled={file?.status !== "comprobante_pendiente"}
+                          className={`px-4 py-2 text-white rounded-md  hover:cursor-pointer 
+                              ${
+                                file?.status !== "comprobante_pendiente"
                                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                  : "bg-green-600 hover:bg-green-700"
+                                  : "bg-red-600 hover:bg-red-700"
+                              }`}
+                          onClick={() => denyVoucher(file?.id)}
+                          id="deny-button"
+                        >
+                          Denegar
+                        </button>
+                        <button
+                          disabled={file?.status !== "comprobante_pendiente"}
+                          className={`px-4 py-2  text-white rounded-md  hover:cursor-pointer
+                                ${
+                                  file?.status !== "comprobante_pendiente"
+                                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                    : "bg-green-600 hover:bg-green-700"
                                 }`}
-                              onClick={() => approveVoucher(file?.id)}
-                              id="approve-button"
-                            >
-                              Aprobar
-                          </button>
+                          onClick={() => approveVoucher(file?.id)}
+                          id="approve-button"
+                        >
+                          Aprobar
+                        </button>
                       </div>
                     </SwiperSlide>
                   ))}
                 </Swiper>
                 <div className="flex space-x-4 absolute z-10 top-2 right-4 bg-white">
-                    <button
-                      ref={prevRef}
-                      disabled={currentIndex === 0}
-                      className={`px-4 py-2 rounded-md hover:cursor-pointer ${
-                        currentIndex === 0
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "bg-gray-300 text-gray-700 hover:bg-gray-400"
-                      }`}
-                    >
-                      Anterior
-                    </button>
-                    <button
-                      disabled={currentIndex === ((data?.vouchers?.length ?? 0) - 1)}
-                      ref={nextRef} 
-                      className={`px-4 py-2 rounded-md hover:cursor-pointer ${
-                        currentIndex === (data?.vouchers?.length ?? 0) - 1
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "bg-gray-300 text-gray-700 hover:bg-gray-400"
-                      }`}
-                      id="next-voucher"
-                    >
-                      Siguiente
-                    </button>
+                  <button
+                    ref={prevRef}
+                    disabled={currentIndex === 0}
+                    className={`px-4 py-2 rounded-md hover:cursor-pointer ${
+                      currentIndex === 0
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    }`}
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    disabled={
+                      currentIndex === (data?.vouchers?.length ?? 0) - 1
+                    }
+                    ref={nextRef}
+                    className={`px-4 py-2 rounded-md hover:cursor-pointer ${
+                      currentIndex === (data?.vouchers?.length ?? 0) - 1
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                    }`}
+                    id="next-voucher"
+                  >
+                    Siguiente
+                  </button>
                 </div>
               </div>
               <section className="grid grid-cols-3 gap-5" id="refund-review">
-              <div className="my-5">
-                <label
-                  htmlFor={"total"}
-                  className="block text-xs font-semibold text-gray-500 mb-1"
-                >
-                  Total de Comprobantes
-                </label>
-                <input
-                  id={"total"}
-                  type="text"
-                  readOnly
-                  value={formatMoney(data?.vouchers?.reduce((acc: number, file: { status: string; amount: number }) => {
-                    if (file.status === "comprobante_aprobado") {
-                      return acc + +file.amount;
-                    }
-                    return acc;
-                  }, 0) ?? 0)}
-                  className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                />
-              </div>
-              <div className="my-5">
-                <label
-                  htmlFor={"advance_money"}
-                  className="block text-xs font-semibold text-gray-500 mb-1"
-                >
-                  Anticipo
-                </label>
-                <input
-                  id={"advance_money"}
-                  type="text"
-                  readOnly
-                  value={formatMoney(Number(data?.advance_money) || 0)}
-                  className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                />
-              </div>
-              <div className="my-5">
-                <label
-                  htmlFor={"total"}
-                  className="block text-xs font-semibold text-gray-500 mb-1"
-                >
-                  Total
-                </label>
-                <input
-                  id={"total"}
-                  type="text"
-                  readOnly
-                  value={formatMoney(
-                    (data?.vouchers?.reduce((acc: number, file: { status: string; amount: number }) => {
-                      if (file.status === "comprobante_aprobado") {
-                        return acc + Number(file.amount);
-                      }
-                      return acc;
-                    }, 0) ?? 0) + (typeof data?.advance_money === "number" ? data.advance_money : Number(data?.advance_money) || 0)
-                  )}
-                  className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                />
-              </div>
-
+                <div className="my-5">
+                  <label
+                    htmlFor={"total"}
+                    className="block text-xs font-semibold text-gray-500 mb-1"
+                  >
+                    Total de Comprobantes
+                  </label>
+                  <input
+                    id={"total"}
+                    type="text"
+                    readOnly
+                    value={formatMoney(
+                      data?.vouchers?.reduce(
+                        (
+                          acc: number,
+                          file: { status: string; amount: number }
+                        ) => {
+                          if (file.status === "comprobante_aprobado") {
+                            return acc + +file.amount;
+                          }
+                          return acc;
+                        },
+                        0
+                      ) ?? 0
+                    )}
+                    className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                  />
+                </div>
+                <div className="my-5">
+                  <label
+                    htmlFor={"advance_money"}
+                    className="block text-xs font-semibold text-gray-500 mb-1"
+                  >
+                    Anticipo
+                  </label>
+                  <input
+                    id={"advance_money"}
+                    type="text"
+                    readOnly
+                    value={formatMoney(Number(data?.advance_money) || 0)}
+                    className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                  />
+                </div>
+                <div className="my-5">
+                  <label
+                    htmlFor={"total"}
+                    className="block text-xs font-semibold text-gray-500 mb-1"
+                  >
+                    Total
+                  </label>
+                  <input
+                    id={"total"}
+                    type="text"
+                    readOnly
+                    value={formatMoney(
+                      (data?.vouchers?.reduce(
+                        (
+                          acc: number,
+                          file: { status: string; amount: number }
+                        ) => {
+                          if (file.status === "comprobante_aprobado") {
+                            return acc + Number(file.amount);
+                          }
+                          return acc;
+                        },
+                        0
+                      ) ?? 0) +
+                        (typeof data?.advance_money === "number"
+                          ? data.advance_money
+                          : Number(data?.advance_money) || 0)
+                    )}
+                    className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                  />
+                </div>
               </section>
 
               <div className="flex space-x-4 justify-end mt-6">
-                  <button 
-                    className={`px-4 py-2 text-white rounded-md hover:cursor-pointer 
-                      ${data?.vouchers?.some((file) => file.status === "comprobante_pendiente")
-                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                        : "bg-[var(--blue)] hover:bg-[var(--dark-blue)]"
+                <button
+                  className={`px-4 py-2 text-white rounded-md hover:cursor-pointer 
+                      ${
+                        data?.vouchers?.some(
+                          (file) => file.status === "comprobante_pendiente"
+                        )
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                          : "bg-[var(--blue)] hover:bg-[var(--dark-blue)]"
                       }`}
-                    disabled={data?.vouchers?.some((file) => file.status === "comprobante_pendiente")}
-                    onClick={completeRequest}
-                    id="complete-refund"
-                  >
-                      Completar Comprobación
-                  </button>
+                  disabled={data?.vouchers?.some(
+                    (file) => file.status === "comprobante_pendiente"
+                  )}
+                  onClick={completeRequest}
+                  id="complete-refund"
+                >
+                  Completar Comprobación
+                </button>
               </div>
             </div>
           </div>
