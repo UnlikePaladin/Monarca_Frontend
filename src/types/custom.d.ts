@@ -1,4 +1,13 @@
-/*Declares TypeScript module definitions for specific Swiper CSS imports (swiper/css, swiper/css/navigation, and swiper/css/pagination). It tells the TypeScript compiler to treat these CSS paths as valid modules, preventing type errors when importing them in a TypeScript project. Since CSS files do not have built-in type definitions, these declarations allow the project to compile successfully when using Swiper styles in a TypeScript + React environment.*/
+/*
+* custom.d.ts
+*
+* Module stubs for Swiper CSS imports.
+* These declarations don’t define any types; they merely let the
+* TypeScript compiler accept statements like
+*   import 'swiper/css';
+* (and the navigation/pagination variants) without errors.
+* Keeping the bottom‑half wording and focus on compilation success.
+*/
 
 declare module "swiper/css";
 declare module "swiper/css/navigation";
