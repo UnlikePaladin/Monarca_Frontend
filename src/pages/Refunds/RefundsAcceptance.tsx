@@ -117,7 +117,7 @@ const RefundsAcceptance: React.FC = () => {
           ...response,
           createdAt: formatDate(response.createdAt),
           advance_money_str: formatMoney(response.advance_money),
-          admin: response.admin.name + " " + response.admin.last_name,
+          admin: response.admin.name + " " + response.admin.lastName,
           id_origin_city: response.destination.city,
           destinations: response.requests_destinations
             .map((dest: Dest) => dest.destination.city)

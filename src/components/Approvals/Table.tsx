@@ -147,7 +147,7 @@ interface TableProps {
                       <div className="grid grid-cols-3 gap-6">
                         <div>
                           <strong>Solicitante:</strong>{" "}
-                          {`${row?.user?.name} ${row?.user?.last_name}`}
+                          {`${row?.user?.name} ${row?.user?.lastName}`}
                         </div>
                         <div>
                           <strong>Correo Electrónico:</strong>{" "}
@@ -155,7 +155,7 @@ interface TableProps {
                         </div>
                         <div>
                           <strong>Aprobador:</strong>{" "}
-                          {`${row?.admin?.name} ${row?.admin?.last_name}`}
+                          {`${row?.admin?.name} ${row?.admin?.lastName}`}
                         </div>
                         <div>
                           <strong>Estatus:</strong> {row?.status}
