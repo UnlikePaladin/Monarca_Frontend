@@ -83,13 +83,13 @@ const RequestInfo: React.FC = () => {
           formatted_status: renderStatus(response.status),
           createdAt: formatDate(response.createdAt),
           advance_money_str: formatMoney(response.advance_money),
-          admin: response.admin.name + " " + response.admin.last_name,
+          admin: response.admin.name + " " + response.admin.lastName,
           id_origin_city: response.destination.city,
           destinations: response.requests_destinations
             .map((dest: any) => dest.destination.city)
             .join(", "),
         });
-        setSelectedAgency(response.id_travel_agency || "");
+        setSelectedAgency(response.idTravelAgency || "");
       } catch (error) {
         console.error("Error fetching request data:", error);
       }
@@ -279,7 +279,7 @@ const RequestInfo: React.FC = () => {
             <p className="mb-6 text-gray-700 font-medium">
               Solicitante:{" "}
               <span className="text-[var(--blue)]">
-                {data?.user?.name} {data?.user?.last_name}
+                {data?.user?.name} {data?.user?.lastName}
               </span>
             </p>
 
@@ -722,7 +722,7 @@ const RequestInfo: React.FC = () => {
                     readOnly
                     value={
                       agencies?.find(
-                        (agency) => agency.id === data.id_travel_agency
+                        (agency) => agency.id === data.idTravelAgency
                       )?.name
                     }
                     className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"

@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               isAuthenticated: true,
               userId: response.user.id,
               userName: response.user.name,
-              userLastName: response.user.last_name,
+              userLastName: response.user.lastName,
               userRole: response.user.role.name,
               userPermissions: response.user.role.permissions.map(
                 (permission: { name: string }) => permission.name
