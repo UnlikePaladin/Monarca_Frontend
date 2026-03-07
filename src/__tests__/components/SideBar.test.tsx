@@ -43,6 +43,24 @@ describe('Sidebar', () => {
     expect(screen.getByText('Manager')).toBeInTheDocument()
   })
 
+  it('does not crash when names are missing', () => {
+    const emptyUser: AuthState = {
+      ...mockUser,
+      userName: '',
+      userLastName: '',
+      userRole: ''
+    };
+
+    render(
+      <RouterWrapper>
+        <Sidebar user={emptyUser} />
+      </RouterWrapper>
+    );
+
+    // component should render with blanks but not throw
+    expect(screen.getByText('')).toBeInTheDocument();
+  })
+
   it('always renders Inicio option', () => {
     render(
       <RouterWrapper>

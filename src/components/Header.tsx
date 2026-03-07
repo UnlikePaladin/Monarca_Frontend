@@ -39,7 +39,7 @@ function Header() {
                   className="flex text-sm bg-[var(--ultra-light-blue)] p-2 rounded-full"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
-                  {authState?.userName[0]?.toUpperCase()}{authState?.userLastName[0]?.toUpperCase()}
+                  {(authState?.userName?.[0] ?? "").toUpperCase()}{(authState?.userLastName?.[0] ?? "").toUpperCase()}
                 </button>
               </div>
               {dropdownOpen &&
@@ -48,7 +48,7 @@ function Header() {
                 >
                   <div className="px-4 py-3">
                     <p className="text-sm text-[var(--gray)] font-bold whitespace-nowrap overflow-hidden [mask-image:linear-gradient(to_right,black_80%,transparent)] w-[130px]">
-                    {authState.userName} {authState.userLastName}
+                    {authState.userName ?? ""} {authState.userLastName ?? ""}
                     </p>
                     <p className="text-sm font-medium text-[var(--gray)] whitespace-nowrap overflow-hidden [mask-image:linear-gradient(to_right,black_80%,transparent)] w-[130px]">
                      {authState.userEmail}
