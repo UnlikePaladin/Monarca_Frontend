@@ -72,6 +72,13 @@ function Sidebar({ user }: { user: AuthState }) {
             {user.userPermissions.includes("view_assigned_requests_readonly" as Permission) && user.userPermissions.includes("submit_reservations" as Permission) && (
               <SidebarOption label="Historial de viajes reservados" pathIcon="/assets/historial_de_viajes_reservados.png" link="/history"/>
             )}
+            {user.userPermissions.includes("manage_users" as Permission) && (
+              <SidebarOption
+                label="Administración de roles"
+                pathIcon="/assets/roles.png"
+                link="/roles"
+              />
+            )}
         </ul>
       </div>
     </aside>

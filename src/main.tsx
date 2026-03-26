@@ -23,6 +23,7 @@ import Register from "./pages/Register.tsx";
 import Error from "./pages/Error.tsx";
 import Historial from "./pages/historial/Historial.tsx";
 import Bookings from "./pages/Bookings.tsx";
+import Roles from "./pages/Roles/Roles.tsx";
 import { Refunds } from "./pages/Refunds/Refunds.tsx";
 import { Vouchers } from "./pages/Refunds/Vouchers.tsx";
 import Reservations from "./pages/Reservations/Reservations.tsx";
@@ -109,6 +110,18 @@ export const router = createBrowserRouter([
       {
         path: "/refunds-review/:id",
         element: <RefundsAcceptance />,
+      },
+      {
+        path: "/roles",
+        element: (
+          <PermissionProtectedRoute requiredPermissions={["manage_users"]} />
+        ),
+        children: [
+          {
+            path: "",
+            element: <Roles />,
+          },
+        ],
       },
       {
         path: "/approval",
