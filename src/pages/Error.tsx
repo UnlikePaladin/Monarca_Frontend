@@ -1,4 +1,5 @@
-// src/pages/NotFound.jsx
+/*his NotFound component renders a custom 404 error page displayed when a user navigates to a route that does not exist. It shows a large “404” heading, a message explaining that the page was not found or may have been moved, and provides two navigation options using React Router Link: one to return to the home page (/) and another to go directly to the dashboard (/dashboard). The layout is styled with Tailwind CSS for a centered card design on a dark background, and it includes a decorative 404 icon image at the bottom. */
+
 import { Link } from "react-router-dom";
 
 const NotFound = () => {

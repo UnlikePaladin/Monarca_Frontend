@@ -33,6 +33,16 @@ describe("Header", () => {
     handleLogout: vi.fn()
   };
 
+  const fakeAuthEmpty = {
+    authState: {
+      userName: "",
+      userLastName: "",
+      userEmail: "",
+      userRole: ""
+    },
+    handleLogout: vi.fn()
+  };
+
   beforeEach(() => {
     mockedUseAuth.mockReturnValue(fakeAuth);
     mockedUseApp.mockReturnValue({ pageTitle: "Dashboard" });
@@ -43,6 +53,13 @@ describe("Header", () => {
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     // L y B
     expect(screen.getByRole("button", { name: "LB" })).toBeInTheDocument();
+  });
+
+  it("no falla si faltan los nombres (error previo de undefined)", () => {
+    mockedUseAuth.mockReturnValue(fakeAuthEmpty);
+    render(<Header />);
+    // should render without throwing and show empty avatar
+    expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
   it("al hacer clic muestra el menú con datos y botón de logout", async () => {

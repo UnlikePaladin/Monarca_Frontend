@@ -14,25 +14,13 @@ import Button from "../../components/Refunds/Button";
 import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
 import { useApp } from "../../hooks/app/appContext";
+import { toast } from "react-toastify";
 
-//Interface for travel records data
-//interface TravelRecord {
-//id: string;
-//title: string;
-//travelDate: string;
-//destination: string;
-//requestDate: string;
-//}
-// // Interface for travel records data
-// interface TravelRecord {
-//   id: string;
-//   title: string;
-//   travelDate: string;
-//   destination: string;
-//   requestDate: string;
-// }
-
-
+/**
+ * Renders a styled status badge based on the request status.
+ * @param {string} status - The current status of the travel request.
+ * @returns {JSX.Element} A styled span element with the translated status text.
+ */
 const renderStatus = (status: string) => {
   let statusText = "";
   let styles = "";
@@ -88,9 +76,13 @@ const renderStatus = (status: string) => {
     )
 }
 
+/**
+ * Historial component - Displays a paginated table of travel
+ * history records. Fetches data based on user permissions and
+ * renders status, dates, and action buttons for each record.
+ * @returns {JSX.Element} The travel history page layout.
+ */
 export const Historial = () => {
-  // State to store selected travel record details
-  // const [selectedTravel, setSelectedTravel] = useState<TravelRecord | null>(null);
   const [dataWithActions, setDataWithActions] = useState([]);
   const { authState } = useAuth();
   const navigate = useNavigate();
@@ -137,17 +129,9 @@ export const Historial = () => {
             />
           ),
         })));
-        //   action: record.status == "Changes Needed" && (
-        //     <Button
-        //       label="Editar"
-        //       onClickFunction={() => {
-        //         navigate(`/requests/${record.id}/edit`);
-        //       }}
-        //     />
-        //   ),
-        // })));
       } catch (error) {
         console.error("Error fetching travel records:", error);
+        toast.error("Error al obtener el historial de viajes.");
       }
     };
 
@@ -169,7 +153,7 @@ export const Historial = () => {
     }, []);
 
   // Columns schema for travel history table
-  const columnsSchema = [
+  const COLUMNS_SCHEMA = [
     { key: "status", header: "Estado" },
     { key: "title", header: "Viaje" },
     { key: "motive", header: "Motivo" },
@@ -193,7 +177,7 @@ export const Historial = () => {
 
           {/* Travel history table component */}
           <div id="list_requests">
-            <Table columns={columnsSchema} data={dataWithActions} itemsPerPage={5} />
+            <Table columns={COLUMNS_SCHEMA} data={dataWithActions} itemsPerPage={5} />
           </div>
         </div>
       </Tutorial>
@@ -202,3 +186,10 @@ export const Historial = () => {
 };
 
 export default Historial;
+
+/*
+ * Modification History:
+ *
+ * - 2026-02-26 | Diego Flores| Standardized documentation,
+ *   error handling, and constant naming conventions.
+ */

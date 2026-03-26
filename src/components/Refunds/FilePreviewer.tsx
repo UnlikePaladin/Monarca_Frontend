@@ -1,3 +1,10 @@
+/**
+ * FilePreviewer.tsx
+ * 
+ * Component for previewing uploaded expense voucher files (PDF and XML).
+ * Displays file preview with metadata and download options.
+ */
+
 import formatDate from "../../utils/formatDate";
 import formatMoney from "../../utils/formatMoney";
 
@@ -14,8 +21,12 @@ interface FilePreviewerProps {
     fileIndex: number;
 }
 
-
-
+/**
+ * Renders a file preview with PDF viewer and metadata display.
+ * @param file - File object containing URLs and metadata
+ * @param fileIndex - Index of the file in the list
+ * @returns File previewer component with download options
+ */
 const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
     return (
         <>
@@ -61,3 +72,9 @@ const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
 }
 
 export default FilePreviewer;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated text to English.
+*/

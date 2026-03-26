@@ -1,3 +1,6 @@
+/*Defines an authentication and authorization system using React Context to manage user session data globally. The AuthContext stores the authentication state (authState), including whether the user is authenticated, their personal information, role, and permissions, as well as a loading flag and a logout handler. When the AuthProvider mounts, it fetches the user profile from /login/profile to determine if the user is authenticated and populates the context accordingly. 
+The handleLogout function calls /login/logout and resets the authentication state. Additionally, the file includes route protection components: ProtectedRoute, which wraps routes with AuthProvider, AppProvider, and a shared Layout, and PermissionProtectedRoute, which restricts access based on required permissions (either requiring all or any of them) and redirects unauthorized users to specific routes.*/
+
 // src/hooks/auth/authContext.tsx
 import React, { createContext, useContext, ReactNode, useEffect } from "react";
 import { Outlet, Navigate } from "react-router-dom";
@@ -70,12 +73,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               isAuthenticated: true,
               userId: response.user.id,
               userName: response.user.name,
-              userLastName: response.user.last_name,
-              userRole: response.user.role.name,
-              userPermissions: response.user.role.permissions.map(
-                (permission: { name: string }) => permission.name
-              ),
-              userEmail: response.user.email,
+              // API can sometimes omit optional fields; fall back to empty strings
+              userLastName: response.user.lastName ?? "",
+              userRole: response.user.role?.name ?? "",
+              userPermissions: response.user.role?.permissions
+                ? response.user.role.permissions.map(
+                    (permission: { name: string }) => permission.name
+                  )
+                : [],
+              userEmail: response.user.email ?? "",
             });
             setLoadingProfile(false);
           } else {

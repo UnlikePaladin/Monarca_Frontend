@@ -1,3 +1,5 @@
+/*This LoginPage component renders a styled login screen and handles user authentication against the backend. It keeps the user’s email and password in local state, updates them on input changes, and on form submit it validates that both fields are filled; if not, it shows an error toast. If the fields are valid, it sends a POST request to /login with the credentials using postRequest: when the response indicates success (result.status), it redirects the user to /dashboard, and if not, it displays a “Credenciales incorrectas” toast. It also catches unexpected request errors and shows a generic login error toast. The UI is split into a left panel with a background image and a right panel with the form, branding text, and a ToastContainer for notifications. */
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { postRequest } from "../utils/apiService";

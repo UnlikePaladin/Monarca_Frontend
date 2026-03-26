@@ -1,3 +1,10 @@
+/**
+ * DynamicTable.tsx
+ * 
+ * Dynamic table component for reservations with editable cells.
+ * Supports custom cell rendering and data change callbacks.
+ */
+
 import React, { useState, ReactNode } from "react";
 
 interface Column {
@@ -22,7 +29,13 @@ interface DynamicTableProps {
   onDataChange?: (data: TableRow[]) => void;
 }
 
-const DynamicTable: React.FC<DynamicTableProps> = ({
+/**
+ * Renders a dynamic table with editable cells for reservations.
+ * @param columns - Array of column definitions
+ * @param initialData - Initial data to populate the table
+ * @param onDataChange - Callback function when data changes
+ * @returns Dynamic table component
+ */const DynamicTable: React.FC<DynamicTableProps> = ({
   columns,
   initialData = [],
   onDataChange,
@@ -95,3 +108,9 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
 };
 
 export default DynamicTable;
+
+/*
+Modification History:
+
+- 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+*/
