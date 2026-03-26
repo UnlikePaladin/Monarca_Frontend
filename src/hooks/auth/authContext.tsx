@@ -73,12 +73,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               isAuthenticated: true,
               userId: response.user.id,
               userName: response.user.name,
-              userLastName: response.user.lastName,
-              userRole: response.user.role.name,
-              userPermissions: response.user.role.permissions.map(
-                (permission: { name: string }) => permission.name
-              ),
-              userEmail: response.user.email,
+              // API can sometimes omit optional fields; fall back to empty strings
+              userLastName: response.user.lastName ?? "",
+              userRole: response.user.role?.name ?? "",
+              userPermissions: response.user.role?.permissions
+                ? response.user.role.permissions.map(
+                    (permission: { name: string }) => permission.name
+                  )
+                : [],
+              userEmail: response.user.email ?? "",
             });
             setLoadingProfile(false);
           } else {
