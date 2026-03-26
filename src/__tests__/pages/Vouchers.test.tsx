@@ -5,13 +5,15 @@ import { Vouchers } from "./../../pages/Refunds/Vouchers.tsx";
 import { getRequest, postRequest, patchRequest } from "../../utils/apiService";
 import { toast } from "react-toastify";
 
+const mockNavigate = vi.fn();
+
 // Mock dependencies
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     useParams: () => ({ id: "123" }),
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -45,6 +47,13 @@ vi.mock("../../components/Refunds/DynamicTable", () => ({
               amount: 100,
               taxIndicator: "yes",
               date: "2024-01-01",
+            },
+            {
+              id: 2,
+              spentClass: "transport",
+              amount: 200,
+              taxIndicator: "no",
+              date: "2024-01-02",
             },
           ])
         }
@@ -91,6 +100,10 @@ vi.mock("../../components/GoBack", () => ({
   default: () => <button data-testid="go-back">Go Back</button>,
 }));
 
+vi.mock("../../components/Tutorial", () => ({
+  Tutorial: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 const mockTrip = {
   id: 123,
   title: "Business Trip to NYC",
@@ -107,6 +120,7 @@ const renderWithRouter = (component: React.ReactElement) => {
 describe("Vouchers Component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNavigate.mockClear();
   });
 
   it("renders component with initial state", async () => {
@@ -212,8 +226,91 @@ describe("Vouchers Component", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Error al enviar la solicitud de reembolso. Por favor, inténtelo de nuevo más tarde.",
+        "No pudimos subir 2 comprobante(s) en las filas 1, 2. No pudimos subir este comprobante. Inténtalo nuevamente.",
       );
+      expect(patchRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows structured upload 400 details and does not call finish endpoint", async () => {
+    vi.mocked(getRequest).mockResolvedValue(mockTrip);
+    vi.mocked(postRequest).mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          message: "Datos inválidos",
+          errorCode: "MISSING_REQUIRED_FIELDS",
+          missingFields: ["file_url_xml", "amount"],
+        },
+      },
+    });
+
+    renderWithRouter(<Vouchers />);
+
+    fireEvent.click(screen.getByTestId("add-row"));
+    fireEvent.click(screen.getByText("Enviar Solicitud"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "No pudimos subir 2 comprobante(s) en las filas 1, 2. Datos inválidos Revisa estos campos: file_url_xml, amount.",
+      );
+      expect(patchRequest).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows success/failure summary and failed row numbers when some uploads fail", async () => {
+    vi.mocked(getRequest).mockResolvedValue(mockTrip);
+    vi.mocked(postRequest)
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce({
+        response: {
+          status: 400,
+          data: {
+            message: "Datos inválidos",
+            errorCode: "MISSING_REQUIRED_FIELDS",
+            missingFields: ["file_url_pdf"],
+          },
+        },
+      });
+
+    renderWithRouter(<Vouchers />);
+
+    fireEvent.click(screen.getByTestId("add-row"));
+    fireEvent.click(screen.getByTestId("add-row"));
+    fireEvent.click(screen.getByText("Enviar Solicitud"));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "Se subieron 1 comprobante(s), pero 1 falló/fallaron (fila 2). Datos inválidos Revisa estos campos: file_url_pdf.",
+      );
+      expect(patchRequest).not.toHaveBeenCalled();
+      expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows backend message for finish 409 and does not navigate", async () => {
+    vi.mocked(getRequest).mockResolvedValue(mockTrip);
+    vi.mocked(postRequest).mockResolvedValue({});
+    vi.mocked(patchRequest).mockRejectedValue({
+      response: {
+        status: 409,
+        data: { message: "No valid voucher uploaded" },
+      },
+    });
+
+    renderWithRouter(<Vouchers />);
+
+    fireEvent.click(screen.getByTestId("add-row"));
+    fireEvent.click(screen.getByText("Enviar Solicitud"));
+
+    await waitFor(() => {
+      expect(patchRequest).toHaveBeenCalledWith(
+        "/requests/finished-uploading-vouchers/123",
+        {},
+      );
+      expect(toast.error).toHaveBeenCalledWith("No valid voucher uploaded");
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 
@@ -372,9 +469,10 @@ describe("Vouchers Component", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(patchRequest).toHaveBeenCalledWith(
-        "/requests/finished-uploading-vouchers/123",
-        {},
+      expect(postRequest).not.toHaveBeenCalled();
+      expect(patchRequest).not.toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith(
+        "No se subió ningún comprobante válido.",
       );
     });
   });
