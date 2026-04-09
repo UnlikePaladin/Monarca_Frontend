@@ -24,6 +24,7 @@ import Error from "./pages/Error.tsx";
 import Historial from "./pages/historial/Historial.tsx";
 import Bookings from "./pages/Bookings.tsx";
 import Roles from "./pages/Roles/Roles.tsx";
+import ApprovalRules from "./pages/ApprovalRules/ApprovalRules.tsx";
 import { Refunds } from "./pages/Refunds/Refunds.tsx";
 import { Vouchers } from "./pages/Refunds/Vouchers.tsx";
 import Reservations from "./pages/Reservations/Reservations.tsx";
@@ -121,7 +122,11 @@ export const router = createBrowserRouter([
             path: "",
             element: <Roles />,
           },
-        ],
+        ]
+      },
+      {
+        path: "/approval-rules",
+        element: <ApprovalRules />,
       },
       {
         path: "/approval",
