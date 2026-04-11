@@ -1,0 +1,169 @@
+/**
+ * Description: Component to display the list of approval rules with edit and delete actions.
+ */
+
+import React, { useState } from 'react';
+import { ApprovalRule, RuleCondition } from '../../types/approvalRules';
+import { Button } from '../ui/Button';
+import { useGetApprovalRules } from '../../hooks/approvalRules/useGetApprovalRules';
+import { useDeleteApprovalRule } from '../../hooks/approvalRules/useDeleteApprovalRule';
+
+const FIELD_LABELS: Record<string, string> = {
+  trip_type: 'Tipo',
+  cost: 'Costo',
+  priority: 'Prioridad',
+};
+
+const OPERATOR_LABELS: Record<string, string> = {
+  gt: '>',
+  gte: '>=',
+  lt: '<',
+  lte: '<=',
+  eq: '=',
+};
+
+const VALUE_LABELS: Record<string, string> = {
+  nacional: 'Nacional',
+  internacional: 'Internacional',
+  alta: 'Alta',
+  media: 'Media',
+  baja: 'Baja',
+};
+
+/**
+ * Formats a single condition into a human-readable Spanish string.
+ * @param condition The condition to format.
+ * @returns Formatted condition string.
+ */
+const formatCondition = (condition: RuleCondition): string => {
+  const field = FIELD_LABELS[condition.field] ?? condition.field;
+  const operator = condition.operator ? ` ${OPERATOR_LABELS[condition.operator]}` : '';
+  const value = VALUE_LABELS[String(condition.value)] ?? condition.value;
+  return `${field}${operator} ${value}`;
+};
+
+interface RuleListProps {
+  onEdit: (rule: ApprovalRule) => void;
+  onCreate: () => void;
+}
+
+/**
+ * Renders a table of all approval rules with options to create, edit, or delete each one.
+ * @param onEdit Callback triggered when the user selects a rule to edit.
+ * @param onCreate Callback triggered when the user wants to create a new rule.
+ * @returns React component with the rules table.
+ */
+export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
+  const { data: rules, isLoading } = useGetApprovalRules();
+  const { mutate: deleteRule, isPending: isDeleting } = useDeleteApprovalRule();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  /**
+   * Prompts the user for confirmation before deleting a rule.
+   * @param ruleId The unique identifier of the rule to delete.
+   * @param ruleName The rule name shown in the confirmation dialog.
+   */
+  const handleDelete = (ruleId: string, ruleName: string) => {
+    if (!confirm(`¿Seguro que deseas eliminar la regla "${ruleName}"?`)) return;
+    setDeletingId(ruleId);
+    deleteRule(ruleId, { onSettled: () => setDeletingId(null) });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12 text-gray-500 text-sm">
+        Cargando reglas...
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">Reglas de aprobación</h3>
+          <p className="text-sm text-gray-500 mt-0.5">Define quién autoriza cada tipo de solicitud</p>
+        </div>
+        <Button onClick={onCreate} className="bg-blue-600 text-white hover:bg-blue-700">
+          + Nueva Regla
+        </Button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <th className="py-3 px-6 text-sm font-medium text-gray-600">Nombre</th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600">Condiciones</th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">Niveles</th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">Estado</th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rules?.map((rule) => (
+              <tr key={rule.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                <td className="py-4 px-6 font-medium text-gray-800">{rule.name}</td>
+                <td className="py-4 px-6">
+                  <div className="flex flex-col gap-1">
+                    {rule.conditions.map((condition, i) => (
+                      <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full w-fit">
+                        {formatCondition(condition)}
+                      </span>
+                    ))}
+                    {rule.conditions.length === 0 && (
+                      <span className="text-xs text-gray-400 italic">Sin condiciones</span>
+                    )}
+                  </div>
+                </td>
+                <td className="py-4 px-6 text-center text-sm text-gray-600">
+                  {rule.approvalChain.length}
+                </td>
+                <td className="py-4 px-6 text-center">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    rule.isActive
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {rule.isActive ? 'Activa' : 'Inactiva'}
+                  </span>
+                </td>
+                <td className="py-4 px-6">
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={() => onEdit(rule)}
+                      className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Editar
+                    </button>
+                    <span className="text-gray-300">|</span>
+                    <button
+                      onClick={() => handleDelete(rule.id, rule.name)}
+                      disabled={isDeleting && deletingId === rule.id}
+                      className="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
+                    >
+                      {isDeleting && deletingId === rule.id ? 'Eliminando...' : 'Eliminar'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+
+            {rules?.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-12 text-center text-gray-400 text-sm">
+                  Sin reglas. Crea la primera para comenzar.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+/*
+ * Modification History:
+ * - 2026-04-08 | Juan de Dios Gastélum Flores | Initial file creation.
+ */

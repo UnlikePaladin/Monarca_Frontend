@@ -79,6 +79,13 @@ function Sidebar({ user }: { user: AuthState }) {
                 link="/roles"
               />
             )}
+            {user.userPermissions.includes("manage_users" as Permission) && (
+              <SidebarOption
+                label="Matriz de autorización"
+                pathIcon="/assets/matrix.png"
+                link="/approval-rules"
+              />
+            )}
         </ul>
       </div>
     </aside>
