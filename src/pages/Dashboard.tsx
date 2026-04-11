@@ -9,7 +9,10 @@ import { Tutorial } from "../components/Tutorial";
 interface DashboardProps {
   title: string;
 }
-
+/**
+ * Renders the responsive grid of mosaics based on user permissions.
+ * @param title Page title passed from router
+ */
 export const Dashboard = ({ title }: DashboardProps) => {
   const { setPageTitle } = useApp();
   const { authState } = useAuth();
@@ -38,7 +41,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
 
   return (
     <Tutorial page="dashboard" run={tutorial}>
-      <div className="grid grid-cols-4 gap-y-20 py-10 px-1 ml-0">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-16 py-10 justify-items-center">
         {authState.userPermissions.includes("create_request" as Permission) && (
           <Mosaic
             title="Crear solicitud de viaje"
@@ -152,3 +155,8 @@ export const Dashboard = ({ title }: DashboardProps) => {
     </Tutorial>
   );
 };
+
+/*
+Modification History:
+- 2026-04-09 | Fabrizio | Refactored grid system to support 1, 2, and 4 columns depending on device width.
+*/

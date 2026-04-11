@@ -14,24 +14,34 @@ import SidebarOption from "./SidebarOption";
 import { AuthState, Permission } from "../hooks/auth/authContext";
 
 /**
- * Renders the sidebar with user info and permission-based navigation menu.
- * @param user - Authenticated user state including permissions and profile info
- * @returns Sidebar component with logo, user info, and navigation menu
+ * Interface for Sidebar component properties.
  */
-function Sidebar({ user }: { user: AuthState }) {
+interface SidebarProps {
+  user: AuthState;
+  isOpen: boolean; 
+}
+/**
+ * Renders a responsive sidebar with user info and permission-based navigation.
+ * Collapses into a drawer on small screens.
+ * @param user Authenticated user state including permissions and profile info.
+ * @param isOpen Boolean state to control mobile visibility toggle.
+ */
+function Sidebar({ user, isOpen }: SidebarProps) {
   return (
     <aside
       id="logo-sidebar"
-      className="w-[200px] pt-24 bg-[var(--gray)] text-[var(--black)]"
+      className={`fixed top-0 left-0 z-40 w-[240px] h-screen pt-24 transition-transform bg-[var(--gray)] border-r border-gray-200 
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} 
+        lg:translate-x-0`}
       aria-label="Sidebar"
     >
-      <div className="h-full px-3 pb-4 overflow-y-auto">
-        <div className="flex items-center bg-[var(--dark-blue)] mb-6 w-[120px] mx-auto p-4 rounded-lg">
+      <div className="h-full px-3 pb-4 overflow-y-auto bg-[var(--gray)]">
+        <div className="flex items-center bg-[var(--dark-blue)] mb-6 w-[100px] mx-auto p-3 rounded-xl">
             <img src={logo} className="invert mx-auto" alt="Monarca Logo" />
         </div>
-        <div className="flex flex-col items-center justify-center mb-6 text-center">
-          <p className="text-[var(--blue)] font-bold">{user.userName ?? ""} {user.userLastName ?? ""} </p>
-          <p className="text-[var(--blue)] text-sm">{user.userRole ?? ""}</p>
+        <div className="flex flex-col items-center justify-center mb-6 text-center px-2">
+          <p className="text-[var(--blue)] font-bold truncate w-full">{user.userName ?? ""} {user.userLastName ?? ""} </p>
+          <p className="text-[var(--ultra-light-blue)] text-xs font-medium uppercase tracking-wider">{user.userRole ?? ""}</p>
         </div>
         <ul className="space-y-2 font-medium">
             <SidebarOption 
@@ -98,4 +108,5 @@ export default Sidebar;
 Modification History:
 
 - 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and fixed import path.
+- 2026-04-09 | Fabrizio | Converted to a responsive drawer with transition effects.
 */
