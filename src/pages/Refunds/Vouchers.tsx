@@ -16,6 +16,7 @@ import formatMoney from "../../utils/formatMoney";
 import { toast } from "react-toastify";
 import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
+import { PolicyAlert } from "../../components/Refunds/PolicyAlert";
 
 interface FormDataRow extends DynamicTableRow {
   spentClass: string;
@@ -38,6 +39,7 @@ interface UploadVoucherErrorResponse {
   message?: string;
   errorCode?: string;
   missingFields?: string[];
+  policy_summary?: any;
 }
 
 interface UploadFailureDetail {
@@ -120,6 +122,8 @@ export const Vouchers = () => {
     },
   });
   const [commentValue, setCommentValue] = useState<string>("");
+  const [policyViolations, setPolicyViolations] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -134,10 +138,17 @@ export const Vouchers = () => {
       }
     };
     fetchTrip();
-  }, []);
+  }, [id]);
+
+   /**
+   * Processes each row of the table, uploads files to the server and handles policy engine rejections.
+   * If a 422 error occurs, it extracts policy violations to display them to the requester.
+   */
 
   const handleSubmitRefund = async () => {
     let currentStep: "upload" | "finish" = "upload";
+    setPolicyViolations([]); 
+    setIsSubmitting(true);
 
     try {
       // comprobante_pendiente, comprobante_denegado, comprobante_aprobado
@@ -150,12 +161,18 @@ export const Vouchers = () => {
           continue;
         }
 
+        if (!rowData.date) {
+            toast.error(`La fila ${index + 1} no tiene una fecha seleccionada.`);
+            setIsSubmitting(false);
+            return;
+        }
+
         attemptedUploads += 1;
         formDataToSend = new FormData();
 
         formDataToSend.append("id_request", trip.id.toString());
         //formDataToSend.append("comment", commentDescriptionOfSpend);
-        formDataToSend.append("date", new Date().toISOString());
+        formDataToSend.append("date", rowData.date);
         formDataToSend.append("class", rowData.spentClass);
         formDataToSend.append("amount", rowData.amount.toString());
         formDataToSend.append("tax_type", rowData.taxIndicator);
@@ -181,6 +198,12 @@ export const Vouchers = () => {
               ? getUploadErrorMessage(axiosError.response?.data)
               : axiosError.response?.data?.message ||
                 "Error al subir el comprobante.";
+          
+          if (statusCode === 422 && axiosError.response?.data?.policy_summary) {
+            const violations = axiosError.response.data.policy_summary.violations;
+            setPolicyViolations(prev => [...prev, ...violations]);
+          }
+          
           const userUploadMessage =
             statusCode === 400
               ? getUploadUserMessage(axiosError.response?.data)
@@ -239,6 +262,7 @@ export const Vouchers = () => {
           }
         );
         toast.error("No se subió ningún comprobante válido.");
+        setIsSubmitting(false);
         return;
       }
 
@@ -263,6 +287,7 @@ export const Vouchers = () => {
         toast.error(
           `No pudimos subir ${failedUploads.length} comprobante(s) en ${rowLabel}. ${firstFailureReason}`
         );
+        setIsSubmitting(false);
         return;
       }
 
@@ -290,6 +315,7 @@ export const Vouchers = () => {
         );
 
         setFormData(failedUploads.map((failure) => failure.rowData));
+        setIsSubmitting(false);
         return;
       }
 
@@ -307,6 +333,12 @@ export const Vouchers = () => {
 
       const axiosError = err as AxiosError<UploadVoucherErrorResponse>;
       const statusCode = axiosError.response?.status;
+
+       if (statusCode === 422 && axiosError.response?.data?.policy_summary) {
+        setPolicyViolations(axiosError.response.data.policy_summary.violations);
+        toast.error("La solicitud excede los límites de anticipo o tiempo.");
+        return;
+      }
 
       if (currentStep === "upload" && statusCode === 400) {
         console.error("Voucher upload rejected (400).", {
@@ -335,6 +367,8 @@ export const Vouchers = () => {
       toast.error(
         "Error al enviar la solicitud de reembolso. Por favor, inténtelo de nuevo más tarde."
       );
+    }finally {
+      setIsSubmitting(false); 
     }
   };
   const columnsSchemaVauchers = [
@@ -548,6 +582,7 @@ export const Vouchers = () => {
            * The comment is stored in the commentDescriptionOfSpend state,
            * and is updated with the setCommentDescriptionOfSpend function.
            */}
+          <PolicyAlert violations={policyViolations} />
           <h3 className="text-lg font-bold text-[#0a2c6d] mt-4 mb-2">
             Comentario
           </h3>
@@ -567,12 +602,17 @@ export const Vouchers = () => {
             </Link>
             <button
               id="submit-refund"
-              className="px-4 py-2 bg-[#0a2c6d] text-white rounded-md hover:bg-[#0d3d94] transition-colors hover:cursor-pointer"
-              onClick={() => {
-                handleSubmitRefund();
-              }}
+              disabled={isSubmitting}
+              className={`px-4 py-2 text-white rounded-md transition-colors ${
+                isSubmitting 
+                  ? "bg-gray-400 cursor-not-allowed" 
+                  : "bg-[#0a2c6d] hover:bg-[#0d3d94] hover:cursor-pointer"
+              }`}
+              onClick={
+                handleSubmitRefund
+              }
             >
-              Enviar Solicitud
+              {isSubmitting ? "Procesando..." : "Enviar Solicitud"}
             </button>
           </div>
         </div>
@@ -580,3 +620,7 @@ export const Vouchers = () => {
     </>
   );
 };
+/*
+Modification History:
+2026-04-11 | Fabrizio | Integrated policy engine validation (422 error handling) and trip window date synchronization.
+*/

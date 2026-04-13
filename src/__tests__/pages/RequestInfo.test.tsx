@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import RequestInfo from '../../pages/RequestInfo';
+import { getRequest } from "../../utils/apiService";
 
 /* ──────────── VARIABLES DE CONTROL (se cambian en cada test) ──────────── */
 let mockPermissions: string[] = ['approve_request'];
@@ -210,4 +211,30 @@ it('mantiene deshabilitado “Aprobar” si no se elige agencia', async () => {
   await userEvent.click(approveBtn);
   expect(apiService.patchRequest).not.toHaveBeenCalled();
 });
+
+it("el Aprobador ve las violaciones de política al cargar la solicitud", async () => {
+
+    vi.mocked(getRequest).mockImplementation((url: string) => {
+      if (url.includes("/policy-violations")) {
+        return Promise.resolve({
+          violations: [{ 
+            policy_code: "TOTAL_LTE_ADVANCE", 
+            message: "Gasto fuera de fecha", 
+            severity: "BLOCKING",
+            evaluated_value: { total_vouchers: 100, advance_money: 50 } 
+          }]
+        });
+      }
+      return Promise.resolve(baseRequest); 
+    });
+
+    renderPage(); 
+
+    await waitFor(() => {
+      expect(getRequest).toHaveBeenCalledWith(expect.stringContaining("/policy-violations"));
+    });
+
+    expect(await screen.findByText("Resultado de Auditoría Automática")).toBeInTheDocument();
+    expect(screen.getByText("Gasto fuera de fecha")).toBeInTheDocument();
+  });
 });
