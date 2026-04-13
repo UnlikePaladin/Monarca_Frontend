@@ -104,6 +104,16 @@ vi.mock("../../components/Tutorial", () => ({
   Tutorial: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock("../../components/Refunds/PolicyAlert", () => ({
+  PolicyAlert: ({ violations }: { violations: any[] }) => (
+    <div data-testid="policy-alert">
+      {violations.map((v, i) => (
+        <p key={i}>{v.message}</p>
+      ))}
+    </div>
+  ),
+}));
+
 const mockTrip = {
   id: 123,
   title: "Business Trip to NYC",
@@ -532,6 +542,65 @@ describe("Vouchers Component", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalled();
+    });
+  });
+
+  it("shows policy violations when postRequest returns 422 (individual voucher error)", async () => {
+    vi.mocked(getRequest).mockResolvedValue(mockTrip);
+    vi.mocked(postRequest).mockRejectedValue({
+      response: {
+        status: 422,
+        data: {
+          policy_summary: {
+            violations: [{ 
+              policy_code: "MISSING_XML", 
+              message: "Voucher is missing XML file", 
+              severity: "BLOCKING"  
+            }]
+          }
+        }
+      }
+    });
+
+    renderWithRouter(<Vouchers />);
+
+    
+    fireEvent.click(screen.getByTestId("add-row"));
+    fireEvent.click(screen.getByText("Enviar Solicitud"));
+
+    await waitFor(() => {
+     
+      expect(screen.getByTestId("policy-alert")).toBeInTheDocument();
+      expect(screen.getByText("Voucher is missing XML file")).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("Existen comprobantes que no cumplen con las políticas.");
+    });
+  });
+
+  it("shows policy violations when patchRequest returns 422 (total or time error)", async () => {
+    vi.mocked(getRequest).mockResolvedValue(mockTrip);
+    
+    vi.mocked(postRequest).mockResolvedValue({}); 
+    
+    vi.mocked(patchRequest).mockRejectedValue({
+      response: {
+        status: 422,
+        data: {
+          policy_summary: {
+            violations: [{ message: "Total vouchers exceeds advance", severity: "BLOCKING" }]
+          }
+        }
+      }
+    });
+
+    renderWithRouter(<Vouchers />);
+
+    fireEvent.click(screen.getByTestId("add-row"));
+    fireEvent.click(screen.getByText("Enviar Solicitud"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("policy-alert")).toBeInTheDocument();
+      expect(screen.getByText("Total vouchers exceeds advance")).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("La solicitud excede los límites permitidos.");
     });
   });
 });
