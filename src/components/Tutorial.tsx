@@ -120,6 +120,49 @@ const createRequestSteps = [
 }
 ]
 
+const createTenantSteps = [
+  {
+    element: "#tenant_info",
+    popover: {
+      title: "Datos de la Empresa",
+      description: "Escribe el nombre de la empresa que vas a registrar.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_currency",
+    popover: {
+      title: "Moneda Local",
+      description: "Selecciona la moneda local con la que operará la empresa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_departments",
+    popover: {
+      title: "Departamentos",
+      description: "Aquí agregas los departamentos y su centro de costos.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#add_department",
+    popover: {
+      title: "Agregar Departamento",
+      description: "Puedes añadir tantos departamentos como necesites.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_tenant",
+    popover: {
+      title: "Crear Empresa",
+      description: "Cuando termines, guarda la empresa con este botón.",
+      position: "bottom",
+    },
+  },
+]
+
 const historySteps = [
   {
     element: "#list_requests",
@@ -394,6 +437,7 @@ const requestInfoSteps = [
 const stepsMap: Record<string, typeof dashboardSteps> = {
   dashboard: dashboardSteps,
   createRequest: createRequestSteps,
+  createTenant: createTenantSteps,
   history: historySteps,
   refunds: refundsSteps,
   vouchers: vouchersSteps,
@@ -408,7 +452,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
 
 interface TutorialProps {
    children: React.ReactNode;
-   page: "dashboard" | "createRequest" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
+  page: "dashboard" | "createRequest" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
    run?: boolean;
   }
 
