@@ -3,6 +3,7 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { deleteRequest } from '../../utils/apiService';
 
 /**
  * Sends a DELETE request to remove a role.
@@ -10,7 +11,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
  * @returns Promise resolving when the deletion is confirmed.
  */
 const deleteRole = async (roleId: string): Promise<void> => {
-  // TODO: replace with API call → return deleteRequest(`/roles/${roleId}`);
+  await deleteRequest(`/roles/${roleId}`);
 };
 
 /**

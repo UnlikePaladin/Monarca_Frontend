@@ -4,20 +4,27 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Role } from '../../types/auth';
+import { getRequest } from '../../utils/apiService';
+import { normalizeRole, pickFirstArray } from './roleMappers';
 
-const MOCK_ROLES: Role[] = [
-  { id: 'role_1', name: 'Administrador', description: 'Acceso completo al sistema', isActive: true, permissions: [] },
-  { id: 'role_2', name: 'Aprobador', description: 'Puede aprobar solicitudes de viaje', isActive: true, permissions: [] },
-  { id: 'role_3', name: 'Solicitante', description: 'Puede crear solicitudes de viaje', isActive: true, permissions: [] },
-];
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
 /**
  * Fetches all roles from the backend.
  * @returns Promise resolving to an array of Role objects.
  */
 const fetchRoles = async (): Promise<Role[]> => {
-  // TODO: replace with API call → return getRequest('/roles');
-  return MOCK_ROLES;
+  const response = await getRequest('/roles');
+  const payload = toRecord(response);
+
+  const rolesRaw = Array.isArray(response)
+    ? response
+    : pickFirstArray(payload, ['roles', 'data']);
+
+  return rolesRaw
+    .map((item) => normalizeRole(item))
+    .filter((item): item is Role => item !== null);
 };
 
 /**

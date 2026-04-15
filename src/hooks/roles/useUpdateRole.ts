@@ -4,6 +4,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Role } from '../../types/auth';
+import { patchRequest } from '../../utils/apiService';
+import { normalizeRole } from './roleMappers';
 
 interface UpdateRolePayload {
   roleId: string;
@@ -17,8 +19,23 @@ interface UpdateRolePayload {
  * @returns Promise resolving to the updated Role object.
  */
 const updateRole = async ({ roleId, data }: UpdateRolePayload): Promise<Role> => {
-  // TODO: replace with API call → return patchRequest(`/roles/${roleId}`, data);
-  return { id: roleId, name: '', description: '', isActive: true, permissions: [], ...data };
+  const response = await patchRequest(`/roles/${roleId}`, data);
+  const raw =
+    (response as Record<string, unknown>)?.role ??
+    (response as Record<string, unknown>)?.data ??
+    response;
+
+  const normalized = normalizeRole(raw);
+  if (normalized) return normalized;
+
+  return {
+    id: roleId,
+    name: '',
+    description: '',
+    isActive: true,
+    permissions: [],
+    ...data,
+  };
 };
 
 /**

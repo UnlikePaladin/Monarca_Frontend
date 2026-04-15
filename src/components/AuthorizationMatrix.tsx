@@ -2,9 +2,10 @@
  * Description: Component to display and edit granular permissions across different modules.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from './ui/Button';
 import { ActionType, ModulePermission } from './../types/auth';
+import { useGetPermissions } from '../hooks/roles/useGetPermissions';
 
 const ACTIONS: { key: ActionType; label: string }[] = [
   { key: 'create', label: 'Crear' },
@@ -12,12 +13,6 @@ const ACTIONS: { key: ActionType; label: string }[] = [
   { key: 'update', label: 'Actualizar' },
   { key: 'delete', label: 'Eliminar' },
   { key: 'approve', label: 'Aprobar' },
-];
-
-const MOCK_MODULES = [
-  { id: 'mod_travel', name: 'Solicitudes de Viaje' },
-  { id: 'mod_refunds', name: 'Reembolsos' },
-  { id: 'mod_bookings', name: 'Reservaciones' },
 ];
 
 interface AuthorizationMatrixProps {
@@ -40,9 +35,30 @@ const buildInitialMap = (permissions: ModulePermission[]): Record<string, Action
  * @returns React component with the permission matrix.
  */
 export const AuthorizationMatrix = ({ initialPermissions = [], onSave, autoSave = false }: AuthorizationMatrixProps) => {
+  const { data: availableModules = [], isLoading } = useGetPermissions();
   const [permissionsMap, setPermissionsMap] = useState<Record<string, ActionType[]>>(
     () => buildInitialMap(initialPermissions)
   );
+
+  useEffect(() => {
+    setPermissionsMap(buildInitialMap(initialPermissions));
+  }, [initialPermissions]);
+
+  const displayedModules = useMemo(() => {
+    if (availableModules.length > 0) {
+      return availableModules.map((moduleItem) => ({
+        id: moduleItem.moduleId,
+        name: moduleItem.moduleName,
+        availableActions: moduleItem.availableActions,
+      }));
+    }
+
+    return initialPermissions.map((permission) => ({
+      id: permission.moduleId,
+      name: permission.moduleName,
+      availableActions: permission.allowedActions,
+    }));
+  }, [availableModules, initialPermissions]);
 
   /**
    * Toggles an action for a specific module inside the permissions map.
@@ -61,7 +77,7 @@ export const AuthorizationMatrix = ({ initialPermissions = [], onSave, autoSave 
       };
 
       if (autoSave) {
-        const payload: ModulePermission[] = MOCK_MODULES.map((m) => ({
+        const payload: ModulePermission[] = displayedModules.map((m) => ({
           moduleId: m.id,
           moduleName: m.name,
           allowedActions: updated[m.id] || [],
@@ -77,7 +93,7 @@ export const AuthorizationMatrix = ({ initialPermissions = [], onSave, autoSave 
    * Transforms the current map to an array payload and triggers the save callback.
    */
   const handleSave = () => {
-    const payload: ModulePermission[] = MOCK_MODULES.map((moduleItem) => ({
+    const payload: ModulePermission[] = displayedModules.map((moduleItem) => ({
       moduleId: moduleItem.id,
       moduleName: moduleItem.name,
       allowedActions: permissionsMap[moduleItem.id] || [],
@@ -88,6 +104,10 @@ export const AuthorizationMatrix = ({ initialPermissions = [], onSave, autoSave 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <h3 className="text-lg font-semibold mb-4">Matriz de Permisos</h3>
+
+      {isLoading && (
+        <p className="text-sm text-gray-500 mb-4">Cargando permisos disponibles...</p>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -102,7 +122,7 @@ export const AuthorizationMatrix = ({ initialPermissions = [], onSave, autoSave 
             </tr>
           </thead>
           <tbody>
-            {MOCK_MODULES.map((moduleItem) => (
+            {displayedModules.map((moduleItem) => (
               <tr key={moduleItem.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td className="py-4 px-4 font-medium text-gray-800">{moduleItem.name}</td>
                 {ACTIONS.map((action) => (
@@ -110,6 +130,10 @@ export const AuthorizationMatrix = ({ initialPermissions = [], onSave, autoSave 
                     <input
                       type="checkbox"
                       className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                      disabled={
+                        moduleItem.availableActions.length > 0 &&
+                        !moduleItem.availableActions.includes(action.key)
+                      }
                       checked={(permissionsMap[moduleItem.id] || []).includes(action.key)}
                       onChange={() => handleToggle(moduleItem.id, action.key)}
                     />
@@ -117,6 +141,14 @@ export const AuthorizationMatrix = ({ initialPermissions = [], onSave, autoSave 
                 ))}
               </tr>
             ))}
+
+            {displayedModules.length === 0 && !isLoading && (
+              <tr>
+                <td colSpan={ACTIONS.length + 1} className="py-8 px-4 text-center text-sm text-gray-500">
+                  No hay módulos de permisos configurados.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

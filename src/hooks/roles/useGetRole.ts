@@ -4,6 +4,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Role } from '../../types/auth';
+import { getRequest } from '../../utils/apiService';
+import { normalizeRole } from './roleMappers';
+
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
 /**
  * Fetches a single role by its unique identifier.
@@ -11,17 +16,16 @@ import { Role } from '../../types/auth';
  * @returns Promise resolving to a Role object.
  */
 const fetchRole = async (roleId: string): Promise<Role> => {
-  // TODO: replace with API call → return getRequest(`/roles/${roleId}`);
-  return {
-    id: roleId,
-    name: 'Admin',
-    description: 'Full system access',
-    isActive: true,
-    permissions: [
-      { moduleId: 'mod_travel', moduleName: 'Solicitudes de Viaje', allowedActions: ['create', 'read', 'approve'] },
-      { moduleId: 'mod_refunds', moduleName: 'Reembolsos', allowedActions: ['read'] },
-    ],
-  };
+  const response = await getRequest(`/roles/${roleId}`);
+  const payload = toRecord(response);
+  const roleRaw = payload.role ?? payload.data ?? response;
+  const role = normalizeRole(roleRaw);
+
+  if (!role) {
+    throw new Error('No se pudo normalizar el rol solicitado');
+  }
+
+  return role;
 };
 
 /**
