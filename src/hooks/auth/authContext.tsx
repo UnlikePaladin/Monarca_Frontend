@@ -10,15 +10,43 @@ import { getRequest, postRequest } from "../../utils/apiService";
 import { AppProvider } from "../app/appContext";
 
 // Define permissions
-export type Permission =
-  | "view_dashboard"
-  | "create_trip"
-  | "approve_trip"
-  | "book_trip"
-  | "view_reports"
-  | "manage_users"
-  | "view_approval_history"
-  | "view_booking_history";
+export type Permission = string;
+
+const parsePermissions = (value: unknown): Permission[] => {
+  if (!Array.isArray(value)) return [];
+
+  const normalized = value
+    .map((permissionItem) => {
+      if (typeof permissionItem === 'string') {
+        return permissionItem;
+      }
+
+      if (permissionItem && typeof permissionItem === 'object') {
+        const raw = permissionItem as {
+          name?: unknown;
+          permission?: unknown;
+          code?: unknown;
+        };
+
+        if (
+          raw.permission &&
+          typeof raw.permission === 'object' &&
+          typeof (raw.permission as { name?: unknown }).name === 'string'
+        ) {
+          return (raw.permission as { name: string }).name;
+        }
+
+        if (typeof raw.name === 'string') return raw.name;
+        if (typeof raw.permission === 'string') return raw.permission;
+        if (typeof raw.code === 'string') return raw.code;
+      }
+
+      return '';
+    })
+    .filter((permission): permission is Permission => Boolean(permission));
+
+  return Array.from(new Set(normalized));
+};
 
 export interface ContextType {
   authState: AuthState;
@@ -76,11 +104,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               // API can sometimes omit optional fields; fall back to empty strings
               userLastName: response.user.lastName ?? "",
               userRole: response.user.role?.name ?? "",
-              userPermissions: response.user.role?.permissions
-                ? response.user.role.permissions.map(
-                    (permission: { name: string }) => permission.name
-                  )
-                : [],
+              userPermissions: parsePermissions(
+                response.user.role?.rolePermissions ??
+                  response.user.role?.permissions ??
+                  response.user.permissions
+              ),
               userEmail: response.user.email ?? "",
             });
             setLoadingProfile(false);

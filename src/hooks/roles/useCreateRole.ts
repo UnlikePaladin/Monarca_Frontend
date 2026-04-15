@@ -4,6 +4,8 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Role } from '../../types/auth';
+import { postRequest } from '../../utils/apiService';
+import { normalizeRole } from './roleMappers';
 
 type CreateRolePayload = Omit<Role, 'id'>;
 
@@ -13,8 +15,16 @@ type CreateRolePayload = Omit<Role, 'id'>;
  * @returns Promise resolving to the created Role object.
  */
 const createRole = async (payload: CreateRolePayload): Promise<Role> => {
-  // TODO: replace with API call → return postRequest('/roles', payload);
-  return { id: `role_${Date.now()}`, ...payload };
+  const response = await postRequest('/roles', payload);
+  const raw =
+    (response as Record<string, unknown>)?.role ??
+    (response as Record<string, unknown>)?.data ??
+    response;
+
+  const normalized = normalizeRole(raw);
+  if (normalized) return normalized;
+
+  return { id: `temp_${Date.now()}`, ...payload };
 };
 
 /**

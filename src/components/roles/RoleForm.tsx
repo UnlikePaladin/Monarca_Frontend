@@ -3,7 +3,7 @@
  *              Operates in create mode when no role prop is provided, and edit mode otherwise.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,6 +37,10 @@ interface RoleFormProps {
 export const RoleForm = ({ role, onClose }: RoleFormProps) => {
   const isEditMode = !!role;
   const [permissions, setPermissions] = useState<ModulePermission[]>(role?.permissions ?? []);
+
+  useEffect(() => {
+    setPermissions(role?.permissions ?? []);
+  }, [role]);
 
   const { mutate: createRole, isPending: isCreating } = useCreateRole();
   const { mutate: updateRole, isPending: isUpdating } = useUpdateRole();
