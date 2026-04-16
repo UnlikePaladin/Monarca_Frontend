@@ -45,7 +45,7 @@ export const Reservations = () => {
               plane_required: destination.is_plane_required ? "Sí" : "No",
               stay_days: destination.stay_days,
               details: destination.details,
-            })
+            }),
           ),
         });
       } catch (error) {
@@ -59,7 +59,7 @@ export const Reservations = () => {
   useEffect(() => {
     // Get the visited pages from localStorage
     const visitedPages = JSON.parse(
-      localStorage.getItem("visitedPages") || "[]"
+      localStorage.getItem("visitedPages") || "[]",
     );
     // Check if the current page is already in the visited pages
     const isPageVisited = visitedPages.includes(location.pathname);
@@ -74,7 +74,7 @@ export const Reservations = () => {
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    id: string
+    id: string,
   ) => {
     const { name, files } = e.target;
     const file = files ? files[0] : null;
@@ -94,7 +94,7 @@ export const Reservations = () => {
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    id: string
+    id: string,
   ) => {
     const { name, value } = e.target;
     const updatedFormData = {
@@ -107,13 +107,34 @@ export const Reservations = () => {
     setFormData(updatedFormData);
   };
 
+  /**
+   * Handles reservation form submission.
+   * Calculates the total number of required reservations (hotel + plane) per destination
+   * before validating. Allows submission with an empty form when no destination
+   * requires hotel or plane, so the request can still advance its status.
+   * @param e - Form submit event
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData === null || Object.keys(formData).length === 0) {
+
+    // Calculate expected reservations count before any form validation
+    const hotelLength = request.requests_destinations.filter(
+      (destination: any) => destination.is_hotel_required,
+    ).length;
+    const planeLength = request.requests_destinations.filter(
+      (destination: any) => destination.is_plane_required,
+    ).length;
+    const totalLength = hotelLength + planeLength;
+
+    // Only block empty submissions when there are reservations actually required
+    if (
+      totalLength > 0 &&
+      (formData === null || Object.keys(formData).length === 0)
+    ) {
       toast.error("Por favor completa todos los campos requeridos.");
       return;
     }
-    // Format the formData to match the API requirements
+
     const formattedData = {
       reservations: Object.entries(formData).flatMap(([key, value]) => {
         const hotelReservation = value.hotel_title && {
@@ -133,33 +154,24 @@ export const Reservations = () => {
         return [hotelReservation, planeReservation].filter(Boolean);
       }),
     };
-    // Compute the length depending if each request destination has hotel or plane or both
-    const hotelLength = request.requests_destinations.filter(
-      (destination: any) => destination.is_hotel_required
-    ).length;
-    const planeLength = request.requests_destinations.filter(
-      (destination: any) => destination.is_plane_required
-    ).length;
-    const totalLength = hotelLength + planeLength;
+
     if (formattedData.reservations.length !== totalLength) {
       toast.error("Por favor completa todos los campos requeridos.");
       return;
     }
-    // Check if the form is valid
+
     const isValid = Object.values(formData).every((data, index) => {
-      // Get the key of the currrent value
       const key = Object.keys(formData)[index];
       const hotelValid =
         data.hotel_title && data.hotel_comments && data.hotel_file;
       const planeValid =
         data.plane_title && data.plane_comments && data.plane_file;
       const requestDestination = request.requests_destinations.find(
-        (destination: any) => destination.id === key
+        (destination: any) => destination.id === key,
       );
       if (!requestDestination) {
         return false;
       }
-      // Check if hotel or plane is required
       if (
         requestDestination.is_hotel_required &&
         requestDestination.is_plane_required
@@ -178,29 +190,32 @@ export const Reservations = () => {
       }
       return true;
     });
+
     if (!isValid) {
       toast.error("Por favor completa todos los campos requeridos.");
       return;
     }
-    // Send the data to the API
+
     const responses = await Promise.all(
       formattedData.reservations.map(async (reservation) => {
-        const formData = new FormData();
-        formData.append("title", reservation.title);
-        formData.append("comments", reservation.comments);
-        formData.append("price", reservation.price);
-        formData.append("file", reservation.file);
-        formData.append(
+        // Renamed from formData to avoid shadowing the component state variable
+        const reservationFormData = new FormData();
+        reservationFormData.append("title", reservation.title);
+        reservationFormData.append("comments", reservation.comments);
+        reservationFormData.append("price", reservation.price);
+        reservationFormData.append("file", reservation.file);
+        reservationFormData.append(
           "id_request_destination",
-          reservation.id_request_destination
+          reservation.id_request_destination,
         );
         try {
-          await postRequest("/reservations", formData);
+          await postRequest("/reservations", reservationFormData);
         } catch (error) {
-          console.error("Error sending data:", error);
+          console.error("Error sending reservation data:", error);
         }
-      })
+      }),
     );
+
     if (responses) {
       toast.success("Reservaciones enviadas correctamente.");
       setFormData({});

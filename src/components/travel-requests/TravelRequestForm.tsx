@@ -363,7 +363,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       id_origin_city: data.id_origin_city,
       title: data.motive,
       motive: data.motive,
-      requirements: data.requirements || undefined,
+      requirements: data.requirements || "",
       priority: data.priority,
       advance_money: data.advance_money,
       requests_destinations,
