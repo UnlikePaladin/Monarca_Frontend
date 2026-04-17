@@ -17,11 +17,11 @@ const parsePermissions = (value: unknown): Permission[] => {
 
   const normalized = value
     .map((permissionItem) => {
-      if (typeof permissionItem === 'string') {
+      if (typeof permissionItem === "string") {
         return permissionItem;
       }
 
-      if (permissionItem && typeof permissionItem === 'object') {
+      if (permissionItem && typeof permissionItem === "object") {
         const raw = permissionItem as {
           name?: unknown;
           permission?: unknown;
@@ -30,18 +30,18 @@ const parsePermissions = (value: unknown): Permission[] => {
 
         if (
           raw.permission &&
-          typeof raw.permission === 'object' &&
-          typeof (raw.permission as { name?: unknown }).name === 'string'
+          typeof raw.permission === "object" &&
+          typeof (raw.permission as { name?: unknown }).name === "string"
         ) {
           return (raw.permission as { name: string }).name;
         }
 
-        if (typeof raw.name === 'string') return raw.name;
-        if (typeof raw.permission === 'string') return raw.permission;
-        if (typeof raw.code === 'string') return raw.code;
+        if (typeof raw.name === "string") return raw.name;
+        if (typeof raw.permission === "string") return raw.permission;
+        if (typeof raw.code === "string") return raw.code;
       }
 
-      return '';
+      return "";
     })
     .filter((permission): permission is Permission => Boolean(permission));
 
@@ -63,6 +63,7 @@ export interface AuthState {
   userEmail: string;
   userPermissions: Permission[];
   userRole: string;
+  userRoleId: string;
 }
 
 // Create the auth context with proper typing
@@ -88,6 +89,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     userName: "",
     userLastName: "",
     userRole: "",
+    userRoleId: "",
     userEmail: "",
     userPermissions: [],
   });
@@ -104,10 +106,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               // API can sometimes omit optional fields; fall back to empty strings
               userLastName: response.user.lastName ?? "",
               userRole: response.user.role?.name ?? "",
+              userRoleId: response.user.role?.id ?? "",
               userPermissions: parsePermissions(
                 response.user.role?.rolePermissions ??
                   response.user.role?.permissions ??
-                  response.user.permissions
+                  response.user.permissions,
               ),
               userEmail: response.user.email ?? "",
             });
@@ -142,6 +145,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         userName: "",
         userLastName: "",
         userRole: "",
+        userRoleId: "",
         userEmail: "",
         userPermissions: [],
       });
@@ -194,10 +198,10 @@ export const PermissionProtectedRoute: React.FC<
   // Then check permissions
   const hasPermission = requireAll
     ? requiredPermissions.every((permission) =>
-        authState.userPermissions.includes(permission)
+        authState.userPermissions.includes(permission),
       )
     : requiredPermissions.some((permission) =>
-        authState.userPermissions.includes(permission)
+        authState.userPermissions.includes(permission),
       );
 
   if (!hasPermission) {

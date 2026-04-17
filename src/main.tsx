@@ -112,6 +112,7 @@ export const router = createBrowserRouter([
         path: "/refunds-review/:id",
         element: <RefundsAcceptance />,
       },
+      // ---- Inicio de rutas protegidas por permisos específicos (Comentar para test de admin mientras no exista el usuario) ----
       {
         path: "/roles",
         element: (
@@ -124,6 +125,14 @@ export const router = createBrowserRouter([
           },
         ]
       },
+      // --- Fin de rutas protegidas por permisos específicos (Comentar para test de admin mientras no exista el usuario) ---
+      
+      // --- Inicio de ruta desportegida, unicamente desconmetar para hacer pruebas de admin mientras no exista el usuario ---
+      // {
+      //   path: "/roles",
+      //   element: <Roles />,
+      // },
+      // --- Fin de ruta desportegida, unicamente desconmetar para hacer pruebas de admin mientras no exista el usuario ---
       {
         path: "/approval-rules",
         element: <ApprovalRules />,

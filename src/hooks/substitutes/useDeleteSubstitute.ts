@@ -2,7 +2,8 @@
  * Description: Hook to cancel an active substitute delegation by its ID via the API.
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteRequest } from "../../utils/apiService";
 
 /**
  * Sends a DELETE request to cancel a substitute delegation.
@@ -10,7 +11,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
  * @returns Promise resolving when the cancellation is confirmed.
  */
 const deleteSubstitute = async (substitutionId: string): Promise<void> => {
-  // TODO: replace with API call → return deleteRequest(`/substitutes/${substitutionId}`);
+  await deleteRequest(`/substitutes/${substitutionId}`);
 };
 
 /**
@@ -23,7 +24,7 @@ export const useDeleteSubstitute = () => {
   return useMutation<void, Error, string>({
     mutationFn: deleteSubstitute,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['substitutes'] });
+      queryClient.invalidateQueries({ queryKey: ["substitutes"] });
     },
   });
 };
@@ -31,4 +32,5 @@ export const useDeleteSubstitute = () => {
 /*
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-04-16 | Juan de Dios Gastélum Flores | Connected to real API endpoint DELETE /substitutes/:id.
  */
