@@ -16,10 +16,12 @@ const pickFirstArray = (source: Record<string, unknown>, keys: string[]): unknow
 
 const parseDepartment = (value: unknown): CompanyDepartment | null => {
   const raw = toRecord(value);
+  const costCenter = toRecord(raw.cost_center);
 
   const id = String(raw.id ?? raw.departmentId ?? "").trim();
   const name = String(raw.name ?? "").trim();
-  const costCenterRaw = raw.cost_center_id ?? (raw.cost_center as { id?: unknown })?.id;
+  const costCenterRaw =
+    raw.cost_center_id ?? costCenter.numericId ?? costCenter.key ?? costCenter.id;
   const cost_center_id = Number(costCenterRaw);
 
   if (!id || !name || Number.isNaN(cost_center_id)) return null;
