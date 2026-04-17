@@ -20,7 +20,7 @@ function CreateCompany() {
 
   return (
     <div>
-      <Tutorial page="createTenant" run={tutorial}>
+      <Tutorial page="createCompany" run={tutorial}>
         <CreateCompanyForm />
       </Tutorial>
     </div>

@@ -20,7 +20,7 @@ function CreateDepartment() {
 
   return (
     <div>
-      <Tutorial page="createTenant" run={tutorial}>
+      <Tutorial page="createDepartment" run={tutorial}>
         <CreateDepartmentForm />
       </Tutorial>
     </div>

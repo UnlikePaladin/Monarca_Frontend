@@ -120,12 +120,12 @@ const createRequestSteps = [
 }
 ]
 
-const createTenantSteps = [
+const createCompanySteps = [
   {
     element: "#tenant_info",
     popover: {
       title: "Datos de la Empresa",
-      description: "SuperAdmin registra la empresa con clave y nombre.",
+      description: "Un Super Administrador registra una empresa con su Clave y Nombre.",
       position: "bottom",
     },
   },
@@ -141,7 +141,7 @@ const createTenantSteps = [
     element: "#tenant_company",
     popover: {
       title: "Empresa Seleccionada",
-      description: "CompanyAdmin crea departamentos sobre la empresa activa.",
+      description: "Un Administrador de Empresa crea departamentos sobre la empresa activa.",
       position: "bottom",
     },
   },
@@ -149,7 +149,16 @@ const createTenantSteps = [
     element: "#tenant_departments",
     popover: {
       title: "Departamentos",
-      description: "Crea el departamento con name y cost_center_id.",
+      description: "Crea el departamento con su nombre y centro de costos.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_admin",
+    popover: {
+      title: "Administrador por Defecto",
+      description:
+        "La empresa se crea junto con su CompanyAdmin inicial. Define su nombre, apellido, correo y contraseña aquí.",
       position: "bottom",
     },
   },
@@ -157,7 +166,26 @@ const createTenantSteps = [
     element: "#create_tenant",
     popover: {
       title: "Crear Empresa",
-      description: "Cuando termines, guarda la empresa con este botón.",
+      description: "Cuando termines, guarda la empresa y su administrador por defecto con este botón.",
+      position: "bottom",
+    },
+  },
+]
+
+const createDepartmentSteps = [
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa crea departamentos sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_departments",
+    popover: {
+      title: "Departamentos",
+      description: "Crea el departamento con su nombre y centro de costos.",
       position: "bottom",
     },
   },
@@ -445,7 +473,9 @@ const requestInfoSteps = [
 const stepsMap: Record<string, typeof dashboardSteps> = {
   dashboard: dashboardSteps,
   createRequest: createRequestSteps,
-  createTenant: createTenantSteps,
+  createCompany: createCompanySteps,
+  createDepartment: createDepartmentSteps,
+  createTenant: createCompanySteps,
   history: historySteps,
   refunds: refundsSteps,
   vouchers: vouchersSteps,
@@ -460,7 +490,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
 
 interface TutorialProps {
    children: React.ReactNode;
-  page: "dashboard" | "createRequest" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
+  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
    run?: boolean;
   }
 
