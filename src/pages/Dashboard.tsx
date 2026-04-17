@@ -17,6 +17,9 @@ export const Dashboard = ({ title }: DashboardProps) => {
   const { setPageTitle } = useApp();
   const { authState } = useAuth();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
+  const normalizedRole = (authState.userRole || "").toLowerCase().replace(/[_\s-]/g, "");
+  const isSuperAdmin = normalizedRole === "superadmin";
+  const isCompanyAdmin = normalizedRole === "companyadmin";
 
   // Set the page title when the component mounts
   useEffect(() => {
@@ -151,6 +154,14 @@ export const Dashboard = ({ title }: DashboardProps) => {
               id="reserved_requests"
             />
           )}
+        {(isSuperAdmin || isCompanyAdmin) && (
+          <Mosaic
+            title={isSuperAdmin ? "Empresas" : "Departamentos"}
+            iconPath="/assets/roles.png"
+            link={isSuperAdmin ? "/admin/companies" : "/admin/departments"}
+            id="tenant_management"
+          />
+        )}
       </div>
     </Tutorial>
   );

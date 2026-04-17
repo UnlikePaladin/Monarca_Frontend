@@ -10,6 +10,7 @@ import EditTravelRequest from "./pages/EditTravelRequest.tsx";
 import {
   ProtectedRoute,
   PermissionProtectedRoute,
+  RoleProtectedRoute,
 } from "./hooks/auth/authContext";
 import "flowbite";
 
@@ -21,7 +22,7 @@ import "./App.css";
 import Login from "./pages/Login.tsx";
 import Register from "./pages/Register.tsx";
 import Error from "./pages/Error.tsx";
-import Historial from "./pages/historial/Historial.tsx";
+import Historial from "./pages/Historial/Historial.tsx";
 import Bookings from "./pages/Bookings.tsx";
 import Roles from "./pages/Roles/Roles.tsx";
 import ApprovalRules from "./pages/ApprovalRules/ApprovalRules.tsx";
@@ -35,6 +36,8 @@ import RequestInfo from "./pages/RequestInfo.tsx";
 import { Approvals } from "./pages/Approvals/Approvals.tsx";
 import { RefundsReview } from "./pages/Refunds/RefundsReview.tsx";
 import { CheckRefunds } from "./pages/Refunds/CheckRefunds.tsx";
+import CreateCompany from "./pages/Admin/CreateCompany.tsx";
+import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 
 export const router = createBrowserRouter([
   // Public routes (no authentication required)
@@ -136,6 +139,31 @@ export const router = createBrowserRouter([
       {
         path: "/approval-rules",
         element: <ApprovalRules />,
+      },
+      {
+        path: "/admin/companies",
+        element: <RoleProtectedRoute requiredRoles={["SuperAdmin"]} />,
+        children: [
+          {
+            path: "",
+            element: <CreateCompany />,
+          },
+        ],
+      },
+      {
+        path: "/admin/departments",
+        element: (
+          <RoleProtectedRoute
+            requiredRoles={["CompanyAdmin"]}
+            requireCompanyId={true}
+          />
+        ),
+        children: [
+          {
+            path: "",
+            element: <CreateDepartment />,
+          },
+        ],
       },
       {
         path: "/approval",

@@ -120,6 +120,85 @@ const createRequestSteps = [
 }
 ]
 
+const createCompanySteps = [
+  {
+    element: "#tenant_info",
+    popover: {
+      title: "Datos de la Empresa",
+      description: "Un Super Administrador registra una empresa con su Clave y Nombre.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_currency",
+    popover: {
+      title: "Moneda Local",
+      description: "Selecciona la moneda local (localCurrency).",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa crea departamentos sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_departments",
+    popover: {
+      title: "Departamentos",
+      description: "Crea el departamento con su nombre y centro de costos.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_admin",
+    popover: {
+      title: "Administrador por Defecto",
+      description:
+        "La empresa se crea junto con su CompanyAdmin inicial. Define su nombre, apellido, correo y contraseña aquí.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_tenant",
+    popover: {
+      title: "Crear Empresa",
+      description: "Cuando termines, guarda la empresa y su administrador por defecto con este botón.",
+      position: "bottom",
+    },
+  },
+]
+
+const createDepartmentSteps = [
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa crea departamentos sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_departments",
+    popover: {
+      title: "Departamentos",
+      description: "Crea el departamento con su nombre y centro de costos.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_department",
+    popover: {
+      title: "Crear Departamento",
+      description: "Guarda el departamento en la empresa seleccionada.",
+      position: "bottom",
+    },
+  },
+]
+
 const historySteps = [
   {
     element: "#list_requests",
@@ -394,6 +473,9 @@ const requestInfoSteps = [
 const stepsMap: Record<string, typeof dashboardSteps> = {
   dashboard: dashboardSteps,
   createRequest: createRequestSteps,
+  createCompany: createCompanySteps,
+  createDepartment: createDepartmentSteps,
+  createTenant: createCompanySteps,
   history: historySteps,
   refunds: refundsSteps,
   vouchers: vouchersSteps,
@@ -408,7 +490,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
 
 interface TutorialProps {
    children: React.ReactNode;
-   page: "dashboard" | "createRequest" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
+  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
    run?: boolean;
   }
 
