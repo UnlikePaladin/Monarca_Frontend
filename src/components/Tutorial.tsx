@@ -125,7 +125,7 @@ const createTenantSteps = [
     element: "#tenant_info",
     popover: {
       title: "Datos de la Empresa",
-      description: "Escribe el nombre de la empresa que vas a registrar.",
+      description: "SuperAdmin registra la empresa con clave y nombre.",
       position: "bottom",
     },
   },
@@ -133,7 +133,15 @@ const createTenantSteps = [
     element: "#tenant_currency",
     popover: {
       title: "Moneda Local",
-      description: "Selecciona la moneda local con la que operará la empresa.",
+      description: "Selecciona la moneda local (localCurrency).",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "CompanyAdmin crea departamentos sobre la empresa activa.",
       position: "bottom",
     },
   },
@@ -141,15 +149,7 @@ const createTenantSteps = [
     element: "#tenant_departments",
     popover: {
       title: "Departamentos",
-      description: "Aquí agregas los departamentos y su centro de costos.",
-      position: "bottom",
-    },
-  },
-  {
-    element: "#add_department",
-    popover: {
-      title: "Agregar Departamento",
-      description: "Puedes añadir tantos departamentos como necesites.",
+      description: "Crea el departamento con name y cost_center_id.",
       position: "bottom",
     },
   },
@@ -158,6 +158,14 @@ const createTenantSteps = [
     popover: {
       title: "Crear Empresa",
       description: "Cuando termines, guarda la empresa con este botón.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_department",
+    popover: {
+      title: "Crear Departamento",
+      description: "Guarda el departamento en la empresa seleccionada.",
       position: "bottom",
     },
   },

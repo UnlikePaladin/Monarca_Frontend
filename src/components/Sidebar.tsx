@@ -27,6 +27,10 @@ interface SidebarProps {
  * @param isOpen Boolean state to control mobile visibility toggle.
  */
 function Sidebar({ user, isOpen }: SidebarProps) {
+  const normalizedRole = (user.userRole || "").toLowerCase().replace(/[_\s-]/g, "");
+  const isSuperAdmin = normalizedRole === "superadmin";
+  const isCompanyAdmin = normalizedRole === "companyadmin";
+
   return (
     <aside
       id="logo-sidebar"
@@ -94,6 +98,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 label="Matriz de autorización"
                 pathIcon="/assets/matrix.png"
                 link="/approval-rules"
+              />
+            )}
+            {(isSuperAdmin || isCompanyAdmin) && (
+              <SidebarOption
+                label={isSuperAdmin ? "Empresas" : "Departamentos"}
+                pathIcon="/assets/roles.png"
+                link={isSuperAdmin ? "/admin/companies" : "/admin/departments"}
               />
             )}
         </ul>
