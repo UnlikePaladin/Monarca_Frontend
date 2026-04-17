@@ -2,19 +2,25 @@
  * Description: Hook to create a new substitute delegation via the API.
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { SubstituteDelegation } from '../../types/auth';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { SubstituteDelegation } from "../../types/auth";
+import { postRequest } from "../../utils/apiService";
 
-type CreateSubstitutePayload = Omit<SubstituteDelegation, 'id'>;
+type CreateSubstitutePayload = Omit<SubstituteDelegation, "id">;
 
 /**
  * Sends a POST request to create a new substitute delegation.
- * @param payload Delegation data excluding the id field, which is assigned by the backend.
+ * @param payload Delegation data excluding the id field.
  * @returns Promise resolving to the created SubstituteDelegation object.
  */
-const createSubstitute = async (payload: CreateSubstitutePayload): Promise<SubstituteDelegation> => {
-  // TODO: replace with API call → return postRequest('/substitutes', payload);
-  return { id: `sub_${Date.now()}`, ...payload };
+const createSubstitute = async (
+  payload: CreateSubstitutePayload,
+): Promise<SubstituteDelegation> => {
+  const response = await postRequest(
+    "/substitutes",
+    payload as Record<string, unknown>,
+  );
+  return response as SubstituteDelegation;
 };
 
 /**
@@ -27,7 +33,7 @@ export const useCreateSubstitute = () => {
   return useMutation<SubstituteDelegation, Error, CreateSubstitutePayload>({
     mutationFn: createSubstitute,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['substitutes'] });
+      queryClient.invalidateQueries({ queryKey: ["substitutes"] });
     },
   });
 };
@@ -35,4 +41,5 @@ export const useCreateSubstitute = () => {
 /*
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-04-16 | Juan de Dios Gastélum Flores | Connected to real API endpoint POST /substitutes.
  */

@@ -67,7 +67,7 @@ const normalizeAvailableModule = (value: unknown): AvailableModule | null => {
  * @returns Promise resolving to an array of AvailableModule objects.
  */
 const fetchPermissions = async (): Promise<AvailableModule[]> => {
-  const response = await getRequest('/permissions');
+  const response = await getRequest('/roles/modules');
   const payload = toRecord(response);
 
   const candidates = Array.isArray(response)
