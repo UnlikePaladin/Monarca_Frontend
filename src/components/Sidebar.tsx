@@ -100,11 +100,25 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/approval-rules"
               />
             )}
-            {(isSuperAdmin || isCompanyAdmin) && (
+            {isSuperAdmin && (
               <SidebarOption
-                label={isSuperAdmin ? "Empresas" : "Departamentos"}
+                label="Empresas"
                 pathIcon="/assets/roles.png"
-                link={isSuperAdmin ? "/admin/companies" : "/admin/departments"}
+                link="/admin/companies"
+              />
+            )}
+            {isCompanyAdmin && (
+              <SidebarOption
+                label="Departamentos"
+                pathIcon="/assets/roles.png"
+                link="/admin/departments"
+              />
+            )}
+            {isCompanyAdmin && (
+              <SidebarOption
+                label="Centros de costos"
+                pathIcon="/assets/roles.png"
+                link="/admin/cost-centers"
               />
             )}
         </ul>
