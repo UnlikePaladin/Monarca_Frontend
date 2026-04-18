@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -13,17 +13,11 @@ import Select from "../ui/Select";
 import { useAuth } from "../../hooks/auth/authContext";
 import { useCreateCompanyDepartment } from "../../hooks/companies/useCreateCompanyDepartment";
 import { useGetCompany } from "../../hooks/companies/useGetCompany";
+import { useGetCostCenters } from "../../hooks/companies/useGetCostCenters";
 import { useGetCompanyDepartments } from "../../hooks/companies/useGetCompanyDepartments";
 import { CreateCompanyDepartmentPayload } from "../../types/company";
 
 type CostCenterOption = { id: number; name: string };
-
-const costCenterOptions: CostCenterOption[] = [
-  { id: 100, name: "Planta" },
-  { id: 101, name: "Mercadeo" },
-  { id: 102, name: "Sistemas" },
-  { id: 103, name: "Contabilidad" },
-];
 
 const departmentSchema = z.object({
   name: z.string().trim().min(1, {
@@ -70,8 +64,40 @@ function CreateDepartmentForm() {
     isLoading: isLoadingDepartments,
     error: departmentsError,
   } = useGetCompanyDepartments(companyIdForDepartment);
+  const {
+    data: costCenters = [],
+    isLoading: isLoadingCostCenters,
+    error: costCentersError,
+  } = useGetCostCenters();
 
-  const costCenterSelectOptions = useMemo(() => costCenterOptions, []);
+  const costCenterSelectOptions = useMemo(() => {
+    const options = costCenters
+      .map((costCenter) => {
+        const candidateId =
+          typeof costCenter.numericId === "number" && Number.isInteger(costCenter.numericId)
+            ? costCenter.numericId
+            : Number(costCenter.id);
+
+        if (!Number.isInteger(candidateId) || candidateId <= 0) {
+          return null;
+        }
+
+        const formattedName = costCenter.key
+          ? `${costCenter.name} (${costCenter.key})`
+          : costCenter.name;
+
+        return {
+          id: candidateId,
+          name: formattedName,
+        };
+      })
+      .filter((option): option is CostCenterOption => option !== null);
+
+    return options.filter(
+      (option, index, current) =>
+        current.findIndex((currentOption) => currentOption.id === option.id) === index
+    );
+  }, [costCenters]);
 
   const { mutateAsync: createCompanyDepartmentMutation, isPending: isCreatingDepartment } =
     useCreateCompanyDepartment(companyIdForDepartment);
@@ -80,7 +106,9 @@ function CreateDepartmentForm() {
     control,
     register,
     handleSubmit,
+    getValues,
     reset,
+    setValue,
     formState: {
       errors,
       isSubmitting,
@@ -89,9 +117,24 @@ function CreateDepartmentForm() {
     resolver: zodResolver(departmentSchema),
     defaultValues: {
       name: "",
-      cost_center_id: costCenterOptions[0]?.id ?? 100,
     },
   });
+
+  useEffect(() => {
+    const firstCostCenterOption = costCenterSelectOptions[0];
+    if (!firstCostCenterOption) return;
+
+    const currentCostCenterId = getValues("cost_center_id");
+    const hasSelectedCostCenter = costCenterSelectOptions.some(
+      (option) => option.id === currentCostCenterId
+    );
+
+    if (!hasSelectedCostCenter) {
+      setValue("cost_center_id", firstCostCenterOption.id, {
+        shouldValidate: true,
+      });
+    }
+  }, [costCenterSelectOptions, getValues, setValue]);
 
   const onSubmit = async (data: DepartmentFormValues) => {
     if (!companyIdForDepartment) {
@@ -119,7 +162,7 @@ function CreateDepartmentForm() {
 
       reset({
         name: "",
-        cost_center_id: costCenterOptions[0]?.id ?? 100,
+        cost_center_id: costCenterSelectOptions[0]?.id,
       });
     } catch (error) {
       toast.error(getErrorMessage(error, "Error al crear el departamento"), {
@@ -211,6 +254,8 @@ function CreateDepartmentForm() {
                   <Select
                     id="department-cost-center"
                     options={costCenterSelectOptions}
+                    isLoading={isLoadingCostCenters}
+                    isDisabled={isLoadingCostCenters || costCenterSelectOptions.length === 0}
                     value={
                       costCenterSelectOptions.find((option) => option.id === field.value) ??
                       null
@@ -221,6 +266,14 @@ function CreateDepartmentForm() {
                 )}
               />
               <FieldError msg={errors.cost_center_id?.message} />
+              {!isLoadingCostCenters && costCenterSelectOptions.length === 0 && (
+                <p className="mt-1 text-sm text-gray-600">
+                  No hay centros de costos disponibles para seleccionar.
+                </p>
+              )}
+              <FieldError
+                msg={costCentersError instanceof Error ? costCentersError.message : undefined}
+              />
             </div>
 
             <div className="rounded-md bg-white p-4 shadow-sm">
@@ -248,6 +301,8 @@ function CreateDepartmentForm() {
                 isCreatingDepartment ||
                 isSubmitting ||
                 isLoadingCompany ||
+                isLoadingCostCenters ||
+                costCenterSelectOptions.length === 0 ||
                 !selectedCompany
               }
             >
@@ -258,7 +313,7 @@ function CreateDepartmentForm() {
               onClick={() =>
                 reset({
                   name: "",
-                  cost_center_id: costCenterOptions[0]?.id ?? 100,
+                  cost_center_id: costCenterSelectOptions[0]?.id,
                 })
               }
             >

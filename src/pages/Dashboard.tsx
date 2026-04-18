@@ -154,12 +154,28 @@ export const Dashboard = ({ title }: DashboardProps) => {
               id="reserved_requests"
             />
           )}
-        {(isSuperAdmin || isCompanyAdmin) && (
+        {isSuperAdmin && (
           <Mosaic
-            title={isSuperAdmin ? "Empresas" : "Departamentos"}
+            title="Empresas"
             iconPath="/assets/roles.png"
-            link={isSuperAdmin ? "/admin/companies" : "/admin/departments"}
+            link="/admin/companies"
             id="tenant_management"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Departamentos"
+            iconPath="/assets/roles.png"
+            link="/admin/departments"
+            id="tenant_departments"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Centros de costos"
+            iconPath="/assets/roles.png"
+            link="/admin/cost-centers"
+            id="tenant_cost_centers"
           />
         )}
       </div>

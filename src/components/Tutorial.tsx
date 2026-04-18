@@ -199,6 +199,33 @@ const createDepartmentSteps = [
   },
 ]
 
+const createCostCenterSteps = [
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa gestiona centros de costos sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_cost_centers",
+    popover: {
+      title: "Centros de Costos",
+      description: "Revisa los centros de costos existentes antes de registrar uno nuevo.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_cost_center",
+    popover: {
+      title: "Crear Centro de Costos",
+      description: "Guarda el centro de costos en la empresa seleccionada.",
+      position: "bottom",
+    },
+  },
+]
+
 const historySteps = [
   {
     element: "#list_requests",
@@ -475,6 +502,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
   createRequest: createRequestSteps,
   createCompany: createCompanySteps,
   createDepartment: createDepartmentSteps,
+  createCostCenter: createCostCenterSteps,
   createTenant: createCompanySteps,
   history: historySteps,
   refunds: refundsSteps,
@@ -490,7 +518,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
 
 interface TutorialProps {
    children: React.ReactNode;
-  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
+  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createCostCenter" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
    run?: boolean;
   }
 

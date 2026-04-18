@@ -38,6 +38,7 @@ import { RefundsReview } from "./pages/Refunds/RefundsReview.tsx";
 import { CheckRefunds } from "./pages/Refunds/CheckRefunds.tsx";
 import CreateCompany from "./pages/Admin/CreateCompany.tsx";
 import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
+import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 
 export const router = createBrowserRouter([
   // Public routes (no authentication required)
@@ -162,6 +163,21 @@ export const router = createBrowserRouter([
           {
             path: "",
             element: <CreateDepartment />,
+          },
+        ],
+      },
+      {
+        path: "/admin/cost-centers",
+        element: (
+          <RoleProtectedRoute
+            requiredRoles={["CompanyAdmin"]}
+            requireCompanyId={true}
+          />
+        ),
+        children: [
+          {
+            path: "",
+            element: <CreateCostCenter />,
           },
         ],
       },
