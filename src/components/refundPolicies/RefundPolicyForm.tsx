@@ -17,15 +17,199 @@ import { useCreateRefundPolicy } from "../../hooks/refundPolicies/useCreateRefun
 import { useUpdateRefundPolicy } from "../../hooks/refundPolicies/useUpdateRefundPolicy";
 import { toast } from "react-toastify";
 
+const EXPENSE_CLASS_OPTIONS = [
+  { id: "ALIF", name: "ALIF - Alimentación" },
+  { id: "CAPA", name: "CAPA - Capacitación" },
+  { id: "CPF", name: "CPF - Caseta (peaje)" },
+  { id: "FIDP", name: "FIDP - Ficha de depósito" },
+  { id: "GAS", name: "GAS - Gasolina" },
+  { id: "HTLP", name: "HTLP - Hotel pagado" },
+  { id: "LAUN", name: "LAUN - Lavandería" },
+  { id: "NDPR", name: "NDPR - No deducible" },
+  { id: "NDVA", name: "NDVA - No deducible vale azul" },
+  { id: "REAU", name: "REAU - Renta de automóvil" },
+  { id: "TCCF", name: "TCCF - Taxi con comprobante fiscal" },
+  { id: "TSCF", name: "TSCF - Taxi sin comprobante fiscal" },
+  { id: "TRAA", name: "TRAA - Transporte automóvil y/o autobús" },
+  { id: "AIRP", name: "AIRP - Vuelo pagado" },
+  { id: "TODAS", name: "TODAS - Regla de nivel solicitud" },
+];
+
+const OPERATOR_OPTIONS = [
+  { id: "MISSING_XML", name: "MISSING_XML - Falta XML" },
+  { id: "MISSING_PDF", name: "MISSING_PDF - Falta PDF" },
+  { id: "MISSING_FILE", name: "MISSING_FILE - Faltan XML y PDF" },
+  { id: "LT", name: "LT - Menor que" },
+  { id: "LTE", name: "LTE - Menor o igual que" },
+  { id: "GT", name: "GT - Mayor que" },
+  { id: "GTE", name: "GTE - Mayor o igual que" },
+  { id: "TOTAL_LTE_ADVANCE", name: "TOTAL_LTE_ADVANCE - Total vs anticipo" },
+  { id: "TOTAL_VOUCHERS_LIMIT", name: "TOTAL_VOUCHERS_LIMIT - Límite total vouchers" },
+  { id: "TOTAL_VOUCHERS_LTE_ADVANCE", name: "TOTAL_VOUCHERS_LTE_ADVANCE - Vouchers <= anticipo" },
+  { id: "DAYS_EXCEEDED", name: "DAYS_EXCEEDED - Días excedidos" },
+  { id: "TIME_LIMIT", name: "TIME_LIMIT - Límite de tiempo" },
+  {
+    id: "VOUCHER_DATE_WITHIN_TRIP_WINDOW",
+    name: "VOUCHER_DATE_WITHIN_TRIP_WINDOW - Fecha dentro del viaje",
+  },
+];
+
+const CONSEQUENCE_OPTIONS = ["WARNING", "POLICY_VIOLATION"];
+const UNIT_OPTIONS = ["MXN", "DAYS", "USD"];
+
+const REQUEST_LEVEL_OPERATORS = new Set([
+  "TOTAL_LTE_ADVANCE",
+  "TOTAL_VOUCHERS_LIMIT",
+  "TOTAL_VOUCHERS_LTE_ADVANCE",
+  "DAYS_EXCEEDED",
+  "TIME_LIMIT",
+  "VOUCHER_DATE_WITHIN_TRIP_WINDOW",
+]);
+const TIME_OPERATORS = new Set(["DAYS_EXCEEDED", "TIME_LIMIT"]);
+const THRESHOLD_REQUIRED_OPERATORS = new Set([
+  "LT",
+  "LTE",
+  "GT",
+  "GTE",
+  "DAYS_EXCEEDED",
+  "TIME_LIMIT",
+  "TOTAL_VOUCHERS_LIMIT",
+]);
+const NO_THRESHOLD_OPERATORS = new Set([
+  "MISSING_XML",
+  "MISSING_PDF",
+  "MISSING_FILE",
+  "TOTAL_LTE_ADVANCE",
+  "TOTAL_VOUCHERS_LTE_ADVANCE",
+  "VOUCHER_DATE_WITHIN_TRIP_WINDOW",
+]);
+
+const toOptions = (items: string[]) =>
+  items.map((item) => ({ id: item, name: item }));
+
+const expenseClassOptions = EXPENSE_CLASS_OPTIONS;
+const operatorOptions = OPERATOR_OPTIONS;
+const consequenceOptions = toOptions(CONSEQUENCE_OPTIONS);
+const unitOptions = toOptions(UNIT_OPTIONS);
+
+const operatorHelpMap: Record<
+  string,
+  {
+    scope: "Comprobante" | "Solicitud";
+    description: string;
+    thresholdHint: string;
+  }
+> = {
+  MISSING_XML: {
+    scope: "Comprobante",
+    description: "Falla si falta el archivo XML del comprobante.",
+    thresholdHint: "No usa valor umbral.",
+  },
+  MISSING_PDF: {
+    scope: "Comprobante",
+    description: "Falla si falta el archivo PDF del comprobante.",
+    thresholdHint: "No usa valor umbral.",
+  },
+  MISSING_FILE: {
+    scope: "Comprobante",
+    description: "Falla cuando no existen XML y PDF.",
+    thresholdHint: "No usa valor umbral.",
+  },
+  LT: {
+    scope: "Comprobante",
+    description: "Evalúa monto menor que el umbral configurado.",
+    thresholdHint: "Requiere valor umbral.",
+  },
+  LTE: {
+    scope: "Comprobante",
+    description: "Evalúa monto menor o igual que el umbral.",
+    thresholdHint: "Requiere valor umbral.",
+  },
+  GT: {
+    scope: "Comprobante",
+    description: "Evalúa monto mayor que el umbral configurado.",
+    thresholdHint: "Requiere valor umbral.",
+  },
+  GTE: {
+    scope: "Comprobante",
+    description: "Evalúa monto mayor o igual que el umbral.",
+    thresholdHint: "Requiere valor umbral.",
+  },
+  TOTAL_LTE_ADVANCE: {
+    scope: "Solicitud",
+    description: "Compara total de comprobantes contra el anticipo de la solicitud.",
+    thresholdHint: "No usa valor umbral.",
+  },
+  TOTAL_VOUCHERS_LIMIT: {
+    scope: "Solicitud",
+    description: "Limita el total acumulado de comprobantes.",
+    thresholdHint: "Requiere valor umbral.",
+  },
+  TOTAL_VOUCHERS_LTE_ADVANCE: {
+    scope: "Solicitud",
+    description: "Valida que el total de comprobantes no supere el anticipo.",
+    thresholdHint: "No usa valor umbral.",
+  },
+  DAYS_EXCEEDED: {
+    scope: "Solicitud",
+    description: "Controla días máximos permitidos para comprobación.",
+    thresholdHint: "Requiere umbral en DAYS.",
+  },
+  TIME_LIMIT: {
+    scope: "Solicitud",
+    description: "Evalúa si se excede el tiempo límite configurado.",
+    thresholdHint: "Requiere umbral en DAYS.",
+  },
+  VOUCHER_DATE_WITHIN_TRIP_WINDOW: {
+    scope: "Solicitud",
+    description: "Valida que la fecha del comprobante esté dentro de la ventana del viaje.",
+    thresholdHint: "No usa valor umbral.",
+  },
+};
+
+const isRequestLevelOperator = (operator?: string) =>
+  Boolean(operator && REQUEST_LEVEL_OPERATORS.has(operator));
+
+const requiresThreshold = (operator?: string) =>
+  Boolean(operator && THRESHOLD_REQUIRED_OPERATORS.has(operator));
+
+const shouldBlockThreshold = (operator?: string) =>
+  Boolean(operator && NO_THRESHOLD_OPERATORS.has(operator));
+
+const recommendedUnitForOperator = (operator?: string): string => {
+  if (!operator) return "";
+  if (TIME_OPERATORS.has(operator)) return "DAYS";
+  if (THRESHOLD_REQUIRED_OPERATORS.has(operator)) return "MXN";
+  return "";
+};
+
 const ruleSchema = z.object({
   expense_class: z.string().min(1, "La clase de gasto es requerida"),
   operator: z.string().min(1, "El operador es requerido"),
-  threshold_value: z
-    .union([z.number(), z.null()])
-    .optional(),
+  threshold_value: z.union([z.number(), z.null()]).optional(),
   threshold_unit: z.string().optional(),
   consequence: z.string().optional(),
   is_active: z.boolean(),
+}).superRefine((rule, ctx) => {
+  const operator = rule.operator;
+
+  if (isRequestLevelOperator(operator) && rule.expense_class !== "TODAS") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["expense_class"],
+      message: "Para operadores de nivel solicitud, la clase de gasto debe ser TODAS.",
+    });
+  }
+
+  if (requiresThreshold(operator)) {
+    if (rule.threshold_value === null || rule.threshold_value === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["threshold_value"],
+        message: "Este operador requiere valor umbral numérico.",
+      });
+    }
+  }
 });
 
 const policyFormSchema = z.object({
@@ -47,6 +231,11 @@ type Option = {
 interface RefundPolicyFormProps {
   policy?: RefundPolicy;
   groups: RefundPoliciesByCompany[];
+  fallbackCompany?: {
+    id: string;
+    key?: string;
+    name: string;
+  };
   onClose: () => void;
 }
 
@@ -88,30 +277,56 @@ const normalizeRulesForPayload = (
   rules: PolicyFormData["rules"]
 ): RefundPolicyRuleInput[] => {
   return rules.map((rule) => ({
-    expense_class: rule.expense_class.trim(),
+    expense_class: isRequestLevelOperator(rule.operator)
+      ? "TODAS"
+      : rule.expense_class.trim(),
     operator: rule.operator.trim(),
     threshold_value:
-      typeof rule.threshold_value === "number" && Number.isFinite(rule.threshold_value)
+      shouldBlockThreshold(rule.operator)
+        ? null
+        : typeof rule.threshold_value === "number" && Number.isFinite(rule.threshold_value)
         ? rule.threshold_value
         : null,
-    threshold_unit: rule.threshold_unit?.trim() ? rule.threshold_unit.trim() : null,
+    threshold_unit: shouldBlockThreshold(rule.operator)
+      ? null
+      : rule.threshold_unit?.trim()
+      ? rule.threshold_unit.trim()
+      : null,
     consequence: rule.consequence?.trim() || "POLICY_VIOLATION",
     is_active: rule.is_active,
   }));
 };
 
-export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormProps) => {
+export const RefundPolicyForm = ({
+  policy,
+  groups,
+  fallbackCompany,
+  onClose,
+}: RefundPolicyFormProps) => {
   const isEditMode = Boolean(policy);
 
-  const companyOptions: Option[] = groups.map((group) => ({
+  const groupsOptions: Option[] = groups.map((group) => ({
     id: group.company.id,
     name: `${group.company.name}${group.company.key ? ` (${group.company.key})` : ""}`,
   }));
 
+  const fallbackOption = fallbackCompany
+    ? {
+        id: fallbackCompany.id,
+        name: `${fallbackCompany.name}${fallbackCompany.key ? ` (${fallbackCompany.key})` : ""}`,
+      }
+    : undefined;
+
+  const companyOptions: Option[] = (() => {
+    if (!fallbackOption) return groupsOptions;
+    if (groupsOptions.some((option) => option.id === fallbackOption.id)) return groupsOptions;
+    return [fallbackOption, ...groupsOptions];
+  })();
+
   const shouldShowCompanySelector = companyOptions.length > 1;
 
   const initialCompanyId =
-    policy?.id_company || companyOptions[0]?.id || "";
+    policy?.id_company || fallbackOption?.id || companyOptions[0]?.id || "";
 
   const { mutateAsync: createPolicy, isPending: isCreating } = useCreateRefundPolicy();
   const { mutateAsync: updatePolicy, isPending: isUpdating } = useUpdateRefundPolicy();
@@ -166,6 +381,14 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
 
     try {
       if (isEditMode && policy) {
+        if (formData.replaceRules) {
+          const confirmed = confirm(
+            "Estas por reemplazar todas las reglas actuales de la política. ¿Deseas continuar?"
+          );
+
+          if (!confirmed) return;
+        }
+
         const payload: UpdateRefundPolicyPayload = {
           name: formData.name.trim(),
           description: formData.description?.trim() || undefined,
@@ -222,10 +445,37 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
   const isPending = isSubmitting || isCreating || isUpdating;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+    <div id="refund_policy_form" className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <h3 className="text-lg font-semibold mb-6">
         {isEditMode ? "Editar política de reembolso" : "Nueva política de reembolso"}
       </h3>
+
+      <details className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+          Guía rápida de terminología
+        </summary>
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700">
+          <p><strong>Clase de gasto:</strong> categoría de comprobante a la que aplica la regla.</p>
+          <p><strong>Operador:</strong> condición que se evaluará.</p>
+          <p><strong>Valor umbral:</strong> número límite cuando el operador lo requiere.</p>
+          <p><strong>Unidad umbral:</strong> unidad del umbral, por ejemplo MXN o DAYS.</p>
+          <p><strong>Consecuencia:</strong> WARNING avisa; POLICY_VIOLATION bloquea el flujo.</p>
+          <p><strong>Regla activa:</strong> define si la regla participa en evaluación.</p>
+        </div>
+        <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
+          <p className="text-xs font-semibold text-slate-800">
+            Clase de gasto (código canónico y significado)
+          </p>
+          <p className="text-[11px] text-slate-600 mt-1">
+            Se muestra una descripción amigable, pero siempre se envía el código corto al backend.
+          </p>
+          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-[11px] text-slate-700">
+            {expenseClassOptions.map((item) => (
+              <p key={item.id}>{item.name}</p>
+            ))}
+          </div>
+        </div>
+      </details>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
@@ -306,13 +556,13 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
           )}
         </div>
 
-        <div className="border border-gray-200 rounded-lg">
+        <div id="refund_policy_rules" className="border border-gray-200 rounded-lg">
           <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-700">Reglas</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {isEditMode
-                  ? "Si activas reemplazo, se enviará la lista completa de reglas." 
+                  ? "Si activas reemplazo, se enviará la lista completa de reglas."
                   : "Define las reglas que se crearán junto con la política."}
               </p>
             </div>
@@ -343,7 +593,15 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
             {fields.length === 0 ? (
               <p className="text-sm text-gray-500">No hay reglas en el editor.</p>
             ) : (
-              fields.map((field, index) => (
+              fields.map((field, index) => {
+                const selectedOperator = watch(`rules.${index}.operator`);
+                const lockExpenseClass = isRequestLevelOperator(selectedOperator);
+                const operatorRequiresThreshold = requiresThreshold(selectedOperator);
+                const operatorBlocksThreshold = shouldBlockThreshold(selectedOperator);
+                const selectedThresholdUnit = watch(`rules.${index}.threshold_unit`);
+                const operatorHelp = selectedOperator ? operatorHelpMap[selectedOperator] : undefined;
+
+                return (
                 <div key={field.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-gray-700">Regla #{index + 1}</p>
@@ -359,14 +617,92 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">Clase de gasto</label>
-                      <Input {...register(`rules.${index}.expense_class`)} placeholder="Ej. HTLP" />
+                      <Controller
+                        control={control}
+                        name={`rules.${index}.expense_class`}
+                        render={({ field: classField }) => (
+                          <Select
+                            options={expenseClassOptions}
+                            value={
+                              expenseClassOptions.find(
+                                (option) => option.id === classField.value
+                              ) ?? null
+                            }
+                            onChange={(option) => classField.onChange(String(option.id))}
+                            isDisabled={lockExpenseClass}
+                            placeholder="Selecciona clase de gasto"
+                          />
+                        )}
+                      />
+                      {lockExpenseClass && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Para este operador se fuerza automáticamente la clase TODAS.
+                        </p>
+                      )}
+                      {!lockExpenseClass && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Se muestra nombre amigable, pero se enviará el código (ej. HTLP) al backend.
+                        </p>
+                      )}
                       <FieldError msg={errors.rules?.[index]?.expense_class?.message} />
                     </div>
 
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">Operador</label>
-                      <Input {...register(`rules.${index}.operator`)} placeholder="Ej. MISSING_XML" />
+                      <Controller
+                        control={control}
+                        name={`rules.${index}.operator`}
+                        render={({ field: operatorField }) => (
+                          <Select
+                            options={operatorOptions}
+                            value={
+                              operatorOptions.find(
+                                (option) => option.id === operatorField.value
+                              ) ?? null
+                            }
+                            onChange={(option) => {
+                              const nextOperator = String(option.id);
+                              operatorField.onChange(nextOperator);
+
+                              if (isRequestLevelOperator(nextOperator)) {
+                                setValue(`rules.${index}.expense_class`, "TODAS", {
+                                  shouldValidate: true,
+                                });
+                              }
+
+                              if (shouldBlockThreshold(nextOperator)) {
+                                setValue(`rules.${index}.threshold_value`, null, {
+                                  shouldValidate: true,
+                                });
+                                setValue(`rules.${index}.threshold_unit`, "", {
+                                  shouldValidate: true,
+                                });
+                                toast.info(
+                                  "Este operador no usa valor umbral. Se limpiaron esos campos.",
+                                  { position: "top-right", autoClose: 3000 }
+                                );
+                              }
+
+                              if (requiresThreshold(nextOperator) && !selectedThresholdUnit) {
+                                setValue(
+                                  `rules.${index}.threshold_unit`,
+                                  recommendedUnitForOperator(nextOperator),
+                                  { shouldValidate: true }
+                                );
+                              }
+                            }}
+                            placeholder="Selecciona operador"
+                          />
+                        )}
+                      />
                       <FieldError msg={errors.rules?.[index]?.operator?.message} />
+                      {operatorHelp && (
+                        <div className="mt-2 rounded-md border border-blue-100 bg-blue-50 px-2 py-2 text-xs text-blue-900">
+                          <p className="font-semibold">{operatorHelp.scope}</p>
+                          <p>{operatorHelp.description}</p>
+                          <p className="mt-1">{operatorHelp.thresholdHint}</p>
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -374,6 +710,12 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
                       <Input
                         type="number"
                         step="any"
+                        disabled={operatorBlocksThreshold}
+                        placeholder={
+                          operatorRequiresThreshold
+                            ? "Captura un valor numérico"
+                            : "No aplica para este operador"
+                        }
                         {...register(`rules.${index}.threshold_value`, {
                           setValueAs: (value) => {
                             if (value === "" || value === null || value === undefined) return null;
@@ -382,19 +724,54 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
                           },
                         })}
                       />
+                      {operatorRequiresThreshold && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Este operador requiere valor umbral numérico.
+                        </p>
+                      )}
+                      <FieldError msg={errors.rules?.[index]?.threshold_value?.message} />
                     </div>
 
                     <div>
                       <label className="block text-xs text-gray-600 mb-1">Unidad umbral</label>
-                      <Input {...register(`rules.${index}.threshold_unit`)} placeholder="Ej. MXN" />
+                      <Controller
+                        control={control}
+                        name={`rules.${index}.threshold_unit`}
+                        render={({ field: unitField }) => (
+                          <Select
+                            options={unitOptions}
+                            value={
+                              unitOptions.find((option) => option.id === unitField.value) ?? null
+                            }
+                            onChange={(option) => unitField.onChange(String(option.id))}
+                            isDisabled={operatorBlocksThreshold}
+                            placeholder="Selecciona unidad"
+                          />
+                        )}
+                      />
                     </div>
 
-                    <div>
+                    <div id={index === 0 ? "refund_policy_consequence" : undefined}>
                       <label className="block text-xs text-gray-600 mb-1">Consecuencia</label>
-                      <Input
-                        {...register(`rules.${index}.consequence`)}
-                        placeholder="POLICY_VIOLATION"
+                      <Controller
+                        control={control}
+                        name={`rules.${index}.consequence`}
+                        render={({ field: consequenceField }) => (
+                          <Select
+                            options={consequenceOptions}
+                            value={
+                              consequenceOptions.find(
+                                (option) => option.id === consequenceField.value
+                              ) ?? null
+                            }
+                            onChange={(option) => consequenceField.onChange(String(option.id))}
+                            placeholder="Selecciona consecuencia"
+                          />
+                        )}
                       />
+                      <p className="mt-1 text-xs text-gray-500">
+                        WARNING no bloquea. POLICY_VIOLATION bloquea el flujo.
+                      </p>
                     </div>
 
                     <div className="flex items-center gap-2 pt-5">
@@ -413,9 +790,13 @@ export const RefundPolicyForm = ({ policy, groups, onClose }: RefundPolicyFormPr
                     </div>
                   </div>
                 </div>
-              ))
+              )})
             )}
           </div>
+        </div>
+
+        <div id="refund_policy_replace_warning" className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+          Al editar y enviar reglas, se reemplaza el conjunto completo actual.
         </div>
 
         <div className="flex justify-end gap-3 pt-2">

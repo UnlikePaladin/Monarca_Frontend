@@ -37,9 +37,10 @@ export const RefundPoliciesList = ({
 
   if (groups.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+      <div id="refund_policies_list" className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
         <p className="text-gray-500 text-sm">No hay políticas registradas.</p>
         <button
+          id="refund_policies_create"
           type="button"
           onClick={onCreate}
           className="mt-4 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 cursor-pointer"
@@ -51,13 +52,14 @@ export const RefundPoliciesList = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div id="refund_policies_list" className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-800">Políticas por compañía</h2>
           <p className="text-sm text-gray-500 mt-0.5">Vista agrupada según la respuesta de /refund-policies.</p>
         </div>
         <button
+          id="refund_policies_create"
           type="button"
           onClick={onCreate}
           className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 cursor-pointer"
