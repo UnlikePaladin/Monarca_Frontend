@@ -11,6 +11,7 @@ import { postRequest } from "../../utils/apiService";
 import { Tutorial } from "../../components/Tutorial";
 import { useApp } from "../../hooks/app/appContext";
 import { useDuffel } from "../../hooks/requests/useDuffel";
+import { useDestinations } from "../../hooks/destinations/useDestinations";
 import { DuffelOfferList } from "../../components/Reservations/DuffelOfferList";
 import { DuffelPassengerForm } from "../../components/Reservations/DuffelPassengerForm";
 import { DuffelOffer } from "../../types/duffel";
@@ -24,6 +25,7 @@ export const Reservations = () => {
   const [isFormValid, _setIsFormValid] = useState(true);
   const { handleVisitPage, tutorial } = useApp();
   const { createOfferRequest, createOrder } = useDuffel();
+  const { destinations } = useDestinations();
     const [duffelSearchIds, setDuffelSearchIds] = useState<Record<string, string>>({});
     const [searchingDuffel, setSearchingDuffel] = useState<Record<string, boolean>>({});
     const [selectedOffer, setSelectedOffer] = useState<Record<string, DuffelOffer | null>>({});
@@ -48,6 +50,16 @@ export const Reservations = () => {
                 destination.destination.country,
               destination_city: destination.destination.city,
               destination_country: destination.destination.country,
+              origin_id: response.id_origin_city,
+              origin_airport_id: response.id_origin_airport,
+              destination_id: destination.id_destination,
+              destination_airport_id: destination.id_airport,
+              origin_ref: response.destination,
+              origin_airport_ref: response.origin_airport || response.originAirport,
+              destination_ref: destination.destination,
+              destination_airport_ref: destination.airport || destination.destination_airport,
+              departure_date_raw: destination.departure_date,
+              arrival_date_raw: destination.arrival_date,
               departure_date: formatDate(destination.departure_date),
               arrival_date: formatDate(destination.arrival_date),
               hotel_required: destination.is_hotel_required ? "Sí" : "No",
@@ -119,32 +131,124 @@ export const Reservations = () => {
   
   const handleDuffelSearch = async (destination: any) => {
   const destId = destination.id;
-    const extractIATA = (cityString: string): string => {
-      if (!cityString) return "";
-      // Busca 3 letras mayúsculas rodeadas de espacios, comas o inicio/fin de línea
-      const matches = cityString.match(/\b[A-Z]{3}\b/);
-      return matches ? matches[0] : "";
+    const normalizeDate = (value: unknown): string => {
+      if (typeof value !== "string") {
+        return "";
+      }
+
+      if (value.includes("/")) {
+        const [day, month, year] = value.split("/");
+        return `${year}-${month}-${day}`;
+      }
+
+      return dayjs(value).format("YYYY-MM-DD");
     };
 
-    let originCode = extractIATA(destination.origin); 
-    let destinationCode = extractIATA(destination.destination_full);
+    const extractIATA = (value: unknown): string => {
+      if (!value) return "";
 
-    // Si el Regex falla (ej. si escribiste "jfk" en minúsculas en el seed)
-    const rawDate = destination.departure_date;
-    let finalDate = "";
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (/^[A-Z]{3}$/.test(trimmed)) {
+          return trimmed;
+        }
+        const matches = trimmed.match(/\b[A-Z]{3}\b/);
+        return matches ? matches[0] : "";
+      }
 
-    if (rawDate.includes("/")) {
-      // Si viene del formato transformado "DD/MM/YYYY", lo invertimos manualmente para asegurar éxito
-      const [day, month, year] = rawDate.split("/");
-      finalDate = `${year}-${month}-${day}`;
-    } else {
-      // Si viene como ISO string directo de la DB
-      finalDate = dayjs(rawDate).format("YYYY-MM-DD");
+      return "";
+    };
+
+    const getIataFromObject = (obj: any): string => {
+      if (!obj || typeof obj !== "object") return "";
+      const candidates = [
+        obj.iata_code,
+        obj.iataCode,
+        obj.iata,
+        obj.airport_code,
+        obj.airportCode,
+        obj.code,
+      ];
+
+      for (const candidate of candidates) {
+        const code = extractIATA(candidate);
+        if (code) return code;
+      }
+
+      return "";
+    };
+
+    const getIataByDestinationId = (destinationId: unknown): string => {
+      if (!destinationId) return "";
+      const match = destinations.find((d: any) => String(d.id) === String(destinationId));
+      return getIataFromObject(match);
+    };
+
+    const getIataByAirportId = (airportId: unknown, destinationId?: unknown): string => {
+      if (!airportId) return "";
+
+      const destinationMatch = destinationId
+        ? destinations.find((d: any) => String(d.id) === String(destinationId))
+        : null;
+
+      const destinationAirports = destinationMatch?.airports || [];
+      const scopedAirport = destinationAirports.find(
+        (airport: any) => String(airport.id) === String(airportId),
+      );
+
+      if (scopedAirport) {
+        return getIataFromObject(scopedAirport);
+      }
+
+      const allAirports = destinations.flatMap((d: any) => d.airports || []);
+      const anyAirport = allAirports.find(
+        (airport: any) => String(airport.id) === String(airportId),
+      );
+
+      return getIataFromObject(anyAirport);
+    };
+
+    const originCode =
+      getIataFromObject(destination.origin_airport_ref) ||
+      getIataByAirportId(destination.origin_airport_id, destination.origin_id) ||
+      getIataFromObject(destination.origin_ref) ||
+      getIataByDestinationId(destination.origin_id) ||
+      extractIATA(destination.origin);
+
+    const destinationCode =
+      getIataFromObject(destination.destination_airport_ref) ||
+      getIataByAirportId(destination.destination_airport_id, destination.destination_id) ||
+      getIataFromObject(destination.destination_ref) ||
+      getIataByDestinationId(destination.destination_id) ||
+      extractIATA(destination.destination_full);
+
+    if (!originCode || !destinationCode) {
+      const missing = [
+        !originCode ? "origen" : null,
+        !destinationCode ? "destino" : null,
+      ]
+        .filter(Boolean)
+        .join(" y ");
+      toast.error(`No se encontró código IATA para ${missing}. Verifica la configuración de aeropuertos en destinos.`);
+      return;
     }
 
-    // Verificación final
-    if (finalDate === "Invalid Date" || !finalDate) {
-      toast.error("Error en el formato de fecha del viaje");
+    const departureDateSource = destination.departure_date_raw || destination.departure_date;
+    const returnDateSource = destination.arrival_date_raw || destination.arrival_date;
+
+    const outboundDate = normalizeDate(departureDateSource);
+    const returnDate = normalizeDate(returnDateSource);
+
+    if (
+      !dayjs(outboundDate, "YYYY-MM-DD", true).isValid() ||
+      !dayjs(returnDate, "YYYY-MM-DD", true).isValid()
+    ) {
+      toast.error("Error en el formato de fechas del viaje");
+      return;
+    }
+
+    if (!dayjs(returnDate).isAfter(dayjs(outboundDate))) {
+      toast.error("La fecha de regreso debe ser posterior a la fecha de salida");
       return;
     }
     setSearchingDuffel(prev => ({ ...prev, [destId]: true }));
@@ -153,11 +257,18 @@ export const Reservations = () => {
       const payload = {
         requestDestinationId: destId,
         data: {
-          slices: [{
-            origin: originCode,
-            destination: destinationCode,
-            departure_date: dayjs(destination.departure_date, "DD/MM/YYYY").format("YYYY-MM-DD"),
-          }],
+          slices: [
+            {
+              origin: originCode,
+              destination: destinationCode,
+              departure_date: outboundDate,
+            },
+            {
+              origin: destinationCode,
+              destination: originCode,
+              departure_date: returnDate,
+            },
+          ],
           passengers: [{ type: 'adult' as const }],
           cabin_class: 'economy' as const,
         },
@@ -181,42 +292,11 @@ export const Reservations = () => {
 
     } catch (error: any) {
       console.error(" Error en la petición:", error);
-      toast.error("Hubo un problema al conectar con Duffel.");
+      const msg = error.response?.data?.details?.message || error.response?.data?.message || "Hubo un problema al conectar con Duffel.";
+      toast.error(`Duffel dice: ${msg}`);
     } finally {
       setSearchingDuffel(prev => ({ ...prev, [destId]: false }));
      }
-  
-
-      try {
-        const payload = {
-          requestDestinationId: destId, // Trazabilidad para el Backend
-          data: {
-            slices: [
-              {
-                origin: originCode,
-                destination: destinationCode,
-                departure_date: dayjs(destination.departure_date, "DD/MM/YYYY").format("YYYY-MM-DD"),
-              },
-            ],
-            passengers: [{ type: 'adult' as const }], // Por defecto 1 adulto para el flujo base
-            cabin_class: 'economy' as const,
-          },
-        };
-
-        const response = await createOfferRequest.mutateAsync(payload as any);
-        
-        if (response && response.data) {
-          setDuffelSearchIds(prev => ({ ...prev, [destId]: response.data.id }));
-          toast.success(`Vuelos encontrados para ${originCode} -> ${destinationCode}`);
-        }
-      } catch (error: any) {
-        console.error("Duffel Search Error:", error);
-        // Mostramos el error real que devuelve el Backend
-        const msg = error.response?.data?.details?.message || error.response?.data?.message || "Error en la búsqueda";
-        toast.error(`Duffel dice: ${msg}`);
-      } finally {
-        setSearchingDuffel(prev => ({ ...prev, [destId]: false }));
-      }
     };
 
     const handleSelectOffer = (destId: string, offer: DuffelOffer) => {

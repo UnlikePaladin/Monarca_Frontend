@@ -38,7 +38,7 @@ export const DuffelOfferList: React.FC<Props> = ({ offerRequestId, onSelectOffer
 
   return (
     <div className="mt-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-      {offers.map((offer: any) => (
+      {offers.map((offer: DuffelOffer) => (
         <DuffelOfferItem 
           // DETALLE: Usamos offer_id o id para que React no mande advertencias
           key={offer.id || offer.offer_id} 
