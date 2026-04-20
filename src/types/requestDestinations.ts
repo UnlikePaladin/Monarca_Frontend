@@ -14,6 +14,7 @@
 
 export type RequestDestination = {
   id_destination: string;
+  id_airport?: string;
   destination_order: number;
   stay_days: number;
   arrival_date: string; // ISO-8601

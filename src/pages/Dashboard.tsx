@@ -138,6 +138,14 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="bookings"
           />
         )}
+        {authState.userPermissions.includes("check_budgets" as Permission) && (
+          <Mosaic 
+            title="Gestión de Pólizas" 
+            iconPath="/assets/policies.png" 
+            link="/policies" 
+            id="policies-card"
+          />
+        )}
         {/* {authState.userPermissions.includes("submit_reservations" as Permission) && (
           <Mosaic title="Formulario de ingreso de reservación" iconPath="/assets/formulario_de_ingreso_de_reservacion.png" link=""/>
         )} */}
@@ -194,4 +202,5 @@ export const Dashboard = ({ title }: DashboardProps) => {
 /*
 Modification History:
 - 2026-04-09 | Fabrizio | Refactored grid system to support 1, 2, and 4 columns depending on device width.
+- 2026-04-14 | Fabrizio | Added the Policies Management mosaic for the SOI workflow.
 */

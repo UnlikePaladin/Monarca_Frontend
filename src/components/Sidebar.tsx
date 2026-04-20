@@ -100,6 +100,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/approval-rules"
               />
             )}
+            {user.userPermissions.includes("check_budgets" as Permission) && (
+              <SidebarOption 
+                label="Póliza" 
+                pathIcon="/assets/policies.png" 
+                link="/policies"
+              />
+            )}
             {isSuperAdmin && (
               <SidebarOption
                 label="Empresas"
@@ -141,4 +148,5 @@ Modification History:
 
 - 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and fixed import path.
 - 2026-04-09 | Fabrizio | Converted to a responsive drawer with transition effects.
+- 2026-04-14 | Fabrizio | Integrated the 'Policy' option, visible only to users with 'check_budgets' permission.
 */

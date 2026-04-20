@@ -18,6 +18,7 @@ import { RequestDestination } from "./requestDestinations";
 
 export type CreateRequest = {
   id_origin_city: string;
+  id_origin_airport?: string;
   title: string;
   motive: string;
   requirements?: string;

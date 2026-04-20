@@ -26,6 +26,7 @@ import Historial from "./pages/Historial/Historial.tsx";
 import Bookings from "./pages/Bookings.tsx";
 import Roles from "./pages/Roles/Roles.tsx";
 import ApprovalRules from "./pages/ApprovalRules/ApprovalRules.tsx";
+import PoliciesDashboard from "./pages/Policies.tsx";
 import { Refunds } from "./pages/Refunds/Refunds.tsx";
 import { Vouchers } from "./pages/Refunds/Vouchers.tsx";
 import Reservations from "./pages/Reservations/Reservations.tsx";
@@ -41,6 +42,7 @@ import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 import Departments from "./pages/Admin/Departments.tsx";
 import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
+
 
 export const router = createBrowserRouter([
   // Public routes (no authentication required)
@@ -117,6 +119,10 @@ export const router = createBrowserRouter([
       {
         path: "/refunds-review/:id",
         element: <RefundsAcceptance />,
+      },
+      {
+        path: "/policies", // Nueva ruta
+        element: <PoliciesDashboard />,
       },
       {
         path: "/roles",

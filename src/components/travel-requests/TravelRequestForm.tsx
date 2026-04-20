@@ -27,6 +27,7 @@ import FieldError from "../ui/FieldError";
 import { useCreateTravelRequest } from "../../hooks/requests/useCreateRequest";
 import { useUpdateTravelRequest } from "../../hooks/requests/useUpdateRequest";
 import { useDestinations } from "../../hooks/destinations/useDestinations";
+import { Destination } from "../../types/destinations";
 import { CreateRequest } from "../../types/requests";
 import GoBack from "../GoBack";
 import { useEffect } from "react";
@@ -41,6 +42,7 @@ const priorityOptions: Option[] = [
 
 const destinationSchema = z.object({
   id_destination: z.string().nullable(),
+  id_airport: z.string().nullable().optional(),
   arrival_date: z.string().nonempty({ message: "Selecciona fecha de llegada" }),
   departure_date: z
     .string()
@@ -50,10 +52,27 @@ const destinationSchema = z.object({
   is_hotel_required: z.boolean(),
   is_plane_required: z.boolean(),
   details: z.string().nonempty({ message: "Agrega detalles" }),
+}).superRefine((value, ctx) => {
+  if (value.is_plane_required && !value.id_airport) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["id_airport"],
+      message: "Selecciona un aeropuerto para el tramo con vuelo",
+    });
+  }
+
+  if (!value.is_plane_required && value.id_airport) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["id_airport"],
+      message: "El aeropuerto debe omitirse cuando no se requiere vuelo",
+    });
+  }
 });
 
 const formSchema = z.object({
   id_origin_city: z.string().nullable(),
+  id_origin_airport: z.string().nullable().optional(),
   motive: z.string().nonempty({ message: "Escribe el motivo del viaje" }),
   title: z.string().nonempty({ message: "Escribe el título del viaje" }),
   priority: z.enum(["alta", "media", "baja"]),
@@ -79,6 +98,7 @@ interface DestinationFieldsProps {
   control: Control<RawFormValues>;
   register: UseFormRegister<RawFormValues>;
   destinationOptions: { id: string | number; name: string }[];
+  destinations: Destination[];
   errors: FieldErrors<RawFormValues>["requests_destinations"];
   remove: (index: number) => void;
   setValue: UseFormSetValue<RawFormValues>;
@@ -90,6 +110,7 @@ function DestinationFields({
   control,
   register,
   destinationOptions,
+  destinations,
   errors,
   remove,
   setValue,
@@ -104,6 +125,22 @@ function DestinationFields({
     control,
     name: `requests_destinations.${idx}.departure_date`,
   });
+
+  const destinationId = useWatch({
+    control,
+    name: `requests_destinations.${idx}.id_destination`,
+  });
+
+  const isPlaneRequired = useWatch({
+    control,
+    name: `requests_destinations.${idx}.is_plane_required`,
+  });
+
+  const airportOptions = (destinations.find((d) => d.id === destinationId)?.airports || [])
+    .map((airport) => ({
+      id: airport.id,
+      name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
+    }));
 
   const stayDays =
     arrivalDate && departureDate
@@ -147,13 +184,50 @@ function DestinationFields({
                     ? destinationOptions.find((o) => o.id === field.value)
                     : null
                 }
-                onChange={(opt) => field.onChange(opt.id)}
+                onChange={(opt) => {
+                  field.onChange(opt.id);
+                  setValue(`requests_destinations.${idx}.id_airport`, null);
+                }}
                 isLoading={isLoadingDestinations}
                 placeholder="Selecciona destino"
               />
             )}
           />
           <FieldError msg={destinationErrors?.id_destination?.message} />
+        </div>
+
+        <div>
+          <label
+            htmlFor={`airport-${idx}`}
+            className="block mb-2 text-sm font-medium text-gray-900"
+          >
+            Aeropuerto
+          </label>
+          <Controller
+            control={control}
+            name={`requests_destinations.${idx}.id_airport`}
+            render={({ field }) => (
+              <Select
+                id={`airport-${idx}`}
+                options={airportOptions}
+                value={
+                  field.value
+                    ? airportOptions.find((o) => o.id === field.value)
+                    : null
+                }
+                onChange={(opt) => field.onChange(opt.id)}
+                isDisabled={!destinationId || !isPlaneRequired}
+                placeholder={
+                  !destinationId
+                    ? "Selecciona destino primero"
+                    : isPlaneRequired
+                    ? "Selecciona aeropuerto"
+                    : "No aplica sin vuelo"
+                }
+              />
+            )}
+          />
+          <FieldError msg={destinationErrors?.id_airport?.message} />
         </div>
 
         <div>
@@ -263,7 +337,12 @@ function DestinationFields({
               <Switch
                 id={`plane-${idx}`}
                 checked={field.value}
-                onChange={field.onChange}
+                onChange={(checked) => {
+                  field.onChange(checked);
+                  if (!checked) {
+                    setValue(`requests_destinations.${idx}.id_airport`, null);
+                  }
+                }}
               />
             )}
           />
@@ -275,7 +354,7 @@ function DestinationFields({
 
 function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
   const navigate = useNavigate();
-  const { destinationOptions, isLoading: isLoadingDestinations } =
+  const { destinations, destinationOptions, isLoading: isLoadingDestinations } =
     useDestinations();
   const { createTravelRequestMutation, isPending: isCreating } =
     useCreateTravelRequest();
@@ -296,6 +375,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
       id_origin_city: null,
+      id_origin_airport: null,
       motive: "",
       title: "",
       priority: "media",
@@ -304,6 +384,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       requests_destinations: [
         {
           id_destination: null,
+          id_airport: null,
           arrival_date: "",
           departure_date: "",
           stay_days: 1,
@@ -319,6 +400,19 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     control,
     name: "requests_destinations",
   });
+
+  const originCityId = useWatch({
+    control,
+    name: "id_origin_city",
+  });
+
+  const originAirportOptions =
+    destinations
+      .find((d) => d.id === originCityId)
+      ?.airports?.map((airport) => ({
+        id: airport.id,
+        name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
+      })) || [];
 
   const onSubmit = async (data: RawFormValues) => {
     if (!data.id_origin_city) {
@@ -347,6 +441,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 
         return {
           id_destination: d.id_destination,
+          ...(d.is_plane_required && d.id_airport ? { id_airport: d.id_airport } : {}),
           destination_order: idx + 1,
           stay_days: d.stay_days,
           arrival_date: dayjs(d.arrival_date).toISOString(),
@@ -361,6 +456,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 
     const payload = {
       id_origin_city: data.id_origin_city,
+      id_origin_airport: data.id_origin_airport || undefined,
       title: data.motive,
       motive: data.motive,
       requirements: data.requirements || "",
@@ -458,13 +554,48 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                           ? destinationOptions.find((o) => o.id === field.value)
                           : null
                       }
-                      onChange={(opt) => field.onChange(opt.id)}
+                      onChange={(opt) => {
+                        field.onChange(opt.id);
+                        setValue("id_origin_airport", null);
+                      }}
                       isLoading={isLoadingDestinations}
                       placeholder="Selecciona ciudad de origen"
                     />
                   )}
                 />
                 <FieldError msg={errors.id_origin_city?.message} />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="id_origin_airport"
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                >
+                  Aeropuerto de origen
+                </label>
+                <Controller
+                  control={control}
+                  name="id_origin_airport"
+                  render={({ field }) => (
+                    <Select
+                      id="id_origin_airport"
+                      options={originAirportOptions}
+                      value={
+                        field.value
+                          ? originAirportOptions.find((o) => o.id === field.value)
+                          : null
+                      }
+                      onChange={(opt) => field.onChange(opt.id)}
+                      isDisabled={!originCityId}
+                      placeholder={
+                        originCityId
+                          ? "Selecciona aeropuerto de origen (opcional)"
+                          : "Selecciona ciudad primero"
+                      }
+                    />
+                  )}
+                />
+                <FieldError msg={errors.id_origin_airport?.message} />
               </div>
 
               <div>
@@ -529,6 +660,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                 control={control}
                 register={register}
                 destinationOptions={destinationOptions}
+                destinations={destinations}
                 errors={errors.requests_destinations}
                 remove={remove}
                 setValue={setValue}
@@ -542,6 +674,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
               onClick={() =>
                 append({
                   id_destination: null,
+                  id_airport: null,
                   arrival_date: "",
                   departure_date: "",
                   stay_days: 1,
