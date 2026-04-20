@@ -243,7 +243,7 @@ const RequestInfo: React.FC = () => {
   const register = async () => {
     try {
       await patchRequest(`/requests/SOI-approve/${id}`, {});
-      toast.success("Solicitud marcada como registrada", {
+      toast.success("Contabilidad aprobada; la agencia puede reservar", {
         position: "top-right",
         autoClose: 3000,
       });
@@ -906,7 +906,7 @@ const RequestInfo: React.FC = () => {
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >
-                    Marcar como registrado
+                    Aprobar
                   </button>
                 </footer>
               )}
