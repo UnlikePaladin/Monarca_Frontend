@@ -136,12 +136,27 @@ export const Reservations = () => {
         return "";
       }
 
-      if (value.includes("/")) {
-        const [day, month, year] = value.split("/");
-        return `${year}-${month}-${day}`;
+      const trimmed = value.trim();
+      if (!trimmed) return "";
+
+      // Preserve calendar date from ISO/timestamp values and avoid timezone shifts.
+      const isoLike = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (isoLike) return isoLike[1];
+
+      const ymdSlash = trimmed.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+      if (ymdSlash) {
+        const [, year, month, day] = ymdSlash;
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       }
 
-      return dayjs(value).format("YYYY-MM-DD");
+      const dmySlash = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (dmySlash) {
+        const [, day, month, year] = dmySlash;
+        return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      }
+
+      const parsed = dayjs(trimmed);
+      return parsed.isValid() ? parsed.format("YYYY-MM-DD") : "";
     };
 
     const extractIATA = (value: unknown): string => {
@@ -247,6 +262,12 @@ export const Reservations = () => {
       return;
     }
 
+    const today = dayjs().startOf("day");
+    if (!dayjs(outboundDate).isAfter(today)) {
+      toast.error("La fecha de salida debe ser posterior al día de hoy para buscar en Duffel");
+      return;
+    }
+
     if (!dayjs(returnDate).isAfter(dayjs(outboundDate))) {
       toast.error("La fecha de regreso debe ser posterior a la fecha de salida");
       return;
@@ -292,6 +313,10 @@ export const Reservations = () => {
 
     } catch (error: any) {
       console.error(" Error en la petición:", error);
+      if (error?.code === "ECONNABORTED") {
+        toast.error("Duffel tardó demasiado en responder. Intenta de nuevo en unos segundos.");
+        return;
+      }
       const msg = error.response?.data?.details?.message || error.response?.data?.message || "Hubo un problema al conectar con Duffel.";
       toast.error(`Duffel dice: ${msg}`);
     } finally {

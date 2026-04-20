@@ -9,11 +9,14 @@ import {
 
 export function useDuffel() {
   const queryClient = useQueryClient();
+  const DUFFEL_TIMEOUT_MS = 30000;
 
   // 1. Crear solicitud de ofertas (Inicia búsqueda en Duffel)
   const createOfferRequest = useMutation({
     mutationFn: (payload: CreateOfferRequestPayload) => 
-      postRequest("/travel-integrations/duffel/offer-requests", payload as any),
+      postRequest("/travel-integrations/duffel/offer-requests", payload as unknown as Record<string, unknown>, {
+        timeout: DUFFEL_TIMEOUT_MS,
+      }),
   });
 
   // 2. Obtener lista de ofertas para una búsqueda específica
@@ -28,7 +31,9 @@ export function useDuffel() {
   // Este es el paso crítico que consume el nuevo ReservationsService.createReservation del back
   const createOrder = useMutation({
     mutationFn: (payload: CreateDuffelOrderPayload): Promise<DuffelOrderResponse> => 
-      postRequest("/travel-integrations/duffel/orders", payload as any),
+      postRequest("/travel-integrations/duffel/orders", payload as unknown as Record<string, unknown>, {
+        timeout: DUFFEL_TIMEOUT_MS,
+      }),
     onSuccess: (data) => {
       // Invalidamos para que las vistas de reservaciones muestren el nuevo registro
       queryClient.invalidateQueries({ queryKey: ["requests"] });
