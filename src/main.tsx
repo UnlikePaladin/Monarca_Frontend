@@ -40,6 +40,7 @@ import CreateCompany from "./pages/Admin/CreateCompany.tsx";
 import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 import Departments from "./pages/Admin/Departments.tsx";
+import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
 
 export const router = createBrowserRouter([
   // Public routes (no authentication required)
@@ -182,6 +183,18 @@ export const router = createBrowserRouter([
           {
             path: "",
             element: <CreateCostCenter />,
+          },
+        ],
+      },
+      {
+        path: "/admin/refund-policies",
+        element: (
+          <RoleProtectedRoute requiredRoles={["SuperAdmin", "CompanyAdmin"]} />
+        ),
+        children: [
+          {
+            path: "",
+            element: <RefundPolicies />,
           },
         ],
       },

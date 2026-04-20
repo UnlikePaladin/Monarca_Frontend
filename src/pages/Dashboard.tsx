@@ -178,6 +178,14 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="tenant_cost_centers"
           />
         )}
+        {(isSuperAdmin || isCompanyAdmin) && (
+          <Mosaic
+            title="Políticas de reembolso"
+            iconPath="/assets/matrix.png"
+            link="/admin/refund-policies"
+            id="refund_policies_admin"
+          />
+        )}
       </div>
     </Tutorial>
   );
