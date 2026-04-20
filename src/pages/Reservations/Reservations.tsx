@@ -10,6 +10,11 @@ import formatDate from "../../utils/formatDate";
 import { postRequest } from "../../utils/apiService";
 import { Tutorial } from "../../components/Tutorial";
 import { useApp } from "../../hooks/app/appContext";
+import { useDuffel } from "../../hooks/requests/useDuffel";
+import { DuffelOfferList } from "../../components/Reservations/DuffelOfferList";
+import { DuffelPassengerForm } from "../../components/Reservations/DuffelPassengerForm";
+import { DuffelOffer } from "../../types/duffel";
+import dayjs from "dayjs";
 
 export const Reservations = () => {
   const navigate = useNavigate();
@@ -18,6 +23,10 @@ export const Reservations = () => {
   const [request, setRequest] = useState<any>({});
   const [isFormValid, _setIsFormValid] = useState(true);
   const { handleVisitPage, tutorial } = useApp();
+  const { createOfferRequest, createOrder } = useDuffel();
+    const [duffelSearchIds, setDuffelSearchIds] = useState<Record<string, string>>({});
+    const [searchingDuffel, setSearchingDuffel] = useState<Record<string, boolean>>({});
+    const [selectedOffer, setSelectedOffer] = useState<Record<string, DuffelOffer | null>>({});
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -106,6 +115,163 @@ export const Reservations = () => {
     };
     setFormData(updatedFormData);
   };
+
+  
+  const handleDuffelSearch = async (destination: any) => {
+  const destId = destination.id;
+    const extractIATA = (cityString: string): string => {
+      if (!cityString) return "";
+      // Busca 3 letras mayúsculas rodeadas de espacios, comas o inicio/fin de línea
+      const matches = cityString.match(/\b[A-Z]{3}\b/);
+      return matches ? matches[0] : "";
+    };
+
+    let originCode = extractIATA(destination.origin); 
+    let destinationCode = extractIATA(destination.destination_full);
+
+    // Si el Regex falla (ej. si escribiste "jfk" en minúsculas en el seed)
+    const rawDate = destination.departure_date;
+    let finalDate = "";
+
+    if (rawDate.includes("/")) {
+      // Si viene del formato transformado "DD/MM/YYYY", lo invertimos manualmente para asegurar éxito
+      const [day, month, year] = rawDate.split("/");
+      finalDate = `${year}-${month}-${day}`;
+    } else {
+      // Si viene como ISO string directo de la DB
+      finalDate = dayjs(rawDate).format("YYYY-MM-DD");
+    }
+
+    // Verificación final
+    if (finalDate === "Invalid Date" || !finalDate) {
+      toast.error("Error en el formato de fecha del viaje");
+      return;
+    }
+    setSearchingDuffel(prev => ({ ...prev, [destId]: true }));
+
+    try {
+      const payload = {
+        requestDestinationId: destId,
+        data: {
+          slices: [{
+            origin: originCode,
+            destination: destinationCode,
+            departure_date: dayjs(destination.departure_date, "DD/MM/YYYY").format("YYYY-MM-DD"),
+          }],
+          passengers: [{ type: 'adult' as const }],
+          cabin_class: 'economy' as const,
+        },
+      };
+
+      const response = await createOfferRequest.mutateAsync(payload as any);
+      
+      console.log(" RESPUESTA COMPLETA DE DUFFEL:", response);
+
+      // Intentamos obtener el ID de varias formas por si el backend lo envolvió
+      const offerRequestId = response?.offer_request_id || response?.data?.id || response?.id;
+
+      if (offerRequestId) {
+        console.log(" ID DE BÚSQUEDA CAPTURADO:", offerRequestId);
+        setDuffelSearchIds(prev => ({ ...prev, [destId]: offerRequestId }));
+        toast.success(`Vuelos encontrados para ${originCode}`);
+      } else {
+        console.warn(" No se encontró un ID en la respuesta");
+        toast.warning("Duffel respondió, pero no se generó un ID de búsqueda.");
+      }
+
+    } catch (error: any) {
+      console.error(" Error en la petición:", error);
+      toast.error("Hubo un problema al conectar con Duffel.");
+    } finally {
+      setSearchingDuffel(prev => ({ ...prev, [destId]: false }));
+     }
+  
+
+      try {
+        const payload = {
+          requestDestinationId: destId, // Trazabilidad para el Backend
+          data: {
+            slices: [
+              {
+                origin: originCode,
+                destination: destinationCode,
+                departure_date: dayjs(destination.departure_date, "DD/MM/YYYY").format("YYYY-MM-DD"),
+              },
+            ],
+            passengers: [{ type: 'adult' as const }], // Por defecto 1 adulto para el flujo base
+            cabin_class: 'economy' as const,
+          },
+        };
+
+        const response = await createOfferRequest.mutateAsync(payload as any);
+        
+        if (response && response.data) {
+          setDuffelSearchIds(prev => ({ ...prev, [destId]: response.data.id }));
+          toast.success(`Vuelos encontrados para ${originCode} -> ${destinationCode}`);
+        }
+      } catch (error: any) {
+        console.error("Duffel Search Error:", error);
+        // Mostramos el error real que devuelve el Backend
+        const msg = error.response?.data?.details?.message || error.response?.data?.message || "Error en la búsqueda";
+        toast.error(`Duffel dice: ${msg}`);
+      } finally {
+        setSearchingDuffel(prev => ({ ...prev, [destId]: false }));
+      }
+    };
+
+    const handleSelectOffer = (destId: string, offer: DuffelOffer) => {
+      setSelectedOffer(prev => ({ ...prev, [destId]: offer }));
+      // Al seleccionar, podemos ocultar la lista y mostrar un resumen con el botón de "Confirmar Reserva"
+    };
+
+    const handleSubmitDuffelOrder = async (destId: string, passengerData: any) => {
+      const offer = selectedOffer[destId];
+      if (!offer) return;
+
+      const finalOfferId = offer.id || offer.offer_id;
+      const finalPrice = parseFloat(offer.price?.total_amount || offer.total_amount || "0");
+
+
+      try {
+        const payload = {
+          requestDestinationId: destId,
+          offerId: finalOfferId,
+          reservationTitle: `Vuelo Duffel: ${offer.owner?.name || 'Aerolínea'}`,
+          reservationComments: `Reserva digital emitida para ${passengerData.given_name}.`,
+          reservationPrice: finalPrice,
+          data: {
+            selected_offers: [finalOfferId],
+            passengers: [{
+              ...passengerData,
+              // Detalle: Las aerolíneas son estrictas con el formato del teléfono
+               phone_number: passengerData.phone_number.replace(/\s/g, '')
+            }],
+            type: 'instant' as const, // Emisión inmediata
+          },
+        };
+
+        console.log(" ENVIANDO ORDEN FINAL A MONARCA:", payload);
+
+        await createOrder.mutateAsync(payload as any);
+        
+        toast.success("¡Vuelo reservado y emitido correctamente!");
+        
+        // Limpiamos los estados de Duffel para este destino para mostrar la reserva finalizada
+        setDuffelSearchIds(prev => ({ ...prev, [destId]: "" }));
+        setSelectedOffer(prev => ({ ...prev, [destId]: null }));
+        
+        // Opcional: Refrescar la solicitud completa para mostrar la nueva reservación en la lista
+        // El hook de la Parte 1 ya tiene un onSuccess que invalida las queries
+      } catch (error: any) {
+        console.error("Duffel Order Error:", error);
+        // Detalle importante: Duffel devuelve errores muy específicos (ej. "Passport required")
+        const errorMsg = error.response?.data?.message || "Error al emitir el boleto. Verifique los datos.";
+        toast.error(errorMsg);
+      }
+    };
+
+
+
 
   /**
    * Handles reservation form submission.
@@ -251,8 +417,21 @@ export const Reservations = () => {
                   key={destination.id}
                   className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm"
                 >
-                  <h3>Destino #{destination.destination_order}</h3>
-                  <div></div>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <h3 className="font-bold text-lg text-[var(--blue)]">Destino #{destination.destination_order}</h3>
+                    {destination.is_plane_required && !selectedOffer[destination.id] && (
+                     
+                      <button
+                        type="button"
+                        onClick={() => handleDuffelSearch(destination)}
+                        disabled={searchingDuffel[destination.id]}
+                        className="text-xs bg-[#6032b3] text-white px-3 py-1 rounded hover:bg-[#4c2891] transition-colors"
+                      >
+                        {searchingDuffel[destination.id] ? "Buscando..." : "Buscar vuelos (Duffel)"}
+                      </button>
+                    )}
+                  </div>
+                  
                   <section
                     className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8"
                     id="reservation-info"
@@ -275,171 +454,219 @@ export const Reservations = () => {
                       </div>
                     ))}
                   </section>
-                  <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                    {destination.is_hotel_required && (
-                      <div
-                        className="flex flex-col gap-y-4"
-                        id="hotel-reservation"
-                      >
-                        <h3 className="text-[var(--blue)] mb-4 font-bold">
-                          Información del hotel
-                        </h3>
-                        <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`hotel_title_${destination.id}`}
-                          >
-                            Título
-                          </label>
-                          <Input
-                            placeholder="Ingresa el título de la reservación"
-                            value={formData[destination.id]?.hotel_title || ""}
-                            onChange={(e) => handleChange(e, destination.id)}
-                            name="hotel_title"
-                            id={`hotel_title_${destination.id}`}
-                          />
-                        </div>
+                  {!duffelSearchIds[destination.id] && (
+                    <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                      {destination.is_hotel_required && (
+                        <div
+                          className="flex flex-col gap-y-4"
+                          id="hotel-reservation"
+                        >
+                          <h3 className="text-[var(--blue)] mb-4 font-bold">
+                            Información del hotel
+                          </h3>
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`hotel_title_${destination.id}`}
+                            >
+                              Título
+                            </label>
+                            <Input
+                              placeholder="Ingresa el título de la reservación"
+                              value={formData[destination.id]?.hotel_title || ""}
+                              onChange={(e) => handleChange(e, destination.id)}
+                              name="hotel_title"
+                              id={`hotel_title_${destination.id}`}
+                            />
+                          </div>
 
-                        <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`hotel_comments_${destination.id}`}
-                          >
-                            Comentarios
-                          </label>
-                          <TextArea
-                            placeholder="Escribe tus comentarios"
-                            value={
-                              formData[destination.id]?.hotel_comments || ""
-                            }
-                            onChange={(e) => handleChange(e, destination.id)}
-                            name="hotel_comments"
-                            id={`hotel_comments_${destination.id}`}
-                          />
-                        </div>
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`hotel_comments_${destination.id}`}
+                            >
+                              Comentarios
+                            </label>
+                            <TextArea
+                              placeholder="Escribe tus comentarios"
+                              value={
+                                formData[destination.id]?.hotel_comments || ""
+                              }
+                              onChange={(e) => handleChange(e, destination.id)}
+                              name="hotel_comments"
+                              id={`hotel_comments_${destination.id}`}
+                            />
+                          </div>
 
-                        <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`hotel_price_${destination.id}`}
-                          >
-                            Precio
-                          </label>
-                          <Input
-                            placeholder="Ingresa el precio del hotel"
-                            value={formData[destination.id]?.hotel_price || ""}
-                            onChange={(e) => handleChange(e, destination.id)}
-                            name="hotel_price"
-                            type="number"
-                            id={`hotel_price_${destination.id}`}
-                          />
-                        </div>
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`hotel_price_${destination.id}`}
+                            >
+                              Precio
+                            </label>
+                            <Input
+                              placeholder="Ingresa el precio del hotel"
+                              value={formData[destination.id]?.hotel_price || ""}
+                              onChange={(e) => handleChange(e, destination.id)}
+                              name="hotel_price"
+                              type="number"
+                              id={`hotel_price_${destination.id}`}
+                            />
+                          </div>
 
-                        <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`hotel_file_${destination.id}`}
-                          >
-                            Subir archivos de hotel
-                          </label>
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`hotel_file_${destination.id}`}
+                            >
+                              Subir archivos de hotel
+                            </label>
 
-                          <Input
-                            type="file"
-                            accept=".pdf"
-                            onChange={(e) =>
-                              handleFileChange(e, destination.id)
-                            }
-                            name="hotel_file"
-                            id={`hotel_file_${destination.id}`}
-                            selectedFileName={
-                              formData[destination.id]?.hotel_file_name
-                            }
-                          />
+                            <Input
+                              type="file"
+                              accept=".pdf"
+                              onChange={(e) =>
+                                handleFileChange(e, destination.id)
+                              }
+                              name="hotel_file"
+                              id={`hotel_file_${destination.id}`}
+                              selectedFileName={
+                                formData[destination.id]?.hotel_file_name
+                              }
+                            />
+                          </div>
                         </div>
+                      )}
+                      {destination.is_plane_required && (
+                        <div
+                          className="flex flex-col gap-y-4"
+                          id="plane-reservation"
+                        >
+                          <h3 className="text-[var(--blue)] mb-4 font-bold">
+                            Información del vuelo
+                          </h3>
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`plane_title_${destination.id}`}
+                            >
+                              Título
+                            </label>
+                            <Input
+                              placeholder="Ingresa el título de la reservación"
+                              value={formData[destination.id]?.plane_title || ""}
+                              onChange={(e) => handleChange(e, destination.id)}
+                              name="plane_title"
+                              id={`plane_title_${destination.id}`}
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`plane_comments_${destination.id}`}
+                            >
+                              Comentarios
+                            </label>
+                            <TextArea
+                              placeholder="Escribe tus comentarios"
+                              value={
+                                formData[destination.id]?.plane_comments || ""
+                              }
+                              onChange={(e) => handleChange(e, destination.id)}
+                              name="plane_comments"
+                              id={`plane_comments_${destination.id}`}
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`plane_price_${destination.id}`}
+                            >
+                              Precio
+                            </label>
+                            <Input
+                              placeholder="Ingresa el precio del vuelo"
+                              value={formData[destination.id]?.plane_price || ""}
+                              onChange={(e) => handleChange(e, destination.id)}
+                              name="plane_price"
+                              type="number"
+                              id={`plane_price_${destination.id}`}
+                            />
+                          </div>
+
+                          <div>
+                            <label
+                              className="block mb-2 text-sm font-medium text-gray-900"
+                              htmlFor={`plane_file_${destination.id}`}
+                            >
+                              Subir archivos de avión
+                            </label>
+                            <Input
+                              type="file"
+                              accept=".pdf"
+                              onChange={(e) =>
+                                handleFileChange(e, destination.id)
+                              }
+                              name="plane_file"
+                              id={`plane_file_${destination.id}`}
+                              selectedFileName={
+                                formData[destination.id]?.plane_file_name
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </section>
+                  )}
+                  {duffelSearchIds[destination.id] && !selectedOffer[destination.id] && (
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 shadow-inner">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-sm font-bold text-purple-900">Vuelos encontrados (Precios en tiempo real)</h4>
+                        <button 
+                          onClick={() => setDuffelSearchIds(prev => ({ ...prev, [destination.id]: "" }))}
+                          className="text-xs text-purple-600 hover:underline"
+                        >
+                          Cambiar a carga manual
+                        </button>
                       </div>
-                    )}
-                    {destination.is_plane_required && (
-                      <div
-                        className="flex flex-col gap-y-4"
-                        id="plane-reservation"
-                      >
-                        <h3 className="text-[var(--blue)] mb-4 font-bold">
-                          Información del vuelo
-                        </h3>
-                        <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`plane_title_${destination.id}`}
-                          >
-                            Título
-                          </label>
-                          <Input
-                            placeholder="Ingresa el título de la reservación"
-                            value={formData[destination.id]?.plane_title || ""}
-                            onChange={(e) => handleChange(e, destination.id)}
-                            name="plane_title"
-                            id={`plane_title_${destination.id}`}
-                          />
-                        </div>
+                      <DuffelOfferList 
+                        offerRequestId={duffelSearchIds[destination.id] || ""} 
+                        onSelectOffer={(offer) => handleSelectOffer(destination.id, offer)}
+                      />
+                    </div>
+                  )}
 
+                  {selectedOffer[destination.id] && (
+                    <div className="bg-green-50 p-6 rounded-lg border-2 border-green-200">
+                      <div className="flex justify-between items-start mb-6">
                         <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`plane_comments_${destination.id}`}
-                          >
-                            Comentarios
-                          </label>
-                          <TextArea
-                            placeholder="Escribe tus comentarios"
-                            value={
-                              formData[destination.id]?.plane_comments || ""
-                            }
-                            onChange={(e) => handleChange(e, destination.id)}
-                            name="plane_comments"
-                            id={`plane_comments_${destination.id}`}
-                          />
+                          <h4 className="font-black text-green-900 uppercase tracking-tight">Vuelo Seleccionado</h4>
+                          <p className="text-xs text-green-700">
+                            Aerolínea: {selectedOffer[destination.id]?.owner?.name} Vuelo ID: {(selectedOffer[destination.id]?.id || selectedOffer[destination.id]?.offer_id || "").substring(0, 8)}
+                          </p>
                         </div>
-
-                        <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`plane_price_${destination.id}`}
-                          >
-                            Precio
-                          </label>
-                          <Input
-                            placeholder="Ingresa el precio del vuelo"
-                            value={formData[destination.id]?.plane_price || ""}
-                            onChange={(e) => handleChange(e, destination.id)}
-                            name="plane_price"
-                            type="number"
-                            id={`plane_price_${destination.id}`}
-                          />
-                        </div>
-
-                        <div>
-                          <label
-                            className="block mb-2 text-sm font-medium text-gray-900"
-                            htmlFor={`plane_file_${destination.id}`}
-                          >
-                            Subir archivos de avión
-                          </label>
-                          <Input
-                            type="file"
-                            accept=".pdf"
-                            onChange={(e) =>
-                              handleFileChange(e, destination.id)
-                            }
-                            name="plane_file"
-                            id={`plane_file_${destination.id}`}
-                            selectedFileName={
-                              formData[destination.id]?.plane_file_name
-                            }
-                          />
-                        </div>
+                        <button 
+                          onClick={() => setSelectedOffer(prev => ({ ...prev, [destination.id]: null }))}
+                          className="text-xs bg-white border border-green-300 px-2 py-1 rounded text-green-700 hover:bg-green-100"
+                        >
+                          Elegir otro vuelo
+                        </button>
                       </div>
-                    )}
-                  </section>
+                      <DuffelPassengerForm 
+                        offer={selectedOffer[destination.id]!}
+                        initialData={{
+                          name: request?.user?.name || "",
+                          last_name: request?.user?.last_name || "",
+                          email: request?.user?.email || "",
+                        }}
+                        isSubmitting={createOrder.isPending}
+                        onSubmit={(data) => handleSubmitDuffelOrder(destination.id, data)}
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
