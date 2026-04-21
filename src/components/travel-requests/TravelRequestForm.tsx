@@ -80,7 +80,7 @@ const formSchema = z.object({
   advance_money: z
     .number()
     .int()
-    .positive({ message: "El dinero adelantado debe ser positivo" }),
+    .nonnegative({ message: "El dinero adelantado debe ser positivo" }),
   requests_destinations: z
     .array(destinationSchema)
     .min(1, "Al menos un destino"),
