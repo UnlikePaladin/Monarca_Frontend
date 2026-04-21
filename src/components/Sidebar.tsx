@@ -128,7 +128,7 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/admin/cost-centers"
               />
             )}
-            {(isSuperAdmin || isCompanyAdmin) && (
+            {isCompanyAdmin && (
               <SidebarOption
                 label="Políticas de reembolso"
                 pathIcon="/assets/matrix.png"

@@ -195,7 +195,7 @@ export const router = createBrowserRouter([
       {
         path: "/admin/refund-policies",
         element: (
-          <RoleProtectedRoute requiredRoles={["SuperAdmin", "CompanyAdmin"]} />
+          <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} />
         ),
         children: [
           {
