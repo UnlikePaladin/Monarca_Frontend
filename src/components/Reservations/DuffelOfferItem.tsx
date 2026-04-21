@@ -1,3 +1,9 @@
+/*
+DuffelOfferItem.tsx
+UI component that renders a single flight offer from Duffel, 
+including itinerary details, prices, and airline logos.
+*/
+
 import React from "react";
 import { DuffelCarrier, DuffelOffer } from "../../types/duffel";
 import formatMoney from "../../utils/formatMoney";
@@ -8,7 +14,16 @@ interface Props {
   onSelect: (offer: DuffelOffer) => void;
 }
 
+/**
+Individual item component for the flight offers list.
+@param offer Duffel flight offer data object.
+@param onSelect Callback function when the user selects the offer.
+*/
 export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
+  /**
+  Parses ISO 8601 duration strings (e.g. PT2H30M) into readable format.
+  @param duration ISO string from API.
+  */
   const formatIsoDuration = (duration?: string) => {
     if (!duration) return "N/A";
     const hoursMatch = duration.match(/(\d+)H/);
@@ -233,3 +248,8 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
     </div>
   );
 };
+
+/*
+Modification History:
+2026-04-20 | Fabrizio | Initial implementation of the Duffel offer display card.
+*/

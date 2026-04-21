@@ -1,3 +1,9 @@
+/*
+DuffelOfferList.tsx
+Container component that fetches and maps available flight offers 
+using an existing offer request ID.
+*/
+
 import React from "react";
 import { useDuffel } from "../../hooks/requests/useDuffel";
 import { DuffelOfferItem } from "./DuffelOfferItem";
@@ -8,6 +14,11 @@ interface Props {
   onSelectOffer: (offer: DuffelOffer) => void;
 }
 
+/**
+Component responsible for listing all flights returned by the GDS.
+@param offerRequestId The unique ID from the search request.
+@param onSelectOffer Selection handler passed to children items.
+*/
 export const DuffelOfferList: React.FC<Props> = ({ offerRequestId, onSelectOffer }) => {
   const { useListOffers } = useDuffel();
   const { data, isLoading, error } = useListOffers(offerRequestId);
@@ -49,3 +60,8 @@ export const DuffelOfferList: React.FC<Props> = ({ offerRequestId, onSelectOffer
     </div>
   );
 };
+
+/*
+Modification History:
+2026-04-20 | Fabrizio | Implemented asynchronous fetching and list rendering for Duffel offers.
+*/

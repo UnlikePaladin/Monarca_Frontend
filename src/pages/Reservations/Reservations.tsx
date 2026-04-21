@@ -379,6 +379,239 @@ export const Reservations = () => {
 
 
   /**
+  Extracts IATA codes and starts flight search via Duffel API.
+  @param destination Specific destination slice from request.
+  */
+  const handleDuffelSearch = async (destination: any) => {
+  const destId = destination.id;
+    const normalizeDate = (value: unknown): string => {
+      if (typeof value !== "string") {
+        return "";
+      }
+
+      if (value.includes("/")) {
+        const [day, month, year] = value.split("/");
+        return `${year}-${month}-${day}`;
+      }
+
+      return dayjs(value).format("YYYY-MM-DD");
+    };
+
+    const extractIATA = (value: unknown): string => {
+      if (!value) return "";
+
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (/^[A-Z]{3}$/.test(trimmed)) {
+          return trimmed;
+        }
+        const matches = trimmed.match(/\b[A-Z]{3}\b/);
+        return matches ? matches[0] : "";
+      }
+
+      return "";
+    };
+
+    const getIataFromObject = (obj: any): string => {
+      if (!obj || typeof obj !== "object") return "";
+      const candidates = [
+        obj.iata_code,
+        obj.iataCode,
+        obj.iata,
+        obj.airport_code,
+        obj.airportCode,
+        obj.code,
+      ];
+
+      for (const candidate of candidates) {
+        const code = extractIATA(candidate);
+        if (code) return code;
+      }
+
+      return "";
+    };
+
+    const getIataByDestinationId = (destinationId: unknown): string => {
+      if (!destinationId) return "";
+      const match = destinations.find((d: any) => String(d.id) === String(destinationId));
+      return getIataFromObject(match);
+    };
+
+    const getIataByAirportId = (airportId: unknown, destinationId?: unknown): string => {
+      if (!airportId) return "";
+
+      const destinationMatch = destinationId
+        ? destinations.find((d: any) => String(d.id) === String(destinationId))
+        : null;
+
+      const destinationAirports = destinationMatch?.airports || [];
+      const scopedAirport = destinationAirports.find(
+        (airport: any) => String(airport.id) === String(airportId),
+      );
+
+      if (scopedAirport) {
+        return getIataFromObject(scopedAirport);
+      }
+
+      const allAirports = destinations.flatMap((d: any) => d.airports || []);
+      const anyAirport = allAirports.find(
+        (airport: any) => String(airport.id) === String(airportId),
+      );
+
+      return getIataFromObject(anyAirport);
+    };
+
+    const originCode =
+      getIataFromObject(destination.origin_airport_ref) ||
+      getIataByAirportId(destination.origin_airport_id, destination.origin_id) ||
+      getIataFromObject(destination.origin_ref) ||
+      getIataByDestinationId(destination.origin_id) ||
+      extractIATA(destination.origin);
+
+    const destinationCode =
+      getIataFromObject(destination.destination_airport_ref) ||
+      getIataByAirportId(destination.destination_airport_id, destination.destination_id) ||
+      getIataFromObject(destination.destination_ref) ||
+      getIataByDestinationId(destination.destination_id) ||
+      extractIATA(destination.destination_full);
+
+    if (!originCode || !destinationCode) {
+      const missing = [
+        !originCode ? "origen" : null,
+        !destinationCode ? "destino" : null,
+      ]
+        .filter(Boolean)
+        .join(" y ");
+      toast.error(`No se encontró código IATA para ${missing}. Verifica la configuración de aeropuertos en destinos.`);
+      return;
+    }
+
+    const departureDateSource = destination.departure_date_raw || destination.departure_date;
+    const returnDateSource = destination.arrival_date_raw || destination.arrival_date;
+
+    const outboundDate = normalizeDate(departureDateSource);
+    const returnDate = normalizeDate(returnDateSource);
+
+    if (
+      !dayjs(outboundDate, "YYYY-MM-DD", true).isValid() ||
+      !dayjs(returnDate, "YYYY-MM-DD", true).isValid()
+    ) {
+      toast.error("Error en el formato de fechas del viaje");
+      return;
+    }
+
+    if (!dayjs(returnDate).isAfter(dayjs(outboundDate))) {
+      toast.error("La fecha de regreso debe ser posterior a la fecha de salida");
+      return;
+    }
+    setSearchingDuffel(prev => ({ ...prev, [destId]: true }));
+
+    try {
+      const payload = {
+        requestDestinationId: destId,
+        data: {
+          slices: [
+            {
+              origin: originCode,
+              destination: destinationCode,
+              departure_date: outboundDate,
+            },
+            {
+              origin: destinationCode,
+              destination: originCode,
+              departure_date: returnDate,
+            },
+          ],
+          passengers: [{ type: 'adult' as const }],
+          cabin_class: 'economy' as const,
+        },
+      };
+
+      const response = await createOfferRequest.mutateAsync(payload as any);
+      
+      console.log(" RESPUESTA COMPLETA DE DUFFEL:", response);
+
+      // Intentamos obtener el ID de varias formas por si el backend lo envolvió
+      const offerRequestId = response?.offer_request_id || response?.data?.id || response?.id;
+
+      if (offerRequestId) {
+        console.log(" ID DE BÚSQUEDA CAPTURADO:", offerRequestId);
+        setDuffelSearchIds(prev => ({ ...prev, [destId]: offerRequestId }));
+        toast.success(`Vuelos encontrados para ${originCode}`);
+      } else {
+        console.warn(" No se encontró un ID en la respuesta");
+        toast.warning("Duffel respondió, pero no se generó un ID de búsqueda.");
+      }
+
+    } catch (error: any) {
+      console.error(" Error en la petición:", error);
+      const msg = error.response?.data?.details?.message || error.response?.data?.message || "Hubo un problema al conectar con Duffel.";
+      toast.error(`Duffel dice: ${msg}`);
+    } finally {
+      setSearchingDuffel(prev => ({ ...prev, [destId]: false }));
+     }
+    };
+
+    const handleSelectOffer = (destId: string, offer: DuffelOffer) => {
+      setSelectedOffer(prev => ({ ...prev, [destId]: offer }));
+      // Al seleccionar, podemos ocultar la lista y mostrar un resumen con el botón de "Confirmar Reserva"
+    };
+
+    /**
+    Finalizes a Duffel order and creates the internal Monarca reservation.
+    @param destId Request destination UUID.
+    @param passengerData Validated traveler details.
+    */
+    const handleSubmitDuffelOrder = async (destId: string, passengerData: any) => {
+      const offer = selectedOffer[destId];
+      if (!offer) return;
+
+      const finalOfferId = offer.id || offer.offer_id;
+      const finalPrice = parseFloat(offer.price?.total_amount || offer.total_amount || "0");
+
+
+      try {
+        const payload = {
+          requestDestinationId: destId,
+          offerId: finalOfferId,
+          reservationTitle: `Vuelo Duffel: ${offer.owner?.name || 'Aerolínea'}`,
+          reservationComments: `Reserva digital emitida para ${passengerData.given_name}.`,
+          reservationPrice: finalPrice,
+          data: {
+            selected_offers: [finalOfferId],
+            passengers: [{
+              ...passengerData,
+              // Detalle: Las aerolíneas son estrictas con el formato del teléfono
+               phone_number: passengerData.phone_number.replace(/\s/g, '')
+            }],
+            type: 'instant' as const, // Emisión inmediata
+          },
+        };
+
+        console.log(" ENVIANDO ORDEN FINAL A MONARCA:", payload);
+
+        await createOrder.mutateAsync(payload as any);
+        
+        toast.success("¡Vuelo reservado y emitido correctamente!");
+        
+        // Limpiamos los estados de Duffel para este destino para mostrar la reserva finalizada
+        setDuffelSearchIds(prev => ({ ...prev, [destId]: "" }));
+        setSelectedOffer(prev => ({ ...prev, [destId]: null }));
+        
+        // Opcional: Refrescar la solicitud completa para mostrar la nueva reservación en la lista
+        // El hook de la Parte 1 ya tiene un onSuccess que invalida las queries
+      } catch (error: any) {
+        console.error("Duffel Order Error:", error);
+        // Detalle importante: Duffel devuelve errores muy específicos (ej. "Passport required")
+        const errorMsg = error.response?.data?.message || "Error al emitir el boleto. Verifique los datos.";
+        toast.error(errorMsg);
+      }
+    };
+
+
+
+
+  /**
    * Handles reservation form submission.
    * Calculates the total number of required reservations (hotel + plane) per destination
    * before validating. Allows submission with an empty form when no destination
@@ -797,3 +1030,8 @@ export const Reservations = () => {
 };
 
 export default Reservations;
+
+/*
+Modification History:
+2026-04-20 | Fabrizio | Integrated Duffel search and order flow inside the agent booking view.
+*/

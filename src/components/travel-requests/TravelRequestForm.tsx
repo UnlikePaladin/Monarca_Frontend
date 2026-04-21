@@ -80,7 +80,7 @@ const formSchema = z.object({
   advance_money: z
     .number()
     .int()
-    .positive({ message: "El dinero adelantado debe ser positivo" }),
+    .nonnegative({ message: "El dinero adelantado debe ser positivo" }),
   requests_destinations: z
     .array(destinationSchema)
     .min(1, "Al menos un destino"),
@@ -704,12 +704,6 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 }
 
 export default TravelRequestForm;
-
-/*
-Modification History:
-
-- 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated validation messages to English.
-*/
 
 /*
 Modification History:

@@ -1,4 +1,8 @@
-// src/types/duffel.ts
+/*
+duffel.ts
+Defines types and interfaces for the Duffel flight integration, including
+offers, slices, segments, and order payloads.
+*/
 
 export type DuffelPassengerTitle = 'mr' | 'ms' | 'mrs' | 'miss';
 export type DuffelPassengerType = 'adult' | 'child' | 'infant';
@@ -112,3 +116,8 @@ export interface DuffelOrderResponse {
     provider_name: string;
   };
 }
+
+/*
+Modification History:
+2026-04-20 | Fabrizio | Defined core interfaces for flight offer search and order creation.
+*/

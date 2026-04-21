@@ -1,3 +1,8 @@
+/*
+DuffelPassengerForm.tsx
+Legal data capture form for travelers required by GDS/Airline standards.
+*/
+
 import React, { useState } from "react";
 import { DuffelOffer, DuffelPassengerTitle } from "../../types/duffel";
 import InputField from "../Refunds/InputField";
@@ -14,6 +19,12 @@ interface Props {
   isSubmitting: boolean;
 }
 
+/**
+Captures legal passenger information needed to issue the flight ticket.
+@param offer The selected flight offer.
+@param initialData Traveler data from Monarca DB.
+@param onSubmit Execution callback for order creation.
+*/
 export const DuffelPassengerForm: React.FC<Props> = ({ offer, initialData, onSubmit, isSubmitting }) => {
   const [formData, setFormData] = useState({
     title: "mr" as DuffelPassengerTitle,
@@ -108,3 +119,8 @@ export const DuffelPassengerForm: React.FC<Props> = ({ offer, initialData, onSub
     </div>
   );
 };
+
+/*
+Modification History:
+2026-04-20 | Fabrizio | Added passenger form with IATA title and phone validations.
+*/
