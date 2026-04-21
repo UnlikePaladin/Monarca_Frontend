@@ -464,25 +464,51 @@ export const Vouchers = () => {
         _value: CellValueType,
         onChangeComponentFunction: (newValue: CellValueType) => void,
         rowIndex?: number,
-        _cellIndex?: number
+        _cellIndex?: number,
+        patchRow?: (fields: Partial<FormDataRow>) => void
       ) => (
         <InputField
           id={`xml_file-${rowIndex}-${_cellIndex}`}
           selectedFileName={formData[rowIndex || 0]?.XMLFile?.name || ""}
           type="file"
           accept=".xml"
-          onChange={(e) => {
+          onChange={async (e) => {
             const file = e.target.files?.[0];
-            if (file) {
-              onChangeComponentFunction(file);
-              if (rowIndex !== undefined) {
-                const updatedFormData = [...formData];
+            if (!file || rowIndex === undefined) {
+              return;
+            }
+            onChangeComponentFunction(file);
 
-                if (updatedFormData[rowIndex]) {
-                  updatedFormData[rowIndex].XMLFile = file;
-                  setFormData(updatedFormData);
-                }
+            if (!patchRow) {
+              return;
+            }
+
+            const fd = new FormData();
+            fd.append("file", file);
+
+            try {
+              const res = (await postRequest("/cfdi/preview", fd)) as {
+                total: number | null;
+                fecha: string | null;
+                taxIndicator: string | null;
+              };
+
+              const partial: Partial<FormDataRow> = {};
+              if (res.total != null && !Number.isNaN(Number(res.total))) {
+                partial.amount = Number(res.total);
               }
+              if (res.fecha) {
+                partial.date = res.fecha;
+              }
+              if (res.taxIndicator) {
+                partial.taxIndicator = res.taxIndicator;
+              }
+              patchRow(partial);
+            } catch (err) {
+              console.error("CFDI preview:", err);
+              toast.error(
+                "No se pudieron leer el total, la fecha o el indicador de impuesto del XML."
+              );
             }
           }}
           placeholder="Subir archivo XML"

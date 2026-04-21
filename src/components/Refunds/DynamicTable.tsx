@@ -32,7 +32,8 @@ export interface Column {
     value: CellValueType,
     handleFieldChange: (newValue: CellValueType) => void,
     rowIndex?: number,
-    cellIndex?: number
+    cellIndex?: number,
+    patchRow?: (fields: Partial<TableRow>) => void
   ) => React.ReactNode;
 }
 /*
@@ -75,18 +76,32 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
     columnKey: string,
     newValue: CellValueType
   ): void => {
-    const updatedData = [...tableData];
+    setTableData((prev) => {
+      const updatedData = [...prev];
+      updatedData[rowIndex] = {
+        ...updatedData[rowIndex],
+        [columnKey]: newValue,
+      };
+      if (onDataChange) {
+        onDataChange(updatedData);
+      }
+      return updatedData;
+    });
+  };
 
-    updatedData[rowIndex] = {
-      ...updatedData[rowIndex],
-      [columnKey]: newValue,
-    };
-
-    setTableData(updatedData);
-
-    if (onDataChange) {
-      onDataChange(updatedData);
-    }
+  /** Uses functional updates so async callers (e.g. CFDI preview) never merge into stale rows and drop File fields. */
+  const patchRowFields = (rowIndex: number, partial: Partial<TableRow>): void => {
+    setTableData((prev) => {
+      const updatedData = [...prev];
+      updatedData[rowIndex] = {
+        ...updatedData[rowIndex],
+        ...partial,
+      };
+      if (onDataChange) {
+        onDataChange(updatedData);
+      }
+      return updatedData;
+    });
   };
 
   const addItem = () => {
@@ -172,7 +187,8 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                                   newValue
                                 ),
                               rowIndex,
-                              cellIndex
+                              cellIndex,
+                              (fields) => patchRowFields(rowIndex, fields)
                             )
                           : renderCellContent(row[column.key])
                       }
