@@ -1,12 +1,12 @@
 /**
  * Description: Component to display the current user's active substitute delegations with a cancel action.
  */
-
-import React from "react";
+import React, { useState } from "react";
 import { useGetSubstitutes } from "../../hooks/substitutes/useGetSubstitutes";
 import { useDeleteSubstitute } from "../../hooks/substitutes/useDeleteSubstitute";
 import { useGetUsers } from "../../hooks/users/useGetUsers";
 import { toast } from "react-toastify";
+import { ConfirmationModal } from "../ui/ConfirmationModal";
 
 /**
  * Formats an ISO date string to a human-readable short date in Spanish.
@@ -30,6 +30,30 @@ export const ActiveDelegationsList = () => {
     useGetSubstitutes();
   const { data: users = [] } = useGetUsers();
   const { mutate: deleteSubstitute, isPending } = useDeleteSubstitute();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  /**
+   * Opens the confirmation modal before cancelling an active delegation.
+   * @param substituteId The unique identifier of the delegation to cancel.
+   */
+  const handleCancelClick = (substituteId: string) => {
+    setPendingDeleteId(substituteId);
+    setConfirmOpen(true);
+  };
+
+  /**
+   * Executes the delegation cancellation after the user confirms in the modal.
+   */
+  const handleConfirmCancel = () => {
+    if (!pendingDeleteId) return;
+    setConfirmOpen(false);
+    deleteSubstitute(pendingDeleteId, {
+      onSuccess: () => toast.success("Delegación cancelada correctamente."),
+      onError: () => toast.error("Error al cancelar la delegación."),
+      onSettled: () => setPendingDeleteId(null),
+    });
+  };
 
   const userNameMap = React.useMemo(() => {
     return users.reduce<Record<string, string>>((acc, user) => {
@@ -74,18 +98,27 @@ export const ActiveDelegationsList = () => {
             )}
           </div>
           <button
-            onClick={() =>
-              deleteSubstitute(sub.id, {
-                onSuccess: () =>
-                  toast.success("Delegación cancelada correctamente."),
-                onError: () => toast.error("Error al cancelar la delegación."),
-              })
-            }
+            onClick={() => handleCancelClick(sub.id)}
+            disabled={isPending && pendingDeleteId === sub.id}
+            className="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
           >
-            Cancelar
+            {isPending && pendingDeleteId === sub.id
+              ? "Cancelando..."
+              : "Cancelar"}
           </button>
         </div>
       ))}
+      <ConfirmationModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmCancel}
+        title="Cancelar delegación"
+        description="¿Estás seguro de que deseas cancelar esta delegación activa?"
+        confirmText="Cancelar delegación"
+        cancelText="Volver"
+        isDestructive
+        warningNote="Esta acción es irreversible. El sustituto perderá acceso inmediatamente."
+      />
     </div>
   );
 };
@@ -94,4 +127,5 @@ export const ActiveDelegationsList = () => {
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
  * - 2026-04-16 | Juan de Dios Gastélum Flores | Replaced hardcoded USER_NAMES with dynamic lookup via useGetUsers.
+ * - 2026-04-21 | Juan de Dios Gastélum Flores | Added ConfirmationModal before delegation cancellation.
  */

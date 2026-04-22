@@ -8,6 +8,7 @@ import { Button } from "../ui/Button";
 import { useGetRoles } from "../../hooks/roles/useGetRoles";
 import { useDeleteRole } from "../../hooks/roles/useDeleteRole";
 import { toast } from "react-toastify";
+import { ConfirmationModal } from "../ui/ConfirmationModal";
 
 interface RoleListProps {
   onEdit: (role: Role) => void;
@@ -24,20 +25,35 @@ export const RoleList = ({ onEdit, onCreate }: RoleListProps) => {
   const { data: roles, isLoading } = useGetRoles();
   const { mutate: deleteRole, isPending: isDeleting } = useDeleteRole();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>("");
 
   /**
-   * Prompts the user for confirmation before permanently deleting a role.
+   * Opens the confirmation modal before permanently deleting a role.
    * @param roleId The unique identifier of the role to delete.
-   * @param roleName The role name shown in the confirmation dialog.
+   * @param roleName The role name shown in the confirmation modal.
    */
   const handleDelete = (roleId: string, roleName: string) => {
-    if (!confirm(`¿Estás seguro de que quieres eliminar el rol "${roleName}"?`))
-      return;
-    setDeletingId(roleId);
-    deleteRole(roleId, {
+    setPendingDeleteId(roleId);
+    setPendingDeleteName(roleName);
+    setConfirmOpen(true);
+  };
+
+  /**
+   * Executes the role deletion after the user confirms in the modal.
+   */
+  const handleConfirmDelete = () => {
+    if (!pendingDeleteId) return;
+    setConfirmOpen(false);
+    setDeletingId(pendingDeleteId);
+    deleteRole(pendingDeleteId, {
       onSuccess: () => toast.success("Rol eliminado correctamente."),
       onError: () => toast.error("Error al eliminar el rol."),
-      onSettled: () => setDeletingId(null),
+      onSettled: () => {
+        setDeletingId(null);
+        setPendingDeleteId(null);
+      },
     });
   };
 
@@ -144,6 +160,16 @@ export const RoleList = ({ onEdit, onCreate }: RoleListProps) => {
           </tbody>
         </table>
       </div>
+      <ConfirmationModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar rol"
+        description={`¿Estás seguro de que deseas eliminar el rol "${pendingDeleteName}"?`}
+        confirmText="Eliminar"
+        isDestructive
+        warningNote="Esta acción es irreversible. El rol será eliminado permanentemente."
+      />
     </div>
   );
 };
@@ -151,4 +177,5 @@ export const RoleList = ({ onEdit, onCreate }: RoleListProps) => {
 /*
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-04-21 | Juan de Dios Gastélum Flores | Replaced native confirm() with ConfirmationModal for role deletion.
  */
