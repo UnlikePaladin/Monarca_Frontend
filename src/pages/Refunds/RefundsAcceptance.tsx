@@ -17,6 +17,7 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { toast } from "react-toastify";
 import { useApp } from "../../hooks/app/appContext";
+import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 
 interface RequestData {
   id?: string;
@@ -107,6 +108,38 @@ const RefundsAcceptance: React.FC = () => {
 
   const { handleVisitPage, tutorial } = useApp();
 
+  // Single modal state drives all voucher approval/denial confirmations on this page.
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    warningNote?: string;
+    confirmText: string;
+    isDestructive: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    confirmText: "Confirm",
+    isDestructive: false,
+    onConfirm: () => {},
+  });
+
+  /**
+   * Opens the confirmation modal with the provided configuration.
+   * @param config - Modal content and the callback to invoke on confirmation.
+   */
+  const openConfirm = (config: Omit<typeof confirmModal, "isOpen">) => {
+    setConfirmModal({ ...config, isOpen: true });
+  };
+
+  /**
+   * Closes the confirmation modal without executing any action.
+   */
+  const closeConfirm = () =>
+    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -137,7 +170,7 @@ const RefundsAcceptance: React.FC = () => {
   useEffect(() => {
     // Get the visited pages from localStorage
     const visitedPages = JSON.parse(
-      localStorage.getItem("visitedPages") || "[]"
+      localStorage.getItem("visitedPages") || "[]",
     );
     // Check if the current page is already in the visited pages
     const isPageVisited = visitedPages.includes(location.pathname);
@@ -301,7 +334,17 @@ const RefundsAcceptance: React.FC = () => {
                                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                                   : "bg-red-600 hover:bg-red-700"
                               }`}
-                          onClick={() => denyVoucher(file?.id)}
+                          onClick={() =>
+                            openConfirm({
+                              title: "Denegar comprobante",
+                              description:
+                                "Estás rechazando este comprobante de gasto. El viajero será notificado y deberá corregirlo o eliminarlo.",
+                              warningNote: "Esta acción es irreversible.",
+                              confirmText: "Sí, denegar",
+                              isDestructive: true,
+                              onConfirm: () => denyVoucher(file?.id),
+                            })
+                          }
                           id="deny-button"
                         >
                           Denegar
@@ -314,7 +357,17 @@ const RefundsAcceptance: React.FC = () => {
                                     ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                                     : "bg-green-600 hover:bg-green-700"
                                 }`}
-                          onClick={() => approveVoucher(file?.id)}
+                          onClick={() =>
+                            openConfirm({
+                              title: "Aprobar comprobante",
+                              description:
+                                "Confirmas que este comprobante de gasto es válido. El monto será contabilizado para el cálculo del reembolso.",
+                              warningNote: "Esta acción es irreversible.",
+                              confirmText: "Sí, aprobar",
+                              isDestructive: false,
+                              onConfirm: () => approveVoucher(file?.id),
+                            })
+                          }
                           id="approve-button"
                         >
                           Aprobar
@@ -367,15 +420,15 @@ const RefundsAcceptance: React.FC = () => {
                       data?.vouchers?.reduce(
                         (
                           acc: number,
-                          file: { status: string; amount: number }
+                          file: { status: string; amount: number },
                         ) => {
                           if (file.status === "comprobante_aprobado") {
                             return acc + +file.amount;
                           }
                           return acc;
                         },
-                        0
-                      ) ?? 0
+                        0,
+                      ) ?? 0,
                     )}
                     className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
                   />
@@ -410,18 +463,18 @@ const RefundsAcceptance: React.FC = () => {
                       (data?.vouchers?.reduce(
                         (
                           acc: number,
-                          file: { status: string; amount: number }
+                          file: { status: string; amount: number },
                         ) => {
                           if (file.status === "comprobante_aprobado") {
                             return acc + Number(file.amount);
                           }
                           return acc;
                         },
-                        0
+                        0,
                       ) ?? 0) +
                         (typeof data?.advance_money === "number"
                           ? data.advance_money
-                          : Number(data?.advance_money) || 0)
+                          : Number(data?.advance_money) || 0),
                     )}
                     className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
                   />
@@ -433,15 +486,26 @@ const RefundsAcceptance: React.FC = () => {
                   className={`px-4 py-2 text-white rounded-md hover:cursor-pointer 
                       ${
                         data?.vouchers?.some(
-                          (file) => file.status === "comprobante_pendiente"
+                          (file) => file.status === "comprobante_pendiente",
                         )
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                           : "bg-[var(--blue)] hover:bg-[var(--dark-blue)]"
                       }`}
                   disabled={data?.vouchers?.some(
-                    (file) => file.status === "comprobante_pendiente"
+                    (file) => file.status === "comprobante_pendiente",
                   )}
-                  onClick={completeRequest}
+                  onClick={() =>
+                    openConfirm({
+                      title: "Completar revisión de comprobantes",
+                      description:
+                        "Confirmas que todos los comprobantes han sido revisados. Se cerrará el proceso de reembolso y se generará el balance final entre el anticipo otorgado y los gastos aprobados.",
+                      warningNote:
+                        "Esta acción es irreversible y cierra definitivamente el proceso de reembolso para esta solicitud.",
+                      confirmText: "Sí, completar revisión",
+                      isDestructive: false,
+                      onConfirm: completeRequest,
+                    })
+                  }
                   id="complete-refund"
                 >
                   Completar Comprobación
@@ -451,8 +515,26 @@ const RefundsAcceptance: React.FC = () => {
           </div>
         </main>
       </div>
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirm}
+        onConfirm={() => {
+          closeConfirm();
+          confirmModal.onConfirm();
+        }}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        warningNote={confirmModal.warningNote}
+        confirmText={confirmModal.confirmText}
+        isDestructive={confirmModal.isDestructive}
+      />
     </Tutorial>
   );
 };
 
 export default RefundsAcceptance;
+
+/*
+Modification History:
+- 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for approve, deny, and complete voucher review actions.
+*/

@@ -1,6 +1,6 @@
 /**
  * TravelRequestForm.tsx
- * 
+ *
  * Form component for creating and updating travel requests.
  * Handles multi-destination travel requests with validation, submission, and update capabilities.
  */
@@ -30,7 +30,8 @@ import { useDestinations } from "../../hooks/destinations/useDestinations";
 import { Destination } from "../../types/destinations";
 import { CreateRequest } from "../../types/requests";
 import GoBack from "../GoBack";
-import { useEffect } from "react";
+import { ConfirmationModal } from "../ui/ConfirmationModal";
+import { useEffect, useState } from "react";
 
 type Option = { id: number | string; name: string };
 
@@ -40,35 +41,39 @@ const priorityOptions: Option[] = [
   { id: "baja", name: "Baja" },
 ];
 
-const destinationSchema = z.object({
-  id_destination: z.string().nullable(),
-  id_airport: z.string().nullable().optional(),
-  arrival_date: z.string().nonempty({ message: "Selecciona fecha de llegada" }),
-  departure_date: z
-    .string()
-    .nonempty({ message: "Selecciona fecha de salida" }),
-  stay_days: z.number().int(),
-  // .positive({ message: "Number of days must be positive" }),
-  is_hotel_required: z.boolean(),
-  is_plane_required: z.boolean(),
-  details: z.string().nonempty({ message: "Agrega detalles" }),
-}).superRefine((value, ctx) => {
-  if (value.is_plane_required && !value.id_airport) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["id_airport"],
-      message: "Selecciona un aeropuerto para el tramo con vuelo",
-    });
-  }
+const destinationSchema = z
+  .object({
+    id_destination: z.string().nullable(),
+    id_airport: z.string().nullable().optional(),
+    arrival_date: z
+      .string()
+      .nonempty({ message: "Selecciona fecha de llegada" }),
+    departure_date: z
+      .string()
+      .nonempty({ message: "Selecciona fecha de salida" }),
+    stay_days: z.number().int(),
+    // .positive({ message: "Number of days must be positive" }),
+    is_hotel_required: z.boolean(),
+    is_plane_required: z.boolean(),
+    details: z.string().nonempty({ message: "Agrega detalles" }),
+  })
+  .superRefine((value, ctx) => {
+    if (value.is_plane_required && !value.id_airport) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["id_airport"],
+        message: "Selecciona un aeropuerto para el tramo con vuelo",
+      });
+    }
 
-  if (!value.is_plane_required && value.id_airport) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["id_airport"],
-      message: "El aeropuerto debe omitirse cuando no se requiere vuelo",
-    });
-  }
-});
+    if (!value.is_plane_required && value.id_airport) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["id_airport"],
+        message: "El aeropuerto debe omitirse cuando no se requiere vuelo",
+      });
+    }
+  });
 
 const formSchema = z.object({
   id_origin_city: z.string().nullable(),
@@ -136,11 +141,12 @@ function DestinationFields({
     name: `requests_destinations.${idx}.is_plane_required`,
   });
 
-  const airportOptions = (destinations.find((d) => d.id === destinationId)?.airports || [])
-    .map((airport) => ({
-      id: airport.id,
-      name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
-    }));
+  const airportOptions = (
+    destinations.find((d) => d.id === destinationId)?.airports || []
+  ).map((airport) => ({
+    id: airport.id,
+    name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
+  }));
 
   const stayDays =
     arrivalDate && departureDate
@@ -221,8 +227,8 @@ function DestinationFields({
                   !destinationId
                     ? "Selecciona destino primero"
                     : isPlaneRequired
-                    ? "Selecciona aeropuerto"
-                    : "No aplica sin vuelo"
+                      ? "Selecciona aeropuerto"
+                      : "No aplica sin vuelo"
                 }
               />
             )}
@@ -258,8 +264,10 @@ function DestinationFields({
               <Input
                 id={`departure-${idx}`}
                 type="date"
-                value={field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""}
-                onChange={e => field.onChange(e.target.value)}
+                value={
+                  field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
+                }
+                onChange={(e) => field.onChange(e.target.value)}
               />
             )}
           />
@@ -280,8 +288,10 @@ function DestinationFields({
               <Input
                 id={`arrival-${idx}`}
                 type="date"
-                value={field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""}
-                onChange={e => field.onChange(e.target.value)}
+                value={
+                  field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
+                }
+                onChange={(e) => field.onChange(e.target.value)}
               />
             )}
           />
@@ -354,8 +364,11 @@ function DestinationFields({
 
 function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
   const navigate = useNavigate();
-  const { destinations, destinationOptions, isLoading: isLoadingDestinations } =
-    useDestinations();
+  const {
+    destinations,
+    destinationOptions,
+    isLoading: isLoadingDestinations,
+  } = useDestinations();
   const { createTravelRequestMutation, isPending: isCreating } =
     useCreateTravelRequest();
   const { updateTravelRequestMutation, isPending: isUpdating } =
@@ -414,7 +427,18 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
         name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
       })) || [];
 
-  const onSubmit = async (data: RawFormValues) => {
+  // Holds validated form data between the validation step and the user's confirmation.
+  const [pendingFormData, setPendingFormData] = useState<RawFormValues | null>(
+    null,
+  );
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  /**
+   * Validates the form data and opens the confirmation modal.
+   * The actual API call is deferred to submitConfirmed.
+   * @param data - Raw validated form values from React Hook Form.
+   */
+  const onSubmit = (data: RawFormValues) => {
     if (!data.id_origin_city) {
       toast.error("Selecciona una ciudad de origen");
       return;
@@ -433,6 +457,35 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       return;
     }
 
+    // Origin and destination cities must be different.
+    const hasDuplicateCity = data.requests_destinations.some(
+      (d) => d.id_destination === data.id_origin_city,
+    );
+
+    if (hasDuplicateCity) {
+      toast.error(
+        "La ciudad de destino no puede ser igual a la ciudad de origen",
+        {
+          position: "top-right",
+          autoClose: 4000,
+        },
+      );
+      return;
+    }
+
+    setPendingFormData(data);
+    setShowConfirmModal(true);
+  };
+
+  /**
+   * Executes the travel request create or update API call after user confirmation.
+   * Reads from pendingFormData set during the onSubmit validation phase.
+   */
+  const submitConfirmed = async () => {
+    if (!pendingFormData) return;
+    setShowConfirmModal(false);
+    const data = pendingFormData;
+
     const requests_destinations = data.requests_destinations.map(
       (d, idx, arr) => {
         if (!d.id_destination) {
@@ -441,7 +494,9 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 
         return {
           id_destination: d.id_destination,
-          ...(d.is_plane_required && d.id_airport ? { id_airport: d.id_airport } : {}),
+          ...(d.is_plane_required && d.id_airport
+            ? { id_airport: d.id_airport }
+            : {}),
           destination_order: idx + 1,
           stay_days: d.stay_days,
           arrival_date: dayjs(d.arrival_date).toISOString(),
@@ -451,7 +506,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
           is_last_destination: idx === arr.length - 1,
           details: d.details,
         };
-      }
+      },
     );
 
     const payload = {
@@ -504,7 +559,10 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
             {isEditing ? "Editar Viaje" : "Datos del Viaje"}
           </h2>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="grid gap-4 sm:grid-cols-2 sm:gap-6" id="travel_request_info">
+            <div
+              className="grid gap-4 sm:grid-cols-2 sm:gap-6"
+              id="travel_request_info"
+            >
               <div className="sm:col-span-2">
                 <label
                   htmlFor="motive"
@@ -582,7 +640,9 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                       options={originAirportOptions}
                       value={
                         field.value
-                          ? originAirportOptions.find((o) => o.id === field.value)
+                          ? originAirportOptions.find(
+                              (o) => o.id === field.value,
+                            )
                           : null
                       }
                       onChange={(opt) => field.onChange(opt.id)}
@@ -651,25 +711,25 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
               </div>
             </div>
 
-<div id="destination_info">
-            <h3 className="mt-8 mb-4 text-lg font-semibold">Destinos</h3>
-            {fields.map((field, idx) => (
-              <DestinationFields
-                key={field.id}
-                idx={idx}
-                control={control}
-                register={register}
-                destinationOptions={destinationOptions}
-                destinations={destinations}
-                errors={errors.requests_destinations}
-                remove={remove}
-                setValue={setValue}
-                isLoadingDestinations={isLoadingDestinations}
-              />
-            ))}
-</div>
-            <Button 
-            id="new_destination"
+            <div id="destination_info">
+              <h3 className="mt-8 mb-4 text-lg font-semibold">Destinos</h3>
+              {fields.map((field, idx) => (
+                <DestinationFields
+                  key={field.id}
+                  idx={idx}
+                  control={control}
+                  register={register}
+                  destinationOptions={destinationOptions}
+                  destinations={destinations}
+                  errors={errors.requests_destinations}
+                  remove={remove}
+                  setValue={setValue}
+                  isLoadingDestinations={isLoadingDestinations}
+                />
+              ))}
+            </div>
+            <Button
+              id="new_destination"
               type="button"
               onClick={() =>
                 append({
@@ -687,18 +747,45 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
               + Añadir destino
             </Button>
 
-            <Button type="submit" className="mt-4 sm:mt-6" disabled={isPending} id= {isEditing ? "update_travel_request" : "create_travel_request"}>
+            <Button
+              type="submit"
+              className="mt-4 sm:mt-6"
+              disabled={isPending}
+              id={isEditing ? "update_travel_request" : "create_travel_request"}
+            >
               {isPending
                 ? isEditing
                   ? "Actualizando..."
                   : "Creando..."
                 : isEditing
-                ? "Actualizar viaje"
-                : "Crear viaje"}
+                  ? "Actualizar viaje"
+                  : "Crear viaje"}
             </Button>
           </form>
         </div>
       </section>
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={submitConfirmed}
+        title={
+          isEditing
+            ? "Guardar cambios en la solicitud"
+            : "Enviar solicitud de viaje"
+        }
+        description={
+          isEditing
+            ? "Los cambios realizados reemplazarán la información anterior de la solicitud y serán enviados nuevamente al aprobador para su revisión."
+            : "Estás a punto de enviar tu solicitud de viaje para revisión y aprobación. Verifica que todos los destinos y fechas sean correctos antes de continuar."
+        }
+        warningNote={
+          isEditing
+            ? "El aprobador deberá revisar y aprobar los cambios nuevamente antes de continuar con el proceso."
+            : "Una vez enviada, no podrás modificar los destinos ni las fechas sin solicitar cambios al aprobador."
+        }
+        confirmText={isEditing ? "Sí, guardar cambios" : "Sí, enviar solicitud"}
+        isDestructive={false}
+      />
     </div>
   );
 }
@@ -707,6 +794,6 @@ export default TravelRequestForm;
 
 /*
 Modification History:
-
 - 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated validation messages to English.
+- 2026-04-18 | Juan de Dios Gastélum Flores | Added pre-submission confirmation modal. Split onSubmit into validation and submitConfirmed phases.
 */

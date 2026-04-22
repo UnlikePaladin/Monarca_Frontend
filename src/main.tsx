@@ -120,33 +120,44 @@ export const router = createBrowserRouter([
         path: "/refunds-review/:id",
         element: <RefundsAcceptance />,
       },
+      // ------ Rutas comentadas para testing -----
+      // {
+      //   path: "/roles",
+      //   element: (
+      //     <PermissionProtectedRoute requiredPermissions={["manage_users"]} />
+      //   ),
+      //   children: [
+      //     {
+      //       path: "",
+      //       element: <Roles />,
+      //     },
+      //   ],
+      // },
+      // {
+      //   path: "/approval-rules",
+      //   element: (
+      //     <PermissionProtectedRoute requiredPermissions={["manage_users"]} />
+      //   ),
+      //   children: [
+      //     {
+      //       path: "",
+      //       element: <ApprovalRules />,
+      //     },
+      //   ],
+      // },
+      
+      // Rutas sin protección (para testing)
       {
         path: "/policies", // Nueva ruta
         element: <PoliciesDashboard />,
       },
       {
         path: "/roles",
-        element: (
-          <PermissionProtectedRoute requiredPermissions={["manage_users"]} />
-        ),
-        children: [
-          {
-            path: "",
-            element: <Roles />,
-          },
-        ],
+        element: <Roles />,
       },
       {
         path: "/approval-rules",
-        element: (
-          <PermissionProtectedRoute requiredPermissions={["manage_users"]} />
-        ),
-        children: [
-          {
-            path: "",
-            element: <ApprovalRules />,
-          },
-        ],
+        element: <ApprovalRules />,
       },
       {
         path: "/admin/companies",
