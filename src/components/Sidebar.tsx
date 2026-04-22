@@ -128,6 +128,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/admin/cost-centers"
               />
             )}
+            {isCompanyAdmin && (
+              <SidebarOption
+                label="Políticas de reembolso"
+                pathIcon="/assets/matrix.png"
+                link="/admin/refund-policies"
+              />
+            )}
         </ul>
       </div>
     </aside>
