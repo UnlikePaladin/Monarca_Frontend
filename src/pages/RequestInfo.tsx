@@ -12,12 +12,10 @@ import { Permission, useAuth } from "../hooks/auth/authContext";
 import { useNavigate } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import { Tutorial } from "../components/Tutorial";
-import { PolicyAlert } from "../components/Refunds/PolicyAlert";
 import { Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import FilePreviewer from "../components/Refunds/FilePreviewer";
 import FilePreviewerReservation from "../components/Refunds/FilePreviewerReservation";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 import "swiper/css";
 import "swiper/css/navigation";
@@ -70,8 +68,6 @@ const RequestInfo: React.FC = () => {
   const nextRefRes = React.useRef(null);
 
   const { handleVisitPage, tutorial } = useApp();
-
-  const [policyViolations, setPolicyViolations] = useState<any[]>([]);
 
   // Single modal state drives all confirmation dialogs on this page.
   const [confirmModal, setConfirmModal] = useState<{
@@ -129,12 +125,6 @@ const RequestInfo: React.FC = () => {
             .join(", "),
         });
         setSelectedAgency(response.idTravelAgency || "");
-        const violationsRes = await getRequest(
-          `/requests/${id}/policy-violations`,
-        );
-        if (violationsRes && violationsRes.violations) {
-          setPolicyViolations(violationsRes.violations);
-        }
       } catch (error) {
         console.error("Error fetching request data:", error);
       }
@@ -184,17 +174,6 @@ const RequestInfo: React.FC = () => {
     { key: "priority", label: "Prioridad" },
     { key: "createdAt", label: "Fecha de creación" },
   ];
-
-  const getVoucherViolations = () => {
-    const currentVoucher = data?.vouchers?.[currentIndex];
-    if (!currentVoucher || !currentVoucher.id) {
-      return [];
-    }
-
-    return policyViolations.filter(
-      (violation) => violation.id_voucher === currentVoucher.id,
-    );
-  };
 
   const approve = async () => {
     if (!selectedAgency) {
@@ -742,24 +721,6 @@ const RequestInfo: React.FC = () => {
                     </div>
                   </section>
                 </div>
-                {getVoucherViolations().length > 0 && (
-                  <section className="mt-4" id="policy-alerts">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2 bg-orange-100 rounded-lg">
-                        <MagnifyingGlassIcon className="h-6 w-6 text-orange-700" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-orange-700">
-                          Observaciones de políticas
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Información referencial del historial de comprobantes.
-                        </p>
-                      </div>
-                    </div>
-                    <PolicyAlert violations={getVoucherViolations()} />
-                  </section>
-                )}
               </section>
             )}
 
@@ -853,23 +814,16 @@ const RequestInfo: React.FC = () => {
                   </section>
                 )}
                 <footer className="flex flex-col sm:flex-row gap-4">
+                  
                   <button
                     onClick={() =>
                       openConfirm({
-                        title:
-                          policyViolations.length > 0
-                            ? "Aprobar con excepción de política"
-                            : "Aprobar solicitud de viaje",
+                        title: "Aprobar solicitud de viaje",
                         description:
-                          policyViolations.length > 0
-                            ? "Esta solicitud tiene violaciones a la política de gastos. Al aprobar, autorizas una excepción. El viajero y el área de cumplimiento serán notificados."
-                            : "Estás a punto de aprobar esta solicitud. La agencia de viaje seleccionada recibirá la confirmación y procederá con las reservaciones.",
+                          "Estás a punto de aprobar esta solicitud. La agencia de viaje seleccionada recibirá la confirmación y procederá con las reservaciones.",
                         warningNote:
                           "Esta acción es irreversible. No podrás revertir la aprobación una vez confirmada.",
-                        confirmText:
-                          policyViolations.length > 0
-                            ? "Sí, aprobar con excepción"
-                            : "Sí, aprobar",
+                        confirmText: "Sí, aprobar",
                         isDestructive: false,
                         onConfirm: approve,
                       })
@@ -878,17 +832,11 @@ const RequestInfo: React.FC = () => {
                       !selectedAgency || data.status !== "Pending Review"
                     }
                     className={`flex-1 py-3 rounded-lg font-semibold transition
-                    ${
-                      policyViolations.length > 0
-                        ? "bg-orange-600 hover:bg-orange-700 text-white"
-                        : "bg-green-600 hover:bg-green-700 text-white"
-                    }
+                    bg-green-600 hover:bg-green-700 text-white
                      ${!selectedAgency && "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
                     id="approve-request-button"
                   >
-                    {policyViolations.length > 0
-                      ? "Aprobar con Excepción"
-                      : "Aprobar"}
+                    Aprobar
                   </button>
                   <button
                     onClick={() =>

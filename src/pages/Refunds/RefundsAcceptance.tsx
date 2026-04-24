@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getRequest } from "../../utils/apiService";
+import { getRequest, postRequest } from "../../utils/apiService";
 import formatMoney from "../../utils/formatMoney";
 import formatDate from "../../utils/formatDate";
 import GoBack from "../../components/GoBack";
@@ -58,24 +58,13 @@ interface Dest {
   };
 }
 
-interface PolicyViolationApi {
-  id_voucher?: string;
-  id_policy_rule?: string;
-  detail?: string;
-  rule?: {
-    expense_class?: string;
-    operator?: string;
-    threshold_value?: number;
-    threshold_unit?: string;
-    consequence?: string;
-  };
-}
 
-interface PolicyAlertViolation {
+interface PolicyPreviewViolation {
   policy_code: string;
   message: string;
   severity: "BLOCKING" | "WARNING";
   evaluated_value?: Record<string, unknown>;
+  voucher_id?: string;
 }
 
 export const renderStatus = (status: string) => {
@@ -131,7 +120,7 @@ const RefundsAcceptance: React.FC = () => {
   const { handleVisitPage, tutorial } = useApp();
 
   const [policyViolations, setPolicyViolations] =
-    useState<PolicyViolationApi[]>([]);
+    useState<PolicyPreviewViolation[]>([]);
   // Single modal state drives all voucher approval/denial confirmations on this page.
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -180,11 +169,71 @@ const RefundsAcceptance: React.FC = () => {
             .map((dest: Dest) => dest.destination.city)
             .join(", "),
         });
-        const violationsRes = await getRequest(
-          `/requests/${id}/policy-violations`,
+
+        let previewViolations: PolicyPreviewViolation[] = [];
+        try {
+
+        const previewPayload = {
+          vouchers: (response.vouchers || []).map((voucher: any) => ({
+            class: voucher.class,
+            amount: voucher.amount,
+            currency: voucher.currency || "MXN",
+            date: voucher.date,
+            has_xml: Boolean(voucher.file_url_xml),
+            has_pdf: Boolean(voucher.file_url_pdf),
+          })),
+        };
+        const previewRes = await postRequest(
+          `/requests/${id}/vouchers-policy-preview`,
+          previewPayload,
         );
-        if (violationsRes && violationsRes.violations) {
-          setPolicyViolations(violationsRes.violations);
+        console.log("Preview policy summary:", previewRes?.policy_summary);
+        if (previewRes && previewRes.policy_summary?.violations) {
+          previewViolations = previewRes.policy_summary.violations;
+          }
+        } catch (previewError) {
+          console.error("Error fetching preview violations:", previewError);
+        }
+
+        if (previewViolations.length > 0) {
+          setPolicyViolations(previewViolations);
+        } else {
+          try {
+            const persistedRes = await getRequest(
+              `/requests/${id}/policy-violations`,
+            );
+            const persistedViolations = Array.isArray(persistedRes?.violations)
+              ? persistedRes.violations
+              : [];
+            setPolicyViolations(
+              persistedViolations.map((violation: any) => ({
+                policy_code:
+                  violation.id_policy_rule ||
+                  violation.rule?.operator ||
+                  "POLICY",
+                message: violation.detail || "Advertencia de politica.",
+                severity:
+                  violation.rule?.consequence?.toUpperCase() === "WARNING"
+                    ? "WARNING"
+                    : "BLOCKING",
+                evaluated_value: violation.rule
+                  ? {
+                      expense_class: violation.rule.expense_class,
+                      operator: violation.rule.operator,
+                      threshold_value: violation.rule.threshold_value,
+                      threshold_unit: violation.rule.threshold_unit,
+                    }
+                  : undefined,
+                voucher_id: violation.id_voucher,
+              })),
+            );
+          } catch (persistedError) {
+            console.error(
+              "Error fetching persisted violations:",
+              persistedError,
+            );
+            setPolicyViolations([]);
+          }
         }
       } catch (error) {
         console.error("Error fetching request data:", error);
@@ -226,30 +275,33 @@ const RefundsAcceptance: React.FC = () => {
     { key: "createdAt", label: "Fecha de creación" },
   ];
 
-  const getVoucherViolations = (voucherId?: string) => {
-    if (!voucherId) {
+  const getVoucherViolations = (voucherId?: string, index?: number) => {
+    if (!voucherId && typeof index !== "number") {
       return [];
     }
 
-    return policyViolations
-      .filter((violation) => violation.id_voucher === voucherId)
-      .map<PolicyAlertViolation>((violation) => ({
-        policy_code:
-          violation.id_policy_rule || violation.rule?.operator || "POLICY",
-        message: violation.detail || "Advertencia de política.",
-        severity:
-          violation.rule?.consequence?.toUpperCase() === "WARNING"
-            ? "WARNING"
-            : "BLOCKING",
-        evaluated_value: violation.rule
-          ? {
-              expense_class: violation.rule.expense_class,
-              operator: violation.rule.operator,
-              threshold_value: violation.rule.threshold_value,
-              threshold_unit: violation.rule.threshold_unit,
-            }
-          : undefined,
-      }));
+    const previewId =
+      typeof index === "number" ? `preview-${index + 1}` : undefined;
+
+    return policyViolations.filter((violation) => {
+      const outOfWindowIds =
+        violation.evaluated_value?.out_of_window_voucher_ids as
+          | string[]
+          | undefined;
+
+      if (outOfWindowIds && previewId) {
+        return outOfWindowIds.includes(previewId);
+      }
+
+      if (!violation.voucher_id) {
+        return true;
+      }
+
+      return (
+        violation.voucher_id === voucherId ||
+        (previewId && violation.voucher_id === previewId)
+      );
+    });
   };
 
   const approveVoucher = async (id: string) => {
