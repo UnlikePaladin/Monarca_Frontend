@@ -55,6 +55,27 @@ interface UploadResult {
   reason?: string;
 }
 
+interface PolicyViolation {
+  policy_code: string;
+  message: string;
+  severity: "BLOCKING" | "WARNING";
+  evaluated_value?: any;
+  voucher_id?: string;
+}
+
+interface PolicySummary {
+  total_rules?: number;
+  passed?: number;
+  failed?: number;
+  blocking_violations?: number;
+  can_submit?: boolean;
+  violations?: PolicyViolation[];
+}
+
+interface PolicyPreviewResponse {
+  policy_summary?: PolicySummary;
+}
+
 const getUploadErrorMessage = (errorData?: UploadVoucherErrorResponse) => {
   if (!errorData) {
     return "Error al subir el comprobante. Verifica los datos e inténtalo de nuevo.";
@@ -123,8 +144,11 @@ export const Vouchers = () => {
     },
   });
   const [commentValue, setCommentValue] = useState<string>("");
-  const [policyViolations, setPolicyViolations] = useState<any[]>([]);
+  const [policyViolations, setPolicyViolations] = useState<PolicyViolation[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreviewingPolicy, setIsPreviewingPolicy] = useState(false);
+  const [needsWarningConfirmation, setNeedsWarningConfirmation] = useState(false);
+  const [hasPreviewedPolicy, setHasPreviewedPolicy] = useState(false);
   // Controls the confirmation modal shown before submitting all vouchers.
   const [showSubmitModal, setShowSubmitModal] = useState(false);
 
@@ -147,6 +171,147 @@ export const Vouchers = () => {
    * Processes each row of the table, uploads files to the server and handles policy engine rejections.
    * If a 422 error occurs, it extracts policy violations to display them to the requester.
    */
+
+  const runPolicyPreview = async () => {
+    if (!id) {
+      return { hasWarnings: false, hasBlocking: false };
+    }
+
+    const vouchersPayload: Array<{
+      class: string;
+      amount: number;
+      currency: string;
+      date: string;
+      has_xml: boolean;
+      has_pdf: boolean;
+    }> = [];
+    const voucherRowNumbers: number[] = [];
+
+    formData.forEach((row, index) => {
+      if (isEmptyVoucherRow(row)) {
+        return;
+      }
+
+      vouchersPayload.push({
+        class: row.spentClass,
+        amount: row.amount,
+        currency: "MXN",
+        date: row.date,
+        has_xml: Boolean(row.XMLFile),
+        has_pdf: Boolean(row.PDFFile),
+      });
+      voucherRowNumbers.push(index + 1);
+    });
+
+    if (vouchersPayload.length === 0) {
+      setPolicyViolations([]);
+      return { hasWarnings: false, hasBlocking: false };
+    }
+
+    setIsPreviewingPolicy(true);
+
+    try {
+      const response = (await postRequest(
+        `/requests/${id}/vouchers-policy-preview`,
+        { vouchers: vouchersPayload },
+      )) as PolicyPreviewResponse;
+
+      const summary = response.policy_summary;
+      const violations = Array.isArray(summary?.violations)
+        ? summary?.violations
+        : [];
+
+      const normalizedViolations: PolicyViolation[] = [];
+
+      const addRowPrefix = (violation: PolicyViolation, voucherId?: string) => {
+        if (!voucherId || !voucherId.startsWith("preview-")) {
+          normalizedViolations.push(violation);
+          return;
+        }
+
+        const indexValue = Number(voucherId.replace("preview-", ""));
+        if (!Number.isFinite(indexValue) || indexValue < 1) {
+          normalizedViolations.push(violation);
+          return;
+        }
+
+        const rowNumber = voucherRowNumbers[indexValue - 1];
+        if (!rowNumber) {
+          normalizedViolations.push(violation);
+          return;
+        }
+
+        normalizedViolations.push({
+          ...violation,
+          message: `[Fila ${rowNumber}] ${violation.message}`,
+        });
+      };
+
+      violations.forEach((violation) => {
+        const outOfWindowIds =
+          violation.evaluated_value?.out_of_window_voucher_ids as
+                | string[]
+                | undefined;
+
+        if (outOfWindowIds && outOfWindowIds.length > 0) {
+          outOfWindowIds.forEach((voucherId) => {
+            addRowPrefix({ ...violation, voucher_id: voucherId }, voucherId);
+          });
+          return;
+        }
+
+        addRowPrefix(violation, violation.voucher_id);
+      });
+
+      setPolicyViolations(normalizedViolations);
+
+      return {
+        hasWarnings: normalizedViolations.some(
+          (violation: PolicyViolation) => violation.severity === "WARNING",
+        ),
+        hasBlocking: normalizedViolations.some(
+          (violation: PolicyViolation) => violation.severity === "BLOCKING",
+        ),
+      };
+    } catch (err) {
+      console.error("Error al prevalidar comprobantes:", err);
+      toast.error(
+        "No pudimos validar las políticas del reembolso. Inténtalo nuevamente.",
+      );
+      return { hasWarnings: false, hasBlocking: false };
+    } finally {
+      setIsPreviewingPolicy(false);
+    }
+  };
+
+  const handleSubmitClick = async () => {
+    if (isSubmitting || isPreviewingPolicy) {
+      return;
+    }
+
+    if (needsWarningConfirmation) {
+      setShowSubmitModal(true);
+      return;
+    }
+
+    setHasPreviewedPolicy(true);
+    const previewResult = await runPolicyPreview();
+
+    if (previewResult.hasBlocking) {
+      toast.error("Existen comprobantes que no cumplen con las políticas.");
+      return;
+    }
+
+    if (previewResult.hasWarnings) {
+      setNeedsWarningConfirmation(true);
+      toast.warning(
+        "Hay advertencias en la validación. Puedes enviar de todos modos.",
+      );
+      return;
+    }
+
+    setShowSubmitModal(true);
+  };
 
   const handleSubmitRefund = async () => {
     let currentStep: "upload" | "finish" = "upload";
@@ -555,7 +720,25 @@ export const Vouchers = () => {
 
   const handleFormDataChange = (newData: FormDataRow[]) => {
     setFormData(newData);
+    setNeedsWarningConfirmation(false);
+    if (hasPreviewedPolicy) {
+      setPolicyViolations([]);
+    }
   };
+
+  useEffect(() => {
+    if (!hasPreviewedPolicy) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (!isSubmitting) {
+        runPolicyPreview();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData, hasPreviewedPolicy, isSubmitting]);
 
   // Wrapper function to handle the type conversion
   const handleDynamicTableDataChange = (data: DynamicTableRow[]) => {
@@ -604,6 +787,7 @@ export const Vouchers = () => {
               columns={columnsSchemaVauchers}
               initialData={formData}
               onDataChange={handleDynamicTableDataChange}
+              showRowNumbers
             />
           </div>
           {/*
@@ -631,15 +815,19 @@ export const Vouchers = () => {
             </Link>
             <button
               id="submit-refund"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isPreviewingPolicy}
               className={`px-4 py-2 text-white rounded-md transition-colors ${
-                isSubmitting
-                  ? "bg-gray-400 cursor-not-allowed"
+                isSubmitting || isPreviewingPolicy 
+                  ? "bg-gray-400 cursor-not-allowed" 
                   : "bg-[#0a2c6d] hover:bg-[#0d3d94] hover:cursor-pointer"
               }`}
-              onClick={() => setShowSubmitModal(true)}
+              onClick={handleSubmitClick}
             >
-              {isSubmitting ? "Procesando..." : "Enviar Solicitud"}
+              {isSubmitting
+                ? "Procesando..."
+                : needsWarningConfirmation
+                ? "Enviar de todos modos"
+                : "Enviar Solicitud"}
             </button>
           </div>
         </div>

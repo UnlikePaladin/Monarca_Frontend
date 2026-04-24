@@ -185,6 +185,17 @@ const RequestInfo: React.FC = () => {
     { key: "createdAt", label: "Fecha de creación" },
   ];
 
+  const getVoucherViolations = () => {
+    const currentVoucher = data?.vouchers?.[currentIndex];
+    if (!currentVoucher || !currentVoucher.id) {
+      return [];
+    }
+
+    return policyViolations.filter(
+      (violation) => violation.id_voucher === currentVoucher.id,
+    );
+  };
+
   const approve = async () => {
     if (!selectedAgency) {
       toast.error("Selecciona una agencia de viaje", {
@@ -731,6 +742,24 @@ const RequestInfo: React.FC = () => {
                     </div>
                   </section>
                 </div>
+                {getVoucherViolations().length > 0 && (
+                  <section className="mt-4" id="policy-alerts">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-orange-100 rounded-lg">
+                        <MagnifyingGlassIcon className="h-6 w-6 text-orange-700" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-orange-700">
+                          Observaciones de políticas
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Información referencial del historial de comprobantes.
+                        </p>
+                      </div>
+                    </div>
+                    <PolicyAlert violations={getVoucherViolations()} />
+                  </section>
+                )}
               </section>
             )}
 
@@ -799,30 +828,6 @@ const RequestInfo: React.FC = () => {
               )}
 
             {/* Botones de acción */}
-            {policyViolations.length > 0 && (
-              <section className="mb-8 border-2 border-red-200 rounded-lg p-4 bg-white shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <MagnifyingGlassIcon className="h-6 w-6 text-red-700" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-red-700">
-                      Resultado de Auditoría Automática
-                    </h3>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  El sistema detectó los siguientes conflictos. Revise cada uno
-                  antes de proceder.
-                  <span className="block mt-1 font-semibold text-orange-700">
-                    Usted puede "Aprobar con Excepción" si considera que el
-                    gasto es justificable.
-                  </span>
-                </p>
-
-                <PolicyAlert violations={policyViolations} />
-              </section>
-            )}
             {authState.userPermissions.includes(
               "approve_request" as Permission,
             ) && (

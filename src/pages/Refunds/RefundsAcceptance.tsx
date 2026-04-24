@@ -11,6 +11,8 @@ import { Navigation, Pagination } from "swiper/modules";
 import FilePreviewer from "../../components/Refunds/FilePreviewer";
 import { patchRequest } from "../../utils/apiService";
 import { Tutorial } from "../../components/Tutorial";
+import { PolicyAlert } from "../../components/Refunds/PolicyAlert";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 import "swiper/css";
 import "swiper/css/navigation";
@@ -54,6 +56,26 @@ interface Dest {
   destination: {
     city: string;
   };
+}
+
+interface PolicyViolationApi {
+  id_voucher?: string;
+  id_policy_rule?: string;
+  detail?: string;
+  rule?: {
+    expense_class?: string;
+    operator?: string;
+    threshold_value?: number;
+    threshold_unit?: string;
+    consequence?: string;
+  };
+}
+
+interface PolicyAlertViolation {
+  policy_code: string;
+  message: string;
+  severity: "BLOCKING" | "WARNING";
+  evaluated_value?: Record<string, unknown>;
 }
 
 export const renderStatus = (status: string) => {
@@ -108,6 +130,8 @@ const RefundsAcceptance: React.FC = () => {
 
   const { handleVisitPage, tutorial } = useApp();
 
+  const [policyViolations, setPolicyViolations] =
+    useState<PolicyViolationApi[]>([]);
   // Single modal state drives all voucher approval/denial confirmations on this page.
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -156,6 +180,12 @@ const RefundsAcceptance: React.FC = () => {
             .map((dest: Dest) => dest.destination.city)
             .join(", "),
         });
+        const violationsRes = await getRequest(
+          `/requests/${id}/policy-violations`,
+        );
+        if (violationsRes && violationsRes.violations) {
+          setPolicyViolations(violationsRes.violations);
+        }
       } catch (error) {
         console.error("Error fetching request data:", error);
       } finally {
@@ -195,6 +225,32 @@ const RefundsAcceptance: React.FC = () => {
     { key: "priority", label: "Prioridad" },
     { key: "createdAt", label: "Fecha de creación" },
   ];
+
+  const getVoucherViolations = (voucherId?: string) => {
+    if (!voucherId) {
+      return [];
+    }
+
+    return policyViolations
+      .filter((violation) => violation.id_voucher === voucherId)
+      .map<PolicyAlertViolation>((violation) => ({
+        policy_code:
+          violation.id_policy_rule || violation.rule?.operator || "POLICY",
+        message: violation.detail || "Advertencia de política.",
+        severity:
+          violation.rule?.consequence?.toUpperCase() === "WARNING"
+            ? "WARNING"
+            : "BLOCKING",
+        evaluated_value: violation.rule
+          ? {
+              expense_class: violation.rule.expense_class,
+              operator: violation.rule.operator,
+              threshold_value: violation.rule.threshold_value,
+              threshold_unit: violation.rule.threshold_unit,
+            }
+          : undefined,
+      }));
+  };
 
   const approveVoucher = async (id: string) => {
     try {
@@ -325,6 +381,26 @@ const RefundsAcceptance: React.FC = () => {
                   {data?.vouchers?.map((file, index) => (
                     <SwiperSlide key={index}>
                       <FilePreviewer file={file} fileIndex={index} />
+                      {getVoucherViolations(file.id).length > 0 && (
+                        <section className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <MagnifyingGlassIcon className="h-6 w-6 text-orange-700" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-orange-700">
+                                Observaciones de políticas
+                              </h3>
+                              <p className="text-xs text-gray-600">
+                                Revisa estas alertas antes de aprobar o denegar.
+                              </p>
+                            </div>
+                          </div>
+                          <PolicyAlert
+                            violations={getVoucherViolations(file.id)}
+                          />
+                        </section>
+                      )}
                       <div className="flex space-x-4 justify-end mt-6 absolute z-50 bottom-0 right-4">
                         <button
                           disabled={file?.status !== "comprobante_pendiente"}
