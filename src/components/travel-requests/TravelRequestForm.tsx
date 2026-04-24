@@ -15,11 +15,14 @@ import { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   Control,
+  Controller,
   FieldErrors,
   UseFormRegister,
   UseFormSetValue,
+  useFieldArray,
+  useForm,
+  useWatch,
 } from "react-hook-form";
-import { useForm, Controller, useFieldArray, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Select from "../ui/Select";
@@ -108,6 +111,11 @@ interface DestinationFieldsProps {
   remove: (index: number) => void;
   setValue: UseFormSetValue<RawFormValues>;
   isLoadingDestinations: boolean;
+  legOriginName: string;
+  onArrivalDateChange: (date: string) => void;
+  isLast: boolean;
+  isRoundTrip: boolean;
+  originName: string;
 }
 
 function DestinationFields({
@@ -120,6 +128,11 @@ function DestinationFields({
   remove,
   setValue,
   isLoadingDestinations,
+  legOriginName,
+  onArrivalDateChange,
+  isLast,
+  isRoundTrip,
+  originName,
 }: DestinationFieldsProps) {
   const arrivalDate = useWatch({
     control,
@@ -141,12 +154,17 @@ function DestinationFields({
     name: `requests_destinations.${idx}.is_plane_required`,
   });
 
-  const airportOptions = (
-    destinations.find((d) => d.id === destinationId)?.airports || []
-  ).map((airport) => ({
-    id: airport.id,
-    name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
-  }));
+  const currentDestination = destinations.find((d) => d.id === destinationId);
+  const destinationName = currentDestination
+    ? `${currentDestination.city}, ${currentDestination.country}`
+    : "...";
+
+  const airportOptions = (currentDestination?.airports || []).map(
+    (airport) => ({
+      id: airport.id,
+      name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
+    }),
+  );
 
   const stayDays =
     arrivalDate && departureDate
@@ -162,7 +180,9 @@ function DestinationFields({
   return (
     <div className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm">
       <div className="flex justify-between items-center">
-        <span className="font-medium">Destino #{idx + 1}</span>
+        <span className="font-medium">
+          Tramo #{idx + 1}: {legOriginName} → {destinationName}
+        </span>
         {idx > 0 && (
           <Button type="button" onClick={() => remove(idx)}>
             Quitar
@@ -255,7 +275,7 @@ function DestinationFields({
             htmlFor={`departure-${idx}`}
             className="block mb-2 text-sm font-medium text-gray-900"
           >
-            Fecha salida
+            Salida de {legOriginName}
           </label>
           <Controller
             control={control}
@@ -279,7 +299,11 @@ function DestinationFields({
             htmlFor={`arrival-${idx}`}
             className="block mb-2 text-sm font-medium text-gray-900"
           >
-            Fecha llegada
+            {isLast
+              ? isRoundTrip
+                ? `Fecha de regreso a ${originName}`
+                : `Llegada a ${destinationName}`
+              : `Salida de ${destinationName}`}
           </label>
           <Controller
             control={control}
@@ -291,7 +315,10 @@ function DestinationFields({
                 value={
                   field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
                 }
-                onChange={(e) => field.onChange(e.target.value)}
+                onChange={(e) => {
+                  field.onChange(e.target.value);
+                  onArrivalDateChange(e.target.value);
+                }}
               />
             )}
           />
@@ -427,6 +454,18 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
         name: `${airport.iata_code} - ${airport.name}${airport.is_primary ? " (Principal)" : ""}`,
       })) || [];
 
+  const getDestinationName = (id: string | null | undefined): string => {
+    const d = destinations.find((dest) => dest.id === id);
+    return d ? `${d.city}, ${d.country}` : "";
+  };
+
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
+
+  const watchedDestinations = useWatch({
+    control,
+    name: "requests_destinations",
+  });
+
   // Holds validated form data between the validation step and the user's confirmation.
   const [pendingFormData, setPendingFormData] = useState<RawFormValues | null>(
     null,
@@ -473,6 +512,19 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       return;
     }
 
+    // Departure of leg N must not be before arrival of leg N-1.
+    for (let i = 1; i < data.requests_destinations.length; i++) {
+      const prevArrival = data.requests_destinations[i - 1]?.arrival_date ?? "";
+      const currDeparture = data.requests_destinations[i]?.departure_date ?? "";
+      if (dayjs(currDeparture).diff(dayjs(prevArrival), "day") < 0) {
+        toast.error(
+          `La salida del tramo ${i + 1} no puede ser antes de la llegada del tramo ${i}`,
+          { position: "top-right", autoClose: 4000 },
+        );
+        return;
+      }
+    }
+
     setPendingFormData(data);
     setShowConfirmModal(true);
   };
@@ -510,13 +562,14 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     );
 
     const payload = {
-      id_origin_city: data.id_origin_city,
+      id_origin_city: data.id_origin_city!,
       id_origin_airport: data.id_origin_airport || undefined,
       title: data.motive,
       motive: data.motive,
       requirements: data.requirements || "",
       priority: data.priority,
       advance_money: data.advance_money,
+      is_round_trip: isRoundTrip,
       requests_destinations,
     };
 
@@ -551,219 +604,371 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       <GoBack />
-      <section className="bg-gray-200 rounded-md mb-10">
-        <div className="p-10 mx-auto">
-          <h2 className="text-2xl font-bold text-[var(--blue)] mt-0 mb-4">
-            {isEditing ? "Editar Viaje" : "Datos del Viaje"}
-          </h2>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div
-              className="grid gap-4 sm:grid-cols-2 sm:gap-6"
-              id="travel_request_info"
-            >
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="motive"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Motivo
-                </label>
-                <Input
-                  id="motive"
-                  {...register("motive")}
-                  placeholder="Viaje de Negocios"
-                />
-                <FieldError msg={errors.motive?.message} />
+      <div className="flex gap-6 items-start">
+        <section className="bg-gray-200 rounded-md mb-10 flex-1 min-w-0">
+          <div className="p-10 mx-auto">
+            <h2 className="text-2xl font-bold text-[var(--blue)] mt-0 mb-4">
+              {isEditing ? "Editar Viaje" : "Datos del Viaje"}
+            </h2>
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <div
+                className="grid gap-4 sm:grid-cols-2 sm:gap-6"
+                id="travel_request_info"
+              >
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="motive"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Motivo
+                  </label>
+                  <Input
+                    id="motive"
+                    {...register("motive")}
+                    placeholder="Viaje de Negocios"
+                  />
+                  <FieldError msg={errors.motive?.message} />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="title"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Título
+                  </label>
+                  <Input
+                    id="title"
+                    {...register("title")}
+                    placeholder="Viaje a CDMX"
+                  />
+                  <FieldError msg={errors.title?.message} />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="id_origin_city"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Ciudad Origen
+                  </label>
+                  <Controller
+                    control={control}
+                    name="id_origin_city"
+                    render={({ field }) => (
+                      <Select
+                        id="id_origin_city"
+                        options={destinationOptions}
+                        value={
+                          field.value
+                            ? destinationOptions.find(
+                                (o) => o.id === field.value,
+                              )
+                            : null
+                        }
+                        onChange={(opt) => {
+                          field.onChange(opt.id);
+                          setValue("id_origin_airport", null);
+                        }}
+                        isLoading={isLoadingDestinations}
+                        placeholder="Selecciona ciudad de origen"
+                      />
+                    )}
+                  />
+                  <FieldError msg={errors.id_origin_city?.message} />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="id_origin_airport"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Aeropuerto de origen
+                  </label>
+                  <Controller
+                    control={control}
+                    name="id_origin_airport"
+                    render={({ field }) => (
+                      <Select
+                        id="id_origin_airport"
+                        options={originAirportOptions}
+                        value={
+                          field.value
+                            ? originAirportOptions.find(
+                                (o) => o.id === field.value,
+                              )
+                            : null
+                        }
+                        onChange={(opt) => field.onChange(opt.id)}
+                        isDisabled={!originCityId}
+                        placeholder={
+                          originCityId
+                            ? "Selecciona aeropuerto de origen (opcional)"
+                            : "Selecciona ciudad primero"
+                        }
+                      />
+                    )}
+                  />
+                  <FieldError msg={errors.id_origin_airport?.message} />
+                </div>
+
+                <div className="sm:col-span-2 flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-900">
+                    ¿Es viaje redondo?
+                  </label>
+                  <Switch
+                    id="is_round_trip"
+                    checked={isRoundTrip}
+                    onChange={setIsRoundTrip}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="priority"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Prioridad
+                  </label>
+                  <Controller
+                    control={control}
+                    name="priority"
+                    render={({ field }) => (
+                      <Select
+                        id="priority"
+                        options={priorityOptions}
+                        value={priorityOptions.find(
+                          (o) => o.id === field.value,
+                        )}
+                        onChange={(opt) => field.onChange(opt.id)}
+                        placeholder="Selecciona prioridad"
+                      />
+                    )}
+                  />
+                  <FieldError msg={errors.priority?.message} />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="advance_money"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Dinero adelantado
+                  </label>
+                  <Input
+                    id="advance_money"
+                    type="number"
+                    {...register("advance_money", { valueAsNumber: true })}
+                  />
+                  <FieldError msg={errors.advance_money?.message} />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="requirements"
+                    className="block mb-2 text-sm font-medium text-gray-900"
+                  >
+                    Requisitos adicionales
+                  </label>
+                  <TextArea
+                    id="requirements"
+                    {...register("requirements")}
+                    placeholder="Requisitos adicionales del viaje"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label
-                  htmlFor="title"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Título
-                </label>
-                <Input
-                  id="title"
-                  {...register("title")}
-                  placeholder="Viaje a CDMX"
-                />
-                <FieldError msg={errors.title?.message} />
-              </div>
+              <div id="destination_info">
+                <h3 className="mt-8 mb-4 text-lg font-semibold">Destinos</h3>
+                {fields.map((field, idx) => {
+                  const legOriginId =
+                    idx === 0
+                      ? originCityId
+                      : watchedDestinations[idx - 1]?.id_destination;
+                  const legOriginName =
+                    getDestinationName(legOriginId) ||
+                    (idx === 0 ? "Origen" : `Destino ${idx}`);
 
-              <div>
-                <label
-                  htmlFor="id_origin_city"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Ciudad Origen
-                </label>
-                <Controller
-                  control={control}
-                  name="id_origin_city"
-                  render={({ field }) => (
-                    <Select
-                      id="id_origin_city"
-                      options={destinationOptions}
-                      value={
-                        field.value
-                          ? destinationOptions.find((o) => o.id === field.value)
-                          : null
-                      }
-                      onChange={(opt) => {
-                        field.onChange(opt.id);
-                        setValue("id_origin_airport", null);
+                  return (
+                    <DestinationFields
+                      key={field.id}
+                      idx={idx}
+                      legOriginName={legOriginName}
+                      control={control}
+                      register={register}
+                      destinationOptions={destinationOptions}
+                      destinations={destinations}
+                      errors={errors.requests_destinations}
+                      remove={remove}
+                      setValue={setValue}
+                      isLoadingDestinations={isLoadingDestinations}
+                      isLast={idx === fields.length - 1}
+                      isRoundTrip={isRoundTrip}
+                      originName={getDestinationName(originCityId) || "Origen"}
+                      onArrivalDateChange={(date) => {
+                        if (idx < fields.length - 1) {
+                          setValue(
+                            `requests_destinations.${idx + 1}.departure_date`,
+                            date,
+                          );
+                        }
                       }}
-                      isLoading={isLoadingDestinations}
-                      placeholder="Selecciona ciudad de origen"
                     />
-                  )}
-                />
-                <FieldError msg={errors.id_origin_city?.message} />
+                  );
+                })}
               </div>
+              {isRoundTrip &&
+                fields.length > 0 &&
+                (() => {
+                  const lastDestId =
+                    watchedDestinations[fields.length - 1]?.id_destination;
+                  const lastDestName =
+                    getDestinationName(lastDestId) || "Último destino";
+                  const originName =
+                    getDestinationName(originCityId) || "Origen";
+                  return (
+                    <div className="rounded-md p-4 mb-6 bg-blue-50 border border-blue-200">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-blue-800">
+                          Tramo #{fields.length + 1}: {lastDestName} →{" "}
+                          {originName}
+                        </span>
+                        <span className="text-xs text-white bg-blue-500 px-2 py-0.5 rounded-full">
+                          Vuelo de regreso
+                        </span>
+                      </div>
+                      <p className="text-sm text-blue-600 mt-1">
+                        La agencia de viajes buscará un vuelo de regreso al
+                        origen.
+                      </p>
+                    </div>
+                  );
+                })()}
 
-              <div>
-                <label
-                  htmlFor="id_origin_airport"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Aeropuerto de origen
-                </label>
-                <Controller
-                  control={control}
-                  name="id_origin_airport"
-                  render={({ field }) => (
-                    <Select
-                      id="id_origin_airport"
-                      options={originAirportOptions}
-                      value={
-                        field.value
-                          ? originAirportOptions.find(
-                              (o) => o.id === field.value,
-                            )
-                          : null
-                      }
-                      onChange={(opt) => field.onChange(opt.id)}
-                      isDisabled={!originCityId}
-                      placeholder={
-                        originCityId
-                          ? "Selecciona aeropuerto de origen (opcional)"
-                          : "Selecciona ciudad primero"
-                      }
-                    />
-                  )}
-                />
-                <FieldError msg={errors.id_origin_airport?.message} />
-              </div>
+              <Button
+                id="new_destination"
+                type="button"
+                onClick={() => {
+                  const lastArrival =
+                    watchedDestinations[fields.length - 1]?.arrival_date || "";
+                  append({
+                    id_destination: null,
+                    id_airport: null,
+                    arrival_date: "",
+                    departure_date: lastArrival,
+                    stay_days: 1,
+                    is_hotel_required: false,
+                    is_plane_required: true,
+                    details: "",
+                  });
+                }}
+              >
+                + Añadir destino
+              </Button>
 
-              <div>
-                <label
-                  htmlFor="priority"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Prioridad
-                </label>
-                <Controller
-                  control={control}
-                  name="priority"
-                  render={({ field }) => (
-                    <Select
-                      id="priority"
-                      options={priorityOptions}
-                      value={priorityOptions.find((o) => o.id === field.value)}
-                      onChange={(opt) => field.onChange(opt.id)}
-                      placeholder="Selecciona prioridad"
-                    />
-                  )}
-                />
-                <FieldError msg={errors.priority?.message} />
-              </div>
+              <Button
+                type="submit"
+                className="mt-4 sm:mt-6"
+                disabled={isPending}
+                id={
+                  isEditing ? "update_travel_request" : "create_travel_request"
+                }
+              >
+                {isPending
+                  ? isEditing
+                    ? "Actualizando..."
+                    : "Creando..."
+                  : isEditing
+                    ? "Actualizar viaje"
+                    : "Crear viaje"}
+              </Button>
+            </form>
+          </div>
+        </section>
 
-              <div>
-                <label
-                  htmlFor="advance_money"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Dinero adelantado
-                </label>
-                <Input
-                  id="advance_money"
-                  type="number"
-                  {...register("advance_money", { valueAsNumber: true })}
-                />
-                <FieldError msg={errors.advance_money?.message} />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label
-                  htmlFor="requirements"
-                  className="block mb-2 text-sm font-medium text-gray-900"
-                >
-                  Requisitos adicionales
-                </label>
-                <TextArea
-                  id="requirements"
-                  {...register("requirements")}
-                  placeholder="Requisitos adicionales del viaje"
-                />
-              </div>
+        {watchedDestinations.length > 0 && (
+          <div className="sticky top-32 w-72 shrink-0 rounded-md border border-gray-200 bg-white overflow-hidden shadow-sm">
+            <h4 className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">
+              Resumen del itinerario
+            </h4>
+            <div className="divide-y divide-gray-100">
+              {watchedDestinations.map((dest, idx) => {
+                const legOriginId =
+                  idx === 0
+                    ? originCityId
+                    : watchedDestinations[idx - 1]?.id_destination;
+                const legOriginName =
+                  getDestinationName(legOriginId) ||
+                  (idx === 0 ? "Origen" : "—");
+                const destName =
+                  getDestinationName(dest?.id_destination) || "—";
+                const dep = dest?.departure_date;
+                const arr = dest?.arrival_date;
+                const stayDays =
+                  dep && arr ? dayjs(arr).diff(dayjs(dep), "day") : null;
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-col gap-y-1 px-4 py-3 text-sm"
+                  >
+                    <span className="text-gray-400 text-xs">
+                      Tramo {idx + 1}
+                    </span>
+                    <span className="font-medium">
+                      {legOriginName} → {destName}
+                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 text-xs">
+                        {dep ? dayjs(dep).format("DD/MM/YY") : "—"} –{" "}
+                        {arr ? dayjs(arr).format("DD/MM/YY") : "—"}
+                        {stayDays !== null && stayDays > 0
+                          ? ` (${stayDays}d)`
+                          : ""}
+                      </span>
+                      <div className="flex gap-1">
+                        {dest?.is_plane_required && (
+                          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">
+                            ✈ Vuelo
+                          </span>
+                        )}
+                        {dest?.is_hotel_required && (
+                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                            Hotel
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {isRoundTrip &&
+                (() => {
+                  const lastDestId =
+                    watchedDestinations[watchedDestinations.length - 1]
+                      ?.id_destination;
+                  const lastDestName = getDestinationName(lastDestId) || "—";
+                  const originName =
+                    getDestinationName(originCityId) || "Origen";
+                  return (
+                    <div className="flex flex-col gap-y-1 px-4 py-3 text-sm bg-blue-50">
+                      <span className="text-blue-400 text-xs">
+                        Tramo {watchedDestinations.length + 1}
+                      </span>
+                      <span className="font-medium text-blue-800">
+                        {lastDestName} → {originName}
+                      </span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full w-fit">
+                        ✈ Regreso
+                      </span>
+                    </div>
+                  );
+                })()}
             </div>
-
-            <div id="destination_info">
-              <h3 className="mt-8 mb-4 text-lg font-semibold">Destinos</h3>
-              {fields.map((field, idx) => (
-                <DestinationFields
-                  key={field.id}
-                  idx={idx}
-                  control={control}
-                  register={register}
-                  destinationOptions={destinationOptions}
-                  destinations={destinations}
-                  errors={errors.requests_destinations}
-                  remove={remove}
-                  setValue={setValue}
-                  isLoadingDestinations={isLoadingDestinations}
-                />
-              ))}
-            </div>
-            <Button
-              id="new_destination"
-              type="button"
-              onClick={() =>
-                append({
-                  id_destination: null,
-                  id_airport: null,
-                  arrival_date: "",
-                  departure_date: "",
-                  stay_days: 1,
-                  is_hotel_required: false,
-                  is_plane_required: true,
-                  details: "",
-                })
-              }
-            >
-              + Añadir destino
-            </Button>
-
-            <Button
-              type="submit"
-              className="mt-4 sm:mt-6"
-              disabled={isPending}
-              id={isEditing ? "update_travel_request" : "create_travel_request"}
-            >
-              {isPending
-                ? isEditing
-                  ? "Actualizando..."
-                  : "Creando..."
-                : isEditing
-                  ? "Actualizar viaje"
-                  : "Crear viaje"}
-            </Button>
-          </form>
-        </div>
-      </section>
+          </div>
+        )}
+      </div>
       <ConfirmationModal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
@@ -796,4 +1001,6 @@ export default TravelRequestForm;
 Modification History:
 - 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated validation messages to English.
 - 2026-04-18 | Juan de Dios Gastélum Flores | Added pre-submission confirmation modal. Split onSubmit into validation and submitConfirmed phases.
+- 2026-04-22 | Juan de Dios Gastélum Flores | Improved multi-destination flow: sequential leg headers, round trip toggle, return leg indicator, auto-fill dates between legs, cross-leg date validation, and itinerary summary.
+- 2026-04-23 | Juan de Dios Gastélum | Replaced inline itinerary summary with sticky sidebar for better visibility during form navigation.
 */

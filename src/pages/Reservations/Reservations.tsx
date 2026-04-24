@@ -26,9 +26,15 @@ export const Reservations = () => {
   const { handleVisitPage, tutorial } = useApp();
   const { createOfferRequest, createOrder } = useDuffel();
   const { destinations } = useDestinations();
-    const [duffelSearchIds, setDuffelSearchIds] = useState<Record<string, string>>({});
-    const [searchingDuffel, setSearchingDuffel] = useState<Record<string, boolean>>({});
-    const [selectedOffer, setSelectedOffer] = useState<Record<string, DuffelOffer | null>>({});
+  const [duffelSearchIds, setDuffelSearchIds] = useState<
+    Record<string, string>
+  >({});
+  const [searchingDuffel, setSearchingDuffel] = useState<
+    Record<string, boolean>
+  >({});
+  const [selectedOffer, setSelectedOffer] = useState<
+    Record<string, DuffelOffer | null>
+  >({});
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -37,37 +43,75 @@ export const Reservations = () => {
         const response = await getRequest(`/requests/${id}`);
         setRequest({
           ...response,
-          requests_destinations: response.requests_destinations.map(
-            (destination: any) => ({
-              ...destination,
-              origin:
-                response.destination.city + ", " + response.destination.country,
-              origin_city: response.destination.city,
-              origin_country: response.destination.country,
-              destination_full:
-                destination.destination.city +
-                ", " +
-                destination.destination.country,
-              destination_city: destination.destination.city,
-              destination_country: destination.destination.country,
-              origin_id: response.id_origin_city,
-              origin_airport_id: response.id_origin_airport,
-              destination_id: destination.id_destination,
-              destination_airport_id: destination.id_airport,
-              origin_ref: response.destination,
-              origin_airport_ref: response.origin_airport || response.originAirport,
-              destination_ref: destination.destination,
-              destination_airport_ref: destination.airport || destination.destination_airport,
-              departure_date_raw: destination.departure_date,
-              arrival_date_raw: destination.arrival_date,
-              departure_date: formatDate(destination.departure_date),
-              arrival_date: formatDate(destination.arrival_date),
-              hotel_required: destination.is_hotel_required ? "Sí" : "No",
-              plane_required: destination.is_plane_required ? "Sí" : "No",
-              stay_days: destination.stay_days,
-              details: destination.details,
-            }),
-          ),
+          requests_destinations: (() => {
+            const sorted = [...response.requests_destinations].sort(
+              (a: any, b: any) => a.destination_order - b.destination_order,
+            );
+            return sorted.map((destination: any, index: number) => {
+              const prev = index === 0 ? null : sorted[index - 1];
+              const isLast = index === sorted.length - 1;
+
+              const originCity =
+                index === 0
+                  ? response.destination.city +
+                    ", " +
+                    response.destination.country
+                  : prev.destination.city + ", " + prev.destination.country;
+
+              const originCityName =
+                index === 0 ? response.destination.city : prev.destination.city;
+
+              const originCountry =
+                index === 0
+                  ? response.destination.country
+                  : prev.destination.country;
+
+              const originId =
+                index === 0 ? response.id_origin_city : prev.id_destination;
+
+              const originAirportId =
+                index === 0 ? response.id_origin_airport : prev.id_airport;
+
+              const originRef =
+                index === 0 ? response.destination : prev.destination;
+
+              const originAirportRef =
+                index === 0
+                  ? response.origin_airport || response.originAirport
+                  : prev.airport || prev.destination_airport;
+
+              return {
+                ...destination,
+                origin: originCity,
+                origin_city: originCityName,
+                origin_country: originCountry,
+                destination_full:
+                  destination.destination.city +
+                  ", " +
+                  destination.destination.country,
+                destination_city: destination.destination.city,
+                destination_country: destination.destination.country,
+                origin_id: originId,
+                origin_airport_id: originAirportId,
+                destination_id: destination.id_destination,
+                destination_airport_id: destination.id_airport,
+                origin_ref: originRef,
+                origin_airport_ref: originAirportRef,
+                destination_ref: destination.destination,
+                destination_airport_ref:
+                  destination.airport || destination.destination_airport,
+                departure_date_raw: destination.departure_date,
+                arrival_date_raw: destination.arrival_date,
+                departure_date: formatDate(destination.departure_date),
+                arrival_date: formatDate(destination.arrival_date),
+                hotel_required: destination.is_hotel_required ? "Sí" : "No",
+                plane_required: destination.is_plane_required ? "Sí" : "No",
+                stay_days: destination.stay_days,
+                details: destination.details,
+                is_last_destination: isLast,
+              };
+            });
+          })(),
         });
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -128,9 +172,9 @@ export const Reservations = () => {
     setFormData(updatedFormData);
   };
 
-  
   const handleDuffelSearch = async (destination: any) => {
-  const destId = destination.id;
+    const destId = destination.id;
+    const backendDestId = destination.requestDestinationId ?? destination.id;
     const normalizeDate = (value: unknown): string => {
       if (typeof value !== "string") {
         return "";
@@ -195,11 +239,16 @@ export const Reservations = () => {
 
     const getIataByDestinationId = (destinationId: unknown): string => {
       if (!destinationId) return "";
-      const match = destinations.find((d: any) => String(d.id) === String(destinationId));
+      const match = destinations.find(
+        (d: any) => String(d.id) === String(destinationId),
+      );
       return getIataFromObject(match);
     };
 
-    const getIataByAirportId = (airportId: unknown, destinationId?: unknown): string => {
+    const getIataByAirportId = (
+      airportId: unknown,
+      destinationId?: unknown,
+    ): string => {
       if (!airportId) return "";
 
       const destinationMatch = destinationId
@@ -225,14 +274,20 @@ export const Reservations = () => {
 
     const originCode =
       getIataFromObject(destination.origin_airport_ref) ||
-      getIataByAirportId(destination.origin_airport_id, destination.origin_id) ||
+      getIataByAirportId(
+        destination.origin_airport_id,
+        destination.origin_id,
+      ) ||
       getIataFromObject(destination.origin_ref) ||
       getIataByDestinationId(destination.origin_id) ||
       extractIATA(destination.origin);
 
     const destinationCode =
       getIataFromObject(destination.destination_airport_ref) ||
-      getIataByAirportId(destination.destination_airport_id, destination.destination_id) ||
+      getIataByAirportId(
+        destination.destination_airport_id,
+        destination.destination_id,
+      ) ||
       getIataFromObject(destination.destination_ref) ||
       getIataByDestinationId(destination.destination_id) ||
       extractIATA(destination.destination_full);
@@ -244,39 +299,33 @@ export const Reservations = () => {
       ]
         .filter(Boolean)
         .join(" y ");
-      toast.error(`No se encontró código IATA para ${missing}. Verifica la configuración de aeropuertos en destinos.`);
+      toast.error(
+        `No se encontró código IATA para ${missing}. Verifica la configuración de aeropuertos en destinos.`,
+      );
       return;
     }
 
-    const departureDateSource = destination.departure_date_raw || destination.departure_date;
-    const returnDateSource = destination.arrival_date_raw || destination.arrival_date;
-
+    const departureDateSource =
+      destination.departure_date_raw || destination.departure_date;
     const outboundDate = normalizeDate(departureDateSource);
-    const returnDate = normalizeDate(returnDateSource);
 
-    if (
-      !dayjs(outboundDate, "YYYY-MM-DD", true).isValid() ||
-      !dayjs(returnDate, "YYYY-MM-DD", true).isValid()
-    ) {
-      toast.error("Error en el formato de fechas del viaje");
+    if (!dayjs(outboundDate, "YYYY-MM-DD", true).isValid()) {
+      toast.error("Error en el formato de la fecha de salida");
       return;
     }
 
     const today = dayjs().startOf("day");
     if (!dayjs(outboundDate).isAfter(today)) {
-      toast.error("La fecha de salida debe ser posterior al día de hoy para buscar en Duffel");
+      toast.error(
+        "La fecha de salida debe ser posterior al día de hoy para buscar en Duffel",
+      );
       return;
     }
-
-    if (!dayjs(returnDate).isAfter(dayjs(outboundDate))) {
-      toast.error("La fecha de regreso debe ser posterior a la fecha de salida");
-      return;
-    }
-    setSearchingDuffel(prev => ({ ...prev, [destId]: true }));
+    setSearchingDuffel((prev) => ({ ...prev, [destId]: true }));
 
     try {
       const payload = {
-        requestDestinationId: destId,
+        requestDestinationId: backendDestId,
         data: {
           slices: [
             {
@@ -284,96 +333,105 @@ export const Reservations = () => {
               destination: destinationCode,
               departure_date: outboundDate,
             },
-            {
-              origin: destinationCode,
-              destination: originCode,
-              departure_date: returnDate,
-            },
           ],
-          passengers: [{ type: 'adult' as const }],
-          cabin_class: 'economy' as const,
+          passengers: [{ type: "adult" as const }],
+          cabin_class: "economy" as const,
         },
       };
 
       const response = await createOfferRequest.mutateAsync(payload as any);
-      
+
       console.log(" RESPUESTA COMPLETA DE DUFFEL:", response);
 
       // Intentamos obtener el ID de varias formas por si el backend lo envolvió
-      const offerRequestId = response?.offer_request_id || response?.data?.id || response?.id;
+      const offerRequestId =
+        response?.offer_request_id || response?.data?.id || response?.id;
 
       if (offerRequestId) {
         console.log(" ID DE BÚSQUEDA CAPTURADO:", offerRequestId);
-        setDuffelSearchIds(prev => ({ ...prev, [destId]: offerRequestId }));
+        setDuffelSearchIds((prev) => ({ ...prev, [destId]: offerRequestId }));
         toast.success(`Vuelos encontrados para ${originCode}`);
       } else {
         console.warn(" No se encontró un ID en la respuesta");
         toast.warning("Duffel respondió, pero no se generó un ID de búsqueda.");
       }
-
     } catch (error: any) {
       console.error(" Error en la petición:", error);
       if (error?.code === "ECONNABORTED") {
-        toast.error("Duffel tardó demasiado en responder. Intenta de nuevo en unos segundos.");
+        toast.error(
+          "Duffel tardó demasiado en responder. Intenta de nuevo en unos segundos.",
+        );
         return;
       }
-      const msg = error.response?.data?.details?.message || error.response?.data?.message || "Hubo un problema al conectar con Duffel.";
+      const msg =
+        error.response?.data?.details?.message ||
+        error.response?.data?.message ||
+        "Hubo un problema al conectar con Duffel.";
       toast.error(`Duffel dice: ${msg}`);
     } finally {
-      setSearchingDuffel(prev => ({ ...prev, [destId]: false }));
-     }
-    };
+      setSearchingDuffel((prev) => ({ ...prev, [destId]: false }));
+    }
+  };
 
-    const handleSelectOffer = (destId: string, offer: DuffelOffer) => {
-      setSelectedOffer(prev => ({ ...prev, [destId]: offer }));
-      // Al seleccionar, podemos ocultar la lista y mostrar un resumen con el botón de "Confirmar Reserva"
-    };
+  const handleSelectOffer = (destId: string, offer: DuffelOffer) => {
+    setSelectedOffer((prev) => ({ ...prev, [destId]: offer }));
+    // Al seleccionar, podemos ocultar la lista y mostrar un resumen con el botón de "Confirmar Reserva"
+  };
 
-    const handleSubmitDuffelOrder = async (destId: string, passengerData: any) => {
-      const offer = selectedOffer[destId];
-      if (!offer) return;
+  const handleSubmitDuffelOrder = async (
+    destId: string,
+    passengerData: any,
+    backendDestId?: string,
+  ) => {
+    const offer = selectedOffer[destId];
+    if (!offer) return;
 
-      const finalOfferId = offer.id || offer.offer_id;
-      const finalPrice = parseFloat(offer.price?.total_amount || offer.total_amount || "0");
+    const finalOfferId = offer.id || offer.offer_id;
+    const finalPrice = parseFloat(
+      offer.price?.total_amount || offer.total_amount || "0",
+    );
 
-
-      try {
-        const payload = {
-          requestDestinationId: destId,
-          offerId: finalOfferId,
-          reservationTitle: `Vuelo Duffel: ${offer.owner?.name || 'Aerolínea'}`,
-          reservationComments: `Reserva digital emitida para ${passengerData.given_name}.`,
-          reservationPrice: finalPrice,
-          data: {
-            selected_offers: [finalOfferId],
-            passengers: [{
+    try {
+      const payload = {
+        requestDestinationId: backendDestId ?? destId,
+        offerId: finalOfferId,
+        reservationTitle: `Vuelo Duffel: ${offer.owner?.name || "Aerolínea"}`,
+        reservationComments: `Reserva digital emitida para ${passengerData.given_name}.`,
+        reservationPrice: finalPrice,
+        data: {
+          selected_offers: [finalOfferId],
+          passengers: [
+            {
               ...passengerData,
               // Detalle: Las aerolíneas son estrictas con el formato del teléfono
-               phone_number: passengerData.phone_number.replace(/\s/g, '')
-            }],
-            type: 'instant' as const, // Emisión inmediata
-          },
-        };
+              phone_number: passengerData.phone_number.replace(/\s/g, ""),
+            },
+          ],
+          type: "instant" as const, // Emisión inmediata
+        },
+      };
 
-        console.log(" ENVIANDO ORDEN FINAL A MONARCA:", payload);
+      console.log(" ENVIANDO ORDEN FINAL A MONARCA:", payload);
 
-        await createOrder.mutateAsync(payload as any);
-        
-        toast.success("¡Vuelo reservado y emitido correctamente!");
-        
-        // Limpiamos los estados de Duffel para este destino para mostrar la reserva finalizada
-        setDuffelSearchIds(prev => ({ ...prev, [destId]: "" }));
-        setSelectedOffer(prev => ({ ...prev, [destId]: null }));
-        
-        // Opcional: Refrescar la solicitud completa para mostrar la nueva reservación en la lista
-        // El hook de la Parte 1 ya tiene un onSuccess que invalida las queries
-      } catch (error: any) {
-        console.error("Duffel Order Error:", error);
-        // Detalle importante: Duffel devuelve errores muy específicos (ej. "Passport required")
-        const errorMsg = error.response?.data?.message || "Error al emitir el boleto. Verifique los datos.";
-        toast.error(errorMsg);
-      }
-    };
+      await createOrder.mutateAsync(payload as any);
+
+      toast.success("¡Vuelo reservado y emitido correctamente!");
+
+      // Limpiamos los estados de Duffel para este destino para mostrar la reserva finalizada
+      setDuffelSearchIds((prev) => ({ ...prev, [destId]: "" }));
+      setSelectedOffer((prev) => ({ ...prev, [destId]: null }));
+
+      // Opcional: Refrescar la solicitud completa para mostrar la nueva reservación en la lista
+      // El hook de la Parte 1 ya tiene un onSuccess que invalida las queries
+    } catch (error: any) {
+      console.error("Duffel Order Error:", error);
+      // Detalle importante: Duffel devuelve errores muy específicos (ej. "Passport required")
+      const errorMsg =
+        error.response?.data?.message ||
+        "Error al emitir el boleto. Verifique los datos.";
+      toast.error(errorMsg);
+    }
+  };
   /**
    * Handles reservation form submission.
    * Calculates the total number of required reservations (hotel + plane) per destination
@@ -391,7 +449,8 @@ export const Reservations = () => {
     const planeLength = request.requests_destinations.filter(
       (destination: any) => destination.is_plane_required,
     ).length;
-    const totalLength = hotelLength + planeLength;
+    const returnLegLength = request.is_round_trip ? 1 : 0;
+    const totalLength = hotelLength + planeLength + returnLegLength;
 
     // Only block empty submissions when there are reservations actually required
     if (
@@ -402,6 +461,10 @@ export const Reservations = () => {
       return;
     }
 
+    const lastDestId = [...(request.requests_destinations || [])].sort(
+      (a: any, b: any) => b.destination_order - a.destination_order,
+    )[0]?.id;
+
     const formattedData = {
       reservations: Object.entries(formData).flatMap(([key, value]) => {
         const hotelReservation = value.hotel_title && {
@@ -409,14 +472,14 @@ export const Reservations = () => {
           comments: value.hotel_comments,
           price: parseFloat(value.hotel_price),
           file: value.hotel_file,
-          id_request_destination: key,
+          id_request_destination: key === "return_leg" ? lastDestId : key,
         };
         const planeReservation = value.plane_title && {
           title: value.plane_title,
           comments: value.plane_comments,
           price: parseFloat(value.plane_price),
           file: value.plane_file,
-          id_request_destination: key,
+          id_request_destination: key === "return_leg" ? lastDestId : key,
         };
         return [hotelReservation, planeReservation].filter(Boolean);
       }),
@@ -433,6 +496,10 @@ export const Reservations = () => {
         data.hotel_title && data.hotel_comments && data.hotel_file;
       const planeValid =
         data.plane_title && data.plane_comments && data.plane_file;
+      if (key === "return_leg") {
+        return !!(data.plane_title && data.plane_comments && data.plane_file);
+      }
+
       const requestDestination = request.requests_destinations.find(
         (destination: any) => destination.id === key,
       );
@@ -519,20 +586,24 @@ export const Reservations = () => {
                   className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm"
                 >
                   <div className="flex justify-between items-center border-b pb-2">
-                    <h3 className="font-bold text-lg text-[var(--blue)]">Destino #{destination.destination_order}</h3>
-                    {destination.is_plane_required && !selectedOffer[destination.id] && (
-                     
-                      <button
-                        type="button"
-                        onClick={() => handleDuffelSearch(destination)}
-                        disabled={searchingDuffel[destination.id]}
-                        className="text-xs bg-[#6032b3] text-white px-3 py-1 rounded hover:bg-[#4c2891] transition-colors"
-                      >
-                        {searchingDuffel[destination.id] ? "Buscando..." : "Buscar vuelos (Duffel)"}
-                      </button>
-                    )}
+                    <h3 className="font-bold text-lg text-[var(--blue)]">
+                      Destino #{destination.destination_order}
+                    </h3>
+                    {destination.is_plane_required &&
+                      !selectedOffer[destination.id] && (
+                        <button
+                          type="button"
+                          onClick={() => handleDuffelSearch(destination)}
+                          disabled={searchingDuffel[destination.id]}
+                          className="text-xs bg-[#6032b3] text-white px-3 py-1 rounded hover:bg-[#4c2891] transition-colors"
+                        >
+                          {searchingDuffel[destination.id]
+                            ? "Buscando..."
+                            : "Buscar vuelos (Duffel)"}
+                        </button>
+                      )}
                   </div>
-                  
+
                   <section
                     className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8"
                     id="reservation-info"
@@ -574,7 +645,9 @@ export const Reservations = () => {
                             </label>
                             <Input
                               placeholder="Ingresa el título de la reservación"
-                              value={formData[destination.id]?.hotel_title || ""}
+                              value={
+                                formData[destination.id]?.hotel_title || ""
+                              }
                               onChange={(e) => handleChange(e, destination.id)}
                               name="hotel_title"
                               id={`hotel_title_${destination.id}`}
@@ -608,7 +681,9 @@ export const Reservations = () => {
                             </label>
                             <Input
                               placeholder="Ingresa el precio del hotel"
-                              value={formData[destination.id]?.hotel_price || ""}
+                              value={
+                                formData[destination.id]?.hotel_price || ""
+                              }
                               onChange={(e) => handleChange(e, destination.id)}
                               name="hotel_price"
                               type="number"
@@ -656,7 +731,9 @@ export const Reservations = () => {
                             </label>
                             <Input
                               placeholder="Ingresa el título de la reservación"
-                              value={formData[destination.id]?.plane_title || ""}
+                              value={
+                                formData[destination.id]?.plane_title || ""
+                              }
                               onChange={(e) => handleChange(e, destination.id)}
                               name="plane_title"
                               id={`plane_title_${destination.id}`}
@@ -690,7 +767,9 @@ export const Reservations = () => {
                             </label>
                             <Input
                               placeholder="Ingresa el precio del vuelo"
-                              value={formData[destination.id]?.plane_price || ""}
+                              value={
+                                formData[destination.id]?.plane_price || ""
+                              }
                               onChange={(e) => handleChange(e, destination.id)}
                               name="plane_price"
                               type="number"
@@ -722,41 +801,65 @@ export const Reservations = () => {
                       )}
                     </section>
                   )}
-                  {duffelSearchIds[destination.id] && !selectedOffer[destination.id] && (
-                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 shadow-inner">
-                      <div className="flex justify-between items-center mb-4">
-                        <h4 className="text-sm font-bold text-purple-900">Vuelos encontrados (Precios en tiempo real)</h4>
-                        <button 
-                          onClick={() => setDuffelSearchIds(prev => ({ ...prev, [destination.id]: "" }))}
-                          className="text-xs text-purple-600 hover:underline"
-                        >
-                          Cambiar a carga manual
-                        </button>
+                  {duffelSearchIds[destination.id] &&
+                    !selectedOffer[destination.id] && (
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 shadow-inner">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-sm font-bold text-purple-900">
+                            Vuelos encontrados (Precios en tiempo real)
+                          </h4>
+                          <button
+                            onClick={() =>
+                              setDuffelSearchIds((prev) => ({
+                                ...prev,
+                                [destination.id]: "",
+                              }))
+                            }
+                            className="text-xs text-purple-600 hover:underline"
+                          >
+                            Cambiar a carga manual
+                          </button>
+                        </div>
+                        <DuffelOfferList
+                          offerRequestId={duffelSearchIds[destination.id] || ""}
+                          onSelectOffer={(offer) =>
+                            handleSelectOffer(destination.id, offer)
+                          }
+                        />
                       </div>
-                      <DuffelOfferList 
-                        offerRequestId={duffelSearchIds[destination.id] || ""} 
-                        onSelectOffer={(offer) => handleSelectOffer(destination.id, offer)}
-                      />
-                    </div>
-                  )}
+                    )}
 
                   {selectedOffer[destination.id] && (
                     <div className="bg-green-50 p-6 rounded-lg border-2 border-green-200">
                       <div className="flex justify-between items-start mb-6">
                         <div>
-                          <h4 className="font-black text-green-900 uppercase tracking-tight">Vuelo Seleccionado</h4>
+                          <h4 className="font-black text-green-900 uppercase tracking-tight">
+                            Vuelo Seleccionado
+                          </h4>
                           <p className="text-xs text-green-700">
-                            Aerolínea: {selectedOffer[destination.id]?.owner?.name} Vuelo ID: {(selectedOffer[destination.id]?.id || selectedOffer[destination.id]?.offer_id || "").substring(0, 8)}
+                            Aerolínea:{" "}
+                            {selectedOffer[destination.id]?.owner?.name} Vuelo
+                            ID:{" "}
+                            {(
+                              selectedOffer[destination.id]?.id ||
+                              selectedOffer[destination.id]?.offer_id ||
+                              ""
+                            ).substring(0, 8)}
                           </p>
                         </div>
-                        <button 
-                          onClick={() => setSelectedOffer(prev => ({ ...prev, [destination.id]: null }))}
+                        <button
+                          onClick={() =>
+                            setSelectedOffer((prev) => ({
+                              ...prev,
+                              [destination.id]: null,
+                            }))
+                          }
                           className="text-xs bg-white border border-green-300 px-2 py-1 rounded text-green-700 hover:bg-green-100"
                         >
                           Elegir otro vuelo
                         </button>
                       </div>
-                      <DuffelPassengerForm 
+                      <DuffelPassengerForm
                         offer={selectedOffer[destination.id]!}
                         initialData={{
                           name: request?.user?.name || "",
@@ -764,7 +867,9 @@ export const Reservations = () => {
                           email: request?.user?.email || "",
                         }}
                         isSubmitting={createOrder.isPending}
-                        onSubmit={(data) => handleSubmitDuffelOrder(destination.id, data)}
+                        onSubmit={(data) =>
+                          handleSubmitDuffelOrder(destination.id, data)
+                        }
                       />
                     </div>
                   )}
@@ -772,6 +877,238 @@ export const Reservations = () => {
               ))}
             </div>
 
+            {request.is_round_trip &&
+              (() => {
+                const lastDest = [
+                  ...(request.requests_destinations || []),
+                ].sort(
+                  (a: any, b: any) => b.destination_order - a.destination_order,
+                )[0];
+
+                if (!lastDest) return null;
+
+                const returnLegId = "return_leg";
+                const returnLeg = {
+                  id: returnLegId,
+                  requestDestinationId: lastDest.id,
+                  origin: lastDest.destination_full,
+                  origin_city: lastDest.destination_city,
+                  origin_country: lastDest.destination_country,
+                  origin_ref: lastDest.destination_ref,
+                  origin_airport_ref: lastDest.destination_airport_ref,
+                  origin_id: lastDest.destination_id,
+                  origin_airport_id: lastDest.destination_airport_id,
+                  destination_full:
+                    request.destination?.city +
+                    ", " +
+                    request.destination?.country,
+                  destination_city: request.destination?.city,
+                  destination_ref: request.destination,
+                  destination_airport_ref:
+                    request.origin_airport || request.originAirport,
+                  destination_id: request.id_origin_city,
+                  destination_airport_id: request.id_origin_airport,
+                  departure_date_raw: lastDest.arrival_date_raw,
+                  departure_date: lastDest.arrival_date,
+                  is_last_destination: false,
+                  is_plane_required: true,
+                  is_hotel_required: false,
+                };
+                return (
+                  <div
+                    key={returnLegId}
+                    className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm"
+                  >
+                    <div className="flex justify-between items-center border-b pb-2">
+                      <h3 className="font-bold text-lg text-[var(--blue)]">
+                        Vuelo de regreso
+                      </h3>
+                      {!selectedOffer[returnLegId] && (
+                        <button
+                          type="button"
+                          onClick={() => handleDuffelSearch(returnLeg)}
+                          disabled={searchingDuffel[returnLegId]}
+                          className="text-xs bg-[#6032b3] text-white px-3 py-1 rounded hover:bg-[#4c2891] transition-colors"
+                        >
+                          {searchingDuffel[returnLegId]
+                            ? "Buscando..."
+                            : "Buscar vuelos (Duffel)"}
+                        </button>
+                      )}
+                    </div>
+                    <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          Origen
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={returnLeg.origin}
+                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          Destino
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={returnLeg.destination_full}
+                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          Fecha de Salida
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={returnLeg.departure_date}
+                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                        />
+                      </div>
+                    </section>
+                    {!duffelSearchIds[returnLegId] &&
+                      !selectedOffer[returnLegId] && (
+                        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                          <div className="flex flex-col gap-y-4">
+                            <h3 className="text-[var(--blue)] mb-4 font-bold">
+                              Información del vuelo
+                            </h3>
+                            <div>
+                              <label className="block mb-2 text-sm font-medium text-gray-900">
+                                Título
+                              </label>
+                              <Input
+                                placeholder="Ingresa el título de la reservación"
+                                value={formData[returnLegId]?.plane_title || ""}
+                                onChange={(e) => handleChange(e, returnLegId)}
+                                name="plane_title"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-2 text-sm font-medium text-gray-900">
+                                Comentarios
+                              </label>
+                              <TextArea
+                                placeholder="Escribe tus comentarios"
+                                value={
+                                  formData[returnLegId]?.plane_comments || ""
+                                }
+                                onChange={(e) => handleChange(e, returnLegId)}
+                                name="plane_comments"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-2 text-sm font-medium text-gray-900">
+                                Precio
+                              </label>
+                              <Input
+                                placeholder="Ingresa el precio del vuelo"
+                                value={formData[returnLegId]?.plane_price || ""}
+                                onChange={(e) => handleChange(e, returnLegId)}
+                                name="plane_price"
+                                type="number"
+                              />
+                            </div>
+                            <div>
+                              <label className="block mb-2 text-sm font-medium text-gray-900">
+                                Subir archivos de avión
+                              </label>
+                              <Input
+                                type="file"
+                                accept=".pdf"
+                                onChange={(e) =>
+                                  handleFileChange(e, returnLegId)
+                                }
+                                name="plane_file"
+                                selectedFileName={
+                                  formData[returnLegId]?.plane_file_name
+                                }
+                              />
+                            </div>
+                          </div>
+                        </section>
+                      )}
+                    {duffelSearchIds[returnLegId] &&
+                      !selectedOffer[returnLegId] && (
+                        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 shadow-inner">
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-sm font-bold text-purple-900">
+                              Vuelos encontrados (Precios en tiempo real)
+                            </h4>
+                            <button
+                              onClick={() =>
+                                setDuffelSearchIds((prev) => ({
+                                  ...prev,
+                                  [returnLegId]: "",
+                                }))
+                              }
+                              className="text-xs text-purple-600 hover:underline"
+                            >
+                              Cambiar a carga manual
+                            </button>
+                          </div>
+                          <DuffelOfferList
+                            offerRequestId={duffelSearchIds[returnLegId] || ""}
+                            onSelectOffer={(offer) =>
+                              handleSelectOffer(returnLegId, offer)
+                            }
+                          />
+                        </div>
+                      )}
+                    {selectedOffer[returnLegId] && (
+                      <div className="bg-green-50 p-6 rounded-lg border-2 border-green-200">
+                        <div className="flex justify-between items-start mb-6">
+                          <div>
+                            <h4 className="font-black text-green-900 uppercase tracking-tight">
+                              Vuelo Seleccionado
+                            </h4>
+                            <p className="text-xs text-green-700">
+                              Aerolínea:{" "}
+                              {selectedOffer[returnLegId]?.owner?.name} — ID:{" "}
+                              {(selectedOffer[returnLegId]?.id || "").substring(
+                                0,
+                                8,
+                              )}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() =>
+                              setSelectedOffer((prev) => ({
+                                ...prev,
+                                [returnLegId]: null,
+                              }))
+                            }
+                            className="text-xs bg-white border border-green-300 px-2 py-1 rounded text-green-700 hover:bg-green-100"
+                          >
+                            Elegir otro vuelo
+                          </button>
+                        </div>
+                        <DuffelPassengerForm
+                          offer={selectedOffer[returnLegId]!}
+                          initialData={{
+                            name: request?.user?.name || "",
+                            last_name: request?.user?.last_name || "",
+                            email: request?.user?.email || "",
+                          }}
+                          isSubmitting={createOrder.isPending}
+                          onSubmit={(data) =>
+                            handleSubmitDuffelOrder(
+                              returnLegId,
+                              data,
+                              lastDest.id,
+                            )
+                          }
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             <div className="pt-4 flex justify-end">
               <button
                 type="submit"
@@ -796,5 +1133,6 @@ export default Reservations;
 
 /*
 Modification History:
-2026-04-20 | Fabrizio | Integrated Duffel search and order flow inside the agent booking view.
+- 2026-04-20 | Fabrizio | Integrated Duffel search and order flow inside the agent booking view.
+- 2026-04-23 | Juan de Dios Gastélum | Fixed sequential origin mapping, one-way per leg search, and added independent return leg box for round-trip reservations.
 */
