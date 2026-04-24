@@ -50,6 +50,7 @@ export interface DynamicTableProps {
   onDataChange?: (data: any[]) => void;
   expandedRows?: number[];
   renderExpandedRow?: (index: number) => React.ReactNode;
+  showRowNumbers?: boolean;
 }
 
 const DynamicTable: React.FC<DynamicTableProps> = ({
@@ -58,6 +59,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
   onDataChange,
   expandedRows = [],
   renderExpandedRow,
+  showRowNumbers = false,
 }) => {
   /*
    * State to manage the table data.
@@ -142,11 +144,14 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
         <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border-separate border-spacing-y-2">
           <thead>
             <tr className="text-xs text-white uppercase bg-[#0a2c6d]">
+              {showRowNumbers && (
+                <th className="px-4 py-2 text-center rounded-l-lg">Fila</th>
+              )}
               {columns.map((column, index) => (
                 <th
                   key={index}
                   className={`px-4 py-2 text-center ${
-                    index === 0 ? "rounded-l-lg" : ""
+                    index === 0 && !showRowNumbers ? "rounded-l-lg" : ""
                   } ${index === columns.length - 1 ? "rounded-r-lg" : ""}`}
                 >
                   {column.header}
@@ -158,11 +163,16 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
             {tableData.map((row, rowIndex) => (
               <React.Fragment key={rowIndex}>
                 <tr className="bg-[#4C6997] text-white text-center">
+                  {showRowNumbers && (
+                    <td className="px-4 py-3 rounded-l-lg font-semibold">
+                      {rowIndex + 1}
+                    </td>
+                  )}
                   {columns.map((column, cellIndex) => (
                     <td
                       key={cellIndex}
                       className={`px-4 py-3 ${
-                        cellIndex === 0 ? "rounded-l-lg" : ""
+                        cellIndex === 0 && !showRowNumbers ? "rounded-l-lg" : ""
                       } ${
                         cellIndex === columns.length - 1 ? "rounded-r-lg" : ""
                       }`}
