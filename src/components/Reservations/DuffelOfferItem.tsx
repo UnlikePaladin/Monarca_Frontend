@@ -79,7 +79,10 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
   const outbound = getSliceSummary(outboundSlice);
   const inbound = getSliceSummary(returnSlice);
 
-  const renderSliceRow = (label: string, summary: NonNullable<typeof outbound>) => (
+  const renderSliceRow = (
+    label: string,
+    summary: NonNullable<typeof outbound>,
+  ) => (
     <div className="flex items-center justify-around w-full py-2">
       <div className="text-center min-w-[52px]">
         <p className="text-[9px] text-gray-500 uppercase font-bold">{label}</p>
@@ -112,17 +115,25 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
   };
   const ownerLogoUrl = getBestLogo(ownerCarrier);
 
-  const marketingCarrierLogo = getBestLogo(outbound?.firstSegment?.marketing_carrier);
-  const operatingCarrierLogo = getBestLogo(outbound?.firstSegment?.operating_carrier);
-  const segmentCarrier = outbound?.firstSegment?.marketing_carrier || outbound?.firstSegment?.operating_carrier;
-  
+  const marketingCarrierLogo = getBestLogo(
+    outbound?.firstSegment?.marketing_carrier,
+  );
+  const operatingCarrierLogo = getBestLogo(
+    outbound?.firstSegment?.operating_carrier,
+  );
+  const segmentCarrier =
+    outbound?.firstSegment?.marketing_carrier ||
+    outbound?.firstSegment?.operating_carrier;
+
   // DETALLE: Ajuste de precio según el log de tu consola
   const amount = offer.total_amount || offer.price?.total_amount || "0";
   const currency = offer.total_currency || offer.price?.total_currency || "USD";
   const baseAmount = offer.base_amount;
   const taxAmount = offer.tax_amount;
   const emissions = offer.total_emissions_kg;
-  const expiresLabel = offer.expires_at ? dayjs(offer.expires_at).format("DD/MM/YYYY HH:mm") : "Sin dato";
+  const expiresLabel = offer.expires_at
+    ? dayjs(offer.expires_at).format("DD/MM/YYYY HH:mm")
+    : "Sin dato";
 
   if (!outbound) {
     return null;
@@ -140,13 +151,22 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
           />
         ) : (
           <div className="min-w-16 h-12 px-2 flex items-center justify-center bg-white rounded text-[10px] font-bold text-gray-800 uppercase text-center">
-            {offer.owner?.name || offer.owner?.iata_code || outbound?.firstSegment?.marketing_carrier?.iata_code || "N/A"}
+            {offer.owner?.name ||
+              offer.owner?.iata_code ||
+              outbound?.firstSegment?.marketing_carrier?.iata_code ||
+              "N/A"}
           </div>
         )}
         <div className="flex-1">
-          <p className="text-sm font-bold text-white">{offer.owner?.name || "Aerolínea"}</p>
+          <p className="text-sm font-bold text-white">
+            {offer.owner?.name || "Aerolínea"}
+          </p>
           <p className="text-[10px] text-gray-400 uppercase">
-            {isRoundTrip ? "Ida y vuelta" : outbound.stopCount > 0 ? `${outbound.stopCount} Escala(s)` : "Vuelo Directo"}
+            {isRoundTrip
+              ? "Ida y vuelta"
+              : outbound.stopCount > 0
+                ? `${outbound.stopCount} Escala(s)`
+                : "Vuelo Directo"}
           </p>
           <div className="mt-1 flex items-center gap-2">
             {marketingCarrierLogo && (
@@ -177,13 +197,20 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
       </div>
 
       {/* Itinerario (Horas y Duración) */}
-      <div className="w-full">
-        {renderSliceRow("Ida", outbound)}
+      <div className="w-full flex flex-col gap-2">
+        <div className="rounded-md border border-gray-700 bg-[#242424] px-2">
+          <p className="text-[9px] text-purple-400 uppercase font-bold pt-2 pl-1">
+            Vuelo de ida
+          </p>
+          {renderSliceRow("IDA", outbound)}
+        </div>
         {inbound && (
-          <>
-            <div className="h-px bg-gray-700" />
-            {renderSliceRow("Vuelta", inbound)}
-          </>
+          <div className="rounded-md border border-gray-700 bg-[#242424] px-2">
+            <p className="text-[9px] text-purple-400 uppercase font-bold pt-2 pl-1">
+              Vuelo de regreso
+            </p>
+            {renderSliceRow("VUELTA", inbound)}
+          </div>
         )}
       </div>
 
@@ -215,8 +242,8 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
             {offer.payment_requirements?.requires_instant_payment
               ? "Inmediato"
               : offer.payment_requirements?.payment_required_by
-              ? `Antes de ${dayjs(offer.payment_requirements.payment_required_by).format("DD/MM HH:mm")}`
-              : "Sin dato"}
+                ? `Antes de ${dayjs(offer.payment_requirements.payment_required_by).format("DD/MM HH:mm")}`
+                : "Sin dato"}
           </p>
         </div>
       </div>
@@ -229,12 +256,18 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
             <span className="text-xs ml-1 text-gray-500">{currency}</span>
           </p>
           <p className="text-xs text-gray-400">
-            {baseAmount ? `Tarifa: ${baseAmount} ${offer.base_currency || currency}` : ""}
+            {baseAmount
+              ? `Tarifa: ${baseAmount} ${offer.base_currency || currency}`
+              : ""}
             {baseAmount && taxAmount ? " | " : ""}
-            {taxAmount ? `Impuestos: ${taxAmount} ${offer.tax_currency || currency}` : ""}
+            {taxAmount
+              ? `Impuestos: ${taxAmount} ${offer.tax_currency || currency}`
+              : ""}
           </p>
           <p className="text-xs text-gray-500">
-            {emissions ? `Emisiones estimadas: ${emissions} kg CO2` : "Emisiones no disponibles"}
+            {emissions
+              ? `Emisiones estimadas: ${emissions} kg CO2`
+              : "Emisiones no disponibles"}
           </p>
         </div>
         <button
@@ -251,5 +284,6 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
 
 /*
 Modification History:
-2026-04-20 | Fabrizio | Initial implementation of the Duffel offer display card.
+- 2026-04-20 | Fabrizio | Initial implementation of the Duffel offer display card.
+- 2026-04-23 | Juan de Dios Gastélum | Separated outbound and return flight slices into individual visual boxes.
 */

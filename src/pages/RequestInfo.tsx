@@ -120,7 +120,8 @@ const RequestInfo: React.FC = () => {
           advance_money_str: formatMoney(response.advance_money),
           admin: response.admin.name + " " + response.admin.lastName,
           id_origin_city: response.destination.city,
-          destinations: response.requests_destinations
+          destinations: [...response.requests_destinations]
+            .sort((a: any, b: any) => a.destination_order - b.destination_order)
             .map((dest: any) => dest.destination.city)
             .join(", "),
         });
@@ -345,87 +346,135 @@ const RequestInfo: React.FC = () => {
               <p className="block text-sm font-medium text-gray-700 mb-4">
                 Detalles de los destinos
               </p>
-              {data?.requests_destinations?.map((dest: any, index: number) => (
-                <div
-                  className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8"
-                  key={dest.id}
-                >
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Lugar
-                    </label>
-                    <input
-                      id={`destination-${index}`}
-                      type="text"
-                      readOnly
-                      value={dest.destination.city}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
+              {[...(data?.requests_destinations ?? [])]
+                .sort(
+                  (a: any, b: any) => a.destination_order - b.destination_order,
+                )
+                .map((dest: any, index: number) => (
+                  <div
+                    className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8"
+                    key={dest.id}
+                  >
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Lugar
+                      </label>
+                      <input
+                        id={`destination-${index}`}
+                        type="text"
+                        readOnly
+                        value={dest.destination.city}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Fecha de llegada
+                      </label>
+                      <input
+                        id={`arrival-${index}`}
+                        type="text"
+                        readOnly
+                        value={formatDate(dest.departure_date)}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Fecha de salida
+                      </label>
+                      <input
+                        id={`departure-${index}`}
+                        type="text"
+                        readOnly
+                        value={formatDate(dest.arrival_date)}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Detalles
+                      </label>
+                      <input
+                        id={`details-${index}`}
+                        type="text"
+                        readOnly
+                        value={dest.details}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div className="flex items-center justify-start gap-1">
+                      {dest.is_hotel_required && (
+                        <p
+                          id={`hotel-${index}`}
+                          className="text-sm bg-[var(--yellow)] rounded-full px-2 py-1 w-fit"
+                        >
+                          Hotel
+                        </p>
+                      )}
+                      {dest.is_plane_required && (
+                        <p
+                          id={`plane-${index}`}
+                          className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
+                        >
+                          Avión
+                        </p>
+                      )}
+                      {dest.stay_days && (
+                        <p
+                          id={`stay-days-${index}`}
+                          className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
+                        >
+                          {dest.stay_days} días
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Fecha de llegada
-                    </label>
-                    <input
-                      id={`arrival-${index}`}
-                      type="text"
-                      readOnly
-                      value={formatDate(dest.arrival_date)}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Fecha de salida
-                    </label>
-                    <input
-                      id={`departure-${index}`}
-                      type="text"
-                      readOnly
-                      value={formatDate(dest.departure_date)}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Detalles
-                    </label>
-                    <input
-                      id={`details-${index}`}
-                      type="text"
-                      readOnly
-                      value={dest.details}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
-                  </div>
-                  <div className="flex items-center justify-start gap-1">
-                    {dest.is_hotel_required && (
-                      <p
-                        id={`hotel-${index}`}
-                        className="text-sm bg-[var(--yellow)] rounded-full px-2 py-1 w-fit"
-                      >
-                        Hotel
-                      </p>
-                    )}
-                    {dest.is_plane_required && (
-                      <p
-                        id={`plane-${index}`}
-                        className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
-                      >
-                        Avión
-                      </p>
-                    )}
-                    {dest.stay_days && (
-                      <p
-                        id={`stay-days-${index}`}
-                        className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
-                      >
-                        {dest.stay_days} días
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
+              {data?.is_round_trip &&
+                (() => {
+                  const sorted = [...(data?.requests_destinations ?? [])].sort(
+                    (a: any, b: any) =>
+                      a.destination_order - b.destination_order,
+                  );
+                  const lastDest = sorted[sorted.length - 1];
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          Lugar
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={data?.destination?.city ?? "Origen"}
+                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          Fecha de salida
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formatDate(lastDest?.arrival_date)}
+                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                        />
+                      </div>
+                      <div />
+                      <div />
+                      <div className="flex items-center justify-start gap-1">
+                        <p className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit">
+                          Avión
+                        </p>
+                        <p className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit">
+                          Regreso
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
             </section>
 
             {data?.revisions?.length > 0 && (
@@ -1019,6 +1068,7 @@ export default RequestInfo;
 
 /*
 Modification History:
-2026-04-11 | Fabrizio | Added policy violations audit section to provide transparency for the approver role.
-2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for all irreversible actions (approve, deny, cancel, register, complete).
+- 2026-04-11 | Fabrizio | Added policy violations audit section to provide transparency for the approver role.
+- 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for all irreversible actions (approve, deny, cancel, register, complete).
+- 2026-04-23 | Juan de Dios Gastélum | Fixed destination sort order and added return leg row for round trips.
 */
