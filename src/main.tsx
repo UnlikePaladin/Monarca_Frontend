@@ -35,6 +35,7 @@ import RequestInfo from "./pages/RequestInfo.tsx";
 import { Approvals } from "./pages/Approvals/Approvals.tsx";
 import { RefundsReview } from "./pages/Refunds/RefundsReview.tsx";
 import { CheckRefunds } from "./pages/Refunds/CheckRefunds.tsx";
+import ImportEmployees from "./pages/CompanyAdmin/ImportEmployees.tsx";
 
 export const router = createBrowserRouter([
   // Public routes (no authentication required)
@@ -127,6 +128,18 @@ export const router = createBrowserRouter([
       {
         path: "/approval-rules",
         element: <ApprovalRules />,
+      },
+      {
+        path: "/company-admin/import-employees",
+        element: (
+          <PermissionProtectedRoute requiredPermissions={["import_employees"]} />
+        ),
+        children: [
+          {
+            path: "",
+            element: <ImportEmployees />,
+          },
+        ],
       },
       {
         path: "/approval",

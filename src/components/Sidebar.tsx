@@ -96,6 +96,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/approval-rules"
               />
             )}
+            {user.userPermissions.includes("import_employees" as Permission) && (
+              <SidebarOption
+                label="Importar empleados"
+                pathIcon="/assets/roles.png"
+                link="/company-admin/import-employees"
+              />
+            )}
         </ul>
       </div>
     </aside>
