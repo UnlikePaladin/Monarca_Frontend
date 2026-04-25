@@ -104,7 +104,7 @@ export const Historial = () => {
         }
         if(authState.userPermissions.includes("submit_reservations" as Permission)) {
           const travelAgentsIds = response.map((request: any) => request.travel_agency.users.map((user: any) => user.id)).flat();
-          response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled", "Changes Needed", "Pending Reservations"].includes(record.status) && travelAgentsIds.includes(authState.userId));
+          response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled", "Changes Needed", "Pending Accounting Approval"].includes(record.status) && travelAgentsIds.includes(authState.userId));
         }
         if(authState.userPermissions.includes("check_budgets" as Permission)) {
           response = response.filter((record: any) => ["Pending Accounting Approval"].includes(record.status) && record.id_SOI === authState.userId);

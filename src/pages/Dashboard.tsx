@@ -17,6 +17,9 @@ export const Dashboard = ({ title }: DashboardProps) => {
   const { setPageTitle } = useApp();
   const { authState } = useAuth();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
+  const normalizedRole = (authState.userRole || "").toLowerCase().replace(/[_\s-]/g, "");
+  const isSuperAdmin = normalizedRole === "superadmin";
+  const isCompanyAdmin = normalizedRole === "companyadmin";
 
   // Set the page title when the component mounts
   useEffect(() => {
@@ -135,6 +138,14 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="bookings"
           />
         )}
+        {authState.userPermissions.includes("check_budgets" as Permission) && (
+          <Mosaic 
+            title="Gestión de Pólizas" 
+            iconPath="/assets/policies.png" 
+            link="/policies" 
+            id="policies-card"
+          />
+        )}
         {/* {authState.userPermissions.includes("submit_reservations" as Permission) && (
           <Mosaic title="Formulario de ingreso de reservación" iconPath="/assets/formulario_de_ingreso_de_reservacion.png" link=""/>
         )} */}
@@ -151,6 +162,38 @@ export const Dashboard = ({ title }: DashboardProps) => {
               id="reserved_requests"
             />
           )}
+        {isSuperAdmin && (
+          <Mosaic
+            title="Empresas"
+            iconPath="/assets/roles.png"
+            link="/admin/companies"
+            id="tenant_management"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Departamentos"
+            iconPath="/assets/roles.png"
+            link="/admin/departments"
+            id="tenant_departments"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Centros de costos"
+            iconPath="/assets/roles.png"
+            link="/admin/cost-centers"
+            id="tenant_cost_centers"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Políticas de reembolso"
+            iconPath="/assets/matrix.png"
+            link="/admin/refund-policies"
+            id="refund_policies_admin"
+          />
+        )}
       </div>
     </Tutorial>
   );
@@ -159,4 +202,5 @@ export const Dashboard = ({ title }: DashboardProps) => {
 /*
 Modification History:
 - 2026-04-09 | Fabrizio | Refactored grid system to support 1, 2, and 4 columns depending on device width.
+- 2026-04-14 | Fabrizio | Added the Policies Management mosaic for the SOI workflow.
 */

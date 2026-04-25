@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getRequest } from "../../utils/apiService";
+import { getRequest, postRequest } from "../../utils/apiService";
 import formatMoney from "../../utils/formatMoney";
 import formatDate from "../../utils/formatDate";
 import GoBack from "../../components/GoBack";
@@ -11,12 +11,15 @@ import { Navigation, Pagination } from "swiper/modules";
 import FilePreviewer from "../../components/Refunds/FilePreviewer";
 import { patchRequest } from "../../utils/apiService";
 import { Tutorial } from "../../components/Tutorial";
+import { PolicyAlert } from "../../components/Refunds/PolicyAlert";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { toast } from "react-toastify";
 import { useApp } from "../../hooks/app/appContext";
+import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 
 interface RequestData {
   id?: string;
@@ -53,6 +56,15 @@ interface Dest {
   destination: {
     city: string;
   };
+}
+
+
+interface PolicyPreviewViolation {
+  policy_code: string;
+  message: string;
+  severity: "BLOCKING" | "WARNING";
+  evaluated_value?: Record<string, unknown>;
+  voucher_id?: string;
 }
 
 export const renderStatus = (status: string) => {
@@ -107,6 +119,40 @@ const RefundsAcceptance: React.FC = () => {
 
   const { handleVisitPage, tutorial } = useApp();
 
+  const [policyViolations, setPolicyViolations] =
+    useState<PolicyPreviewViolation[]>([]);
+  // Single modal state drives all voucher approval/denial confirmations on this page.
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    warningNote?: string;
+    confirmText: string;
+    isDestructive: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    confirmText: "Confirm",
+    isDestructive: false,
+    onConfirm: () => {},
+  });
+
+  /**
+   * Opens the confirmation modal with the provided configuration.
+   * @param config - Modal content and the callback to invoke on confirmation.
+   */
+  const openConfirm = (config: Omit<typeof confirmModal, "isOpen">) => {
+    setConfirmModal({ ...config, isOpen: true });
+  };
+
+  /**
+   * Closes the confirmation modal without executing any action.
+   */
+  const closeConfirm = () =>
+    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -123,6 +169,72 @@ const RefundsAcceptance: React.FC = () => {
             .map((dest: Dest) => dest.destination.city)
             .join(", "),
         });
+
+        let previewViolations: PolicyPreviewViolation[] = [];
+        try {
+
+        const previewPayload = {
+          vouchers: (response.vouchers || []).map((voucher: any) => ({
+            class: voucher.class,
+            amount: voucher.amount,
+            currency: voucher.currency || "MXN",
+            date: voucher.date,
+            has_xml: Boolean(voucher.file_url_xml),
+            has_pdf: Boolean(voucher.file_url_pdf),
+          })),
+        };
+        const previewRes = await postRequest(
+          `/requests/${id}/vouchers-policy-preview`,
+          previewPayload,
+        );
+        console.log("Preview policy summary:", previewRes?.policy_summary);
+        if (previewRes && previewRes.policy_summary?.violations) {
+          previewViolations = previewRes.policy_summary.violations;
+          }
+        } catch (previewError) {
+          console.error("Error fetching preview violations:", previewError);
+        }
+
+        if (previewViolations.length > 0) {
+          setPolicyViolations(previewViolations);
+        } else {
+          try {
+            const persistedRes = await getRequest(
+              `/requests/${id}/policy-violations`,
+            );
+            const persistedViolations = Array.isArray(persistedRes?.violations)
+              ? persistedRes.violations
+              : [];
+            setPolicyViolations(
+              persistedViolations.map((violation: any) => ({
+                policy_code:
+                  violation.id_policy_rule ||
+                  violation.rule?.operator ||
+                  "POLICY",
+                message: violation.detail || "Advertencia de politica.",
+                severity:
+                  violation.rule?.consequence?.toUpperCase() === "WARNING"
+                    ? "WARNING"
+                    : "BLOCKING",
+                evaluated_value: violation.rule
+                  ? {
+                      expense_class: violation.rule.expense_class,
+                      operator: violation.rule.operator,
+                      threshold_value: violation.rule.threshold_value,
+                      threshold_unit: violation.rule.threshold_unit,
+                    }
+                  : undefined,
+                voucher_id: violation.id_voucher,
+              })),
+            );
+          } catch (persistedError) {
+            console.error(
+              "Error fetching persisted violations:",
+              persistedError,
+            );
+            setPolicyViolations([]);
+          }
+        }
       } catch (error) {
         console.error("Error fetching request data:", error);
       } finally {
@@ -137,7 +249,7 @@ const RefundsAcceptance: React.FC = () => {
   useEffect(() => {
     // Get the visited pages from localStorage
     const visitedPages = JSON.parse(
-      localStorage.getItem("visitedPages") || "[]"
+      localStorage.getItem("visitedPages") || "[]",
     );
     // Check if the current page is already in the visited pages
     const isPageVisited = visitedPages.includes(location.pathname);
@@ -162,6 +274,35 @@ const RefundsAcceptance: React.FC = () => {
     { key: "priority", label: "Prioridad" },
     { key: "createdAt", label: "Fecha de creación" },
   ];
+
+  const getVoucherViolations = (voucherId?: string, index?: number) => {
+    if (!voucherId && typeof index !== "number") {
+      return [];
+    }
+
+    const previewId =
+      typeof index === "number" ? `preview-${index + 1}` : undefined;
+
+    return policyViolations.filter((violation) => {
+      const outOfWindowIds =
+        violation.evaluated_value?.out_of_window_voucher_ids as
+          | string[]
+          | undefined;
+
+      if (outOfWindowIds && previewId) {
+        return outOfWindowIds.includes(previewId);
+      }
+
+      if (!violation.voucher_id) {
+        return true;
+      }
+
+      return (
+        violation.voucher_id === voucherId ||
+        (previewId && violation.voucher_id === previewId)
+      );
+    });
+  };
 
   const approveVoucher = async (id: string) => {
     try {
@@ -292,6 +433,26 @@ const RefundsAcceptance: React.FC = () => {
                   {data?.vouchers?.map((file, index) => (
                     <SwiperSlide key={index}>
                       <FilePreviewer file={file} fileIndex={index} />
+                      {getVoucherViolations(file.id).length > 0 && (
+                        <section className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="p-2 bg-orange-100 rounded-lg">
+                              <MagnifyingGlassIcon className="h-6 w-6 text-orange-700" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-bold text-orange-700">
+                                Observaciones de políticas
+                              </h3>
+                              <p className="text-xs text-gray-600">
+                                Revisa estas alertas antes de aprobar o denegar.
+                              </p>
+                            </div>
+                          </div>
+                          <PolicyAlert
+                            violations={getVoucherViolations(file.id)}
+                          />
+                        </section>
+                      )}
                       <div className="flex space-x-4 justify-end mt-6 absolute z-50 bottom-0 right-4">
                         <button
                           disabled={file?.status !== "comprobante_pendiente"}
@@ -301,7 +462,17 @@ const RefundsAcceptance: React.FC = () => {
                                   ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                                   : "bg-red-600 hover:bg-red-700"
                               }`}
-                          onClick={() => denyVoucher(file?.id)}
+                          onClick={() =>
+                            openConfirm({
+                              title: "Denegar comprobante",
+                              description:
+                                "Estás rechazando este comprobante de gasto. El viajero será notificado y deberá corregirlo o eliminarlo.",
+                              warningNote: "Esta acción es irreversible.",
+                              confirmText: "Sí, denegar",
+                              isDestructive: true,
+                              onConfirm: () => denyVoucher(file?.id),
+                            })
+                          }
                           id="deny-button"
                         >
                           Denegar
@@ -314,7 +485,17 @@ const RefundsAcceptance: React.FC = () => {
                                     ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                                     : "bg-green-600 hover:bg-green-700"
                                 }`}
-                          onClick={() => approveVoucher(file?.id)}
+                          onClick={() =>
+                            openConfirm({
+                              title: "Aprobar comprobante",
+                              description:
+                                "Confirmas que este comprobante de gasto es válido. El monto será contabilizado para el cálculo del reembolso.",
+                              warningNote: "Esta acción es irreversible.",
+                              confirmText: "Sí, aprobar",
+                              isDestructive: false,
+                              onConfirm: () => approveVoucher(file?.id),
+                            })
+                          }
                           id="approve-button"
                         >
                           Aprobar
@@ -367,15 +548,15 @@ const RefundsAcceptance: React.FC = () => {
                       data?.vouchers?.reduce(
                         (
                           acc: number,
-                          file: { status: string; amount: number }
+                          file: { status: string; amount: number },
                         ) => {
                           if (file.status === "comprobante_aprobado") {
                             return acc + +file.amount;
                           }
                           return acc;
                         },
-                        0
-                      ) ?? 0
+                        0,
+                      ) ?? 0,
                     )}
                     className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
                   />
@@ -410,18 +591,18 @@ const RefundsAcceptance: React.FC = () => {
                       (data?.vouchers?.reduce(
                         (
                           acc: number,
-                          file: { status: string; amount: number }
+                          file: { status: string; amount: number },
                         ) => {
                           if (file.status === "comprobante_aprobado") {
                             return acc + Number(file.amount);
                           }
                           return acc;
                         },
-                        0
+                        0,
                       ) ?? 0) +
                         (typeof data?.advance_money === "number"
                           ? data.advance_money
-                          : Number(data?.advance_money) || 0)
+                          : Number(data?.advance_money) || 0),
                     )}
                     className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
                   />
@@ -433,15 +614,26 @@ const RefundsAcceptance: React.FC = () => {
                   className={`px-4 py-2 text-white rounded-md hover:cursor-pointer 
                       ${
                         data?.vouchers?.some(
-                          (file) => file.status === "comprobante_pendiente"
+                          (file) => file.status === "comprobante_pendiente",
                         )
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                           : "bg-[var(--blue)] hover:bg-[var(--dark-blue)]"
                       }`}
                   disabled={data?.vouchers?.some(
-                    (file) => file.status === "comprobante_pendiente"
+                    (file) => file.status === "comprobante_pendiente",
                   )}
-                  onClick={completeRequest}
+                  onClick={() =>
+                    openConfirm({
+                      title: "Completar revisión de comprobantes",
+                      description:
+                        "Confirmas que todos los comprobantes han sido revisados. Se cerrará el proceso de reembolso y se generará el balance final entre el anticipo otorgado y los gastos aprobados.",
+                      warningNote:
+                        "Esta acción es irreversible y cierra definitivamente el proceso de reembolso para esta solicitud.",
+                      confirmText: "Sí, completar revisión",
+                      isDestructive: false,
+                      onConfirm: completeRequest,
+                    })
+                  }
                   id="complete-refund"
                 >
                   Completar Comprobación
@@ -451,8 +643,26 @@ const RefundsAcceptance: React.FC = () => {
           </div>
         </main>
       </div>
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirm}
+        onConfirm={() => {
+          closeConfirm();
+          confirmModal.onConfirm();
+        }}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        warningNote={confirmModal.warningNote}
+        confirmText={confirmModal.confirmText}
+        isDestructive={confirmModal.isDestructive}
+      />
     </Tutorial>
   );
 };
 
 export default RefundsAcceptance;
+
+/*
+Modification History:
+- 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for approve, deny, and complete voucher review actions.
+*/

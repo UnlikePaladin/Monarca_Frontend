@@ -1,16 +1,12 @@
 /**
  * Description: Component to display the current user's active substitute delegations with a cancel action.
  */
-
-import React from 'react';
-import { useGetSubstitutes } from '../../hooks/substitutes/useGetSubstitutes';
-import { useDeleteSubstitute } from '../../hooks/substitutes/useDeleteSubstitute';
-
-// Maps user IDs to display names during the mock stage; replace with a users lookup when API is ready.
-const USER_NAMES: Record<string, string> = {
-  usr_1: 'Ana Silva (Finanzas)',
-  usr_2: 'Carlos Mendoza (Operaciones)',
-};
+import React, { useState } from "react";
+import { useGetSubstitutes } from "../../hooks/substitutes/useGetSubstitutes";
+import { useDeleteSubstitute } from "../../hooks/substitutes/useDeleteSubstitute";
+import { useGetUsers } from "../../hooks/users/useGetUsers";
+import { toast } from "react-toastify";
+import { ConfirmationModal } from "../ui/ConfirmationModal";
 
 /**
  * Formats an ISO date string to a human-readable short date in Spanish.
@@ -18,10 +14,10 @@ const USER_NAMES: Record<string, string> = {
  * @returns Localized date string.
  */
 const formatDate = (isoDate: string): string =>
-  new Date(isoDate).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  new Date(isoDate).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 
 /**
@@ -30,11 +26,46 @@ const formatDate = (isoDate: string): string =>
  * @returns React component with the active delegations list.
  */
 export const ActiveDelegationsList = () => {
-  const { data: substitutes, isLoading } = useGetSubstitutes();
+  const { data: substitutes, isLoading: isLoadingSubstitutes } =
+    useGetSubstitutes();
+  const { data: users = [] } = useGetUsers();
   const { mutate: deleteSubstitute, isPending } = useDeleteSubstitute();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  if (isLoading) {
-    return <p className="text-sm text-gray-500 py-4">Cargando delegaciones...</p>;
+  /**
+   * Opens the confirmation modal before cancelling an active delegation.
+   * @param substituteId The unique identifier of the delegation to cancel.
+   */
+  const handleCancelClick = (substituteId: string) => {
+    setPendingDeleteId(substituteId);
+    setConfirmOpen(true);
+  };
+
+  /**
+   * Executes the delegation cancellation after the user confirms in the modal.
+   */
+  const handleConfirmCancel = () => {
+    if (!pendingDeleteId) return;
+    setConfirmOpen(false);
+    deleteSubstitute(pendingDeleteId, {
+      onSuccess: () => toast.success("Delegación cancelada correctamente."),
+      onError: () => toast.error("Error al cancelar la delegación."),
+      onSettled: () => setPendingDeleteId(null),
+    });
+  };
+
+  const userNameMap = React.useMemo(() => {
+    return users.reduce<Record<string, string>>((acc, user) => {
+      acc[user.id] = `${user.name} ${user.lastName}`;
+      return acc;
+    }, {});
+  }, [users]);
+
+  if (isLoadingSubstitutes) {
+    return (
+      <p className="text-sm text-gray-500 py-4">Cargando delegaciones...</p>
+    );
   }
 
   if (!substitutes || substitutes.length === 0) {
@@ -47,7 +78,9 @@ export const ActiveDelegationsList = () => {
 
   return (
     <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-gray-700">Delegaciones Activas</h4>
+      <h4 className="text-sm font-semibold text-gray-700">
+        Delegaciones Activas
+      </h4>
       {substitutes.map((sub) => (
         <div
           key={sub.id}
@@ -55,7 +88,7 @@ export const ActiveDelegationsList = () => {
         >
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-800">
-              {USER_NAMES[sub.targetUserId] ?? sub.targetUserId}
+              {userNameMap[sub.targetUserId] ?? sub.targetUserId}
             </p>
             <p className="text-xs text-gray-500">
               {formatDate(sub.startDate)} → {formatDate(sub.endDate)}
@@ -65,14 +98,27 @@ export const ActiveDelegationsList = () => {
             )}
           </div>
           <button
-            onClick={() => deleteSubstitute(sub.id)}
-            disabled={isPending}
-            className="text-xs text-red-500 hover:text-red-700 font-medium shrink-0 disabled:opacity-50"
+            onClick={() => handleCancelClick(sub.id)}
+            disabled={isPending && pendingDeleteId === sub.id}
+            className="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
           >
-            Cancelar
+            {isPending && pendingDeleteId === sub.id
+              ? "Cancelando..."
+              : "Cancelar"}
           </button>
         </div>
       ))}
+      <ConfirmationModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmCancel}
+        title="Cancelar delegación"
+        description="¿Estás seguro de que deseas cancelar esta delegación activa?"
+        confirmText="Cancelar delegación"
+        cancelText="Volver"
+        isDestructive
+        warningNote="Esta acción es irreversible. El sustituto perderá acceso inmediatamente."
+      />
     </div>
   );
 };
@@ -80,4 +126,6 @@ export const ActiveDelegationsList = () => {
 /*
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-04-16 | Juan de Dios Gastélum Flores | Replaced hardcoded USER_NAMES with dynamic lookup via useGetUsers.
+ * - 2026-04-21 | Juan de Dios Gastélum Flores | Added ConfirmationModal before delegation cancellation.
  */

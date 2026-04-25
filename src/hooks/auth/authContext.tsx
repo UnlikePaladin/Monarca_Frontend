@@ -17,11 +17,11 @@ const parsePermissions = (value: unknown): Permission[] => {
 
   const normalized = value
     .map((permissionItem) => {
-      if (typeof permissionItem === 'string') {
+      if (typeof permissionItem === "string") {
         return permissionItem;
       }
 
-      if (permissionItem && typeof permissionItem === 'object') {
+      if (permissionItem && typeof permissionItem === "object") {
         const raw = permissionItem as {
           name?: unknown;
           permission?: unknown;
@@ -30,22 +30,53 @@ const parsePermissions = (value: unknown): Permission[] => {
 
         if (
           raw.permission &&
-          typeof raw.permission === 'object' &&
-          typeof (raw.permission as { name?: unknown }).name === 'string'
+          typeof raw.permission === "object" &&
+          typeof (raw.permission as { name?: unknown }).name === "string"
         ) {
           return (raw.permission as { name: string }).name;
         }
 
-        if (typeof raw.name === 'string') return raw.name;
-        if (typeof raw.permission === 'string') return raw.permission;
-        if (typeof raw.code === 'string') return raw.code;
+        if (typeof raw.name === "string") return raw.name;
+        if (typeof raw.permission === "string") return raw.permission;
+        if (typeof raw.code === "string") return raw.code;
       }
 
-      return '';
+      return "";
     })
     .filter((permission): permission is Permission => Boolean(permission));
 
   return Array.from(new Set(normalized));
+};
+
+const normalizeRole = (role: string): string =>
+  role.toLowerCase().replace(/[_\s-]/g, "");
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+const pickString = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+};
+
+const getUserCompanyId = (user: unknown): string => {
+  const userRecord = asRecord(user);
+  const department = asRecord(userRecord.department);
+  const departmentCompany = asRecord(department.company);
+
+  return pickString(
+    department.id_company,
+    department.companyId,
+    department.company_id,
+    department.companyID,
+    departmentCompany.id,
+    departmentCompany.id_company,
+    departmentCompany.companyId,
+    departmentCompany.company_id
+  );
 };
 
 export interface ContextType {
@@ -63,6 +94,8 @@ export interface AuthState {
   userEmail: string;
   userPermissions: Permission[];
   userRole: string;
+  userRoleId: string;
+  userCompanyId?: string;
 }
 
 // Create the auth context with proper typing
@@ -88,8 +121,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     userName: "",
     userLastName: "",
     userRole: "",
+    userRoleId: "",
     userEmail: "",
     userPermissions: [],
+    userCompanyId: "",
   });
 
   useEffect(() => {
@@ -104,12 +139,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               // API can sometimes omit optional fields; fall back to empty strings
               userLastName: response.user.lastName ?? "",
               userRole: response.user.role?.name ?? "",
+              userRoleId: response.user.role?.id ?? "",
               userPermissions: parsePermissions(
                 response.user.role?.rolePermissions ??
                   response.user.role?.permissions ??
-                  response.user.permissions
+                  response.user.permissions,
               ),
               userEmail: response.user.email ?? "",
+              userCompanyId: getUserCompanyId(response.user),
             });
             setLoadingProfile(false);
           } else {
@@ -142,8 +179,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         userName: "",
         userLastName: "",
         userRole: "",
+        userRoleId: "",
         userEmail: "",
         userPermissions: [],
+        userCompanyId: "",
       });
     }
   };
@@ -181,6 +220,11 @@ interface PermissionProtectedRouteProps {
   requireAll?: boolean; // If true, user must have ALL permissions; if false, ANY permission is sufficient
 }
 
+interface RoleProtectedRouteProps {
+  requiredRoles: string[];
+  requireCompanyId?: boolean;
+}
+
 export const PermissionProtectedRoute: React.FC<
   PermissionProtectedRouteProps
 > = ({ requiredPermissions, requireAll = true }) => {
@@ -194,10 +238,10 @@ export const PermissionProtectedRoute: React.FC<
   // Then check permissions
   const hasPermission = requireAll
     ? requiredPermissions.every((permission) =>
-        authState.userPermissions.includes(permission)
+        authState.userPermissions.includes(permission),
       )
     : requiredPermissions.some((permission) =>
-        authState.userPermissions.includes(permission)
+        authState.userPermissions.includes(permission),
       );
 
   if (!hasPermission) {
@@ -210,4 +254,28 @@ export const PermissionProtectedRoute: React.FC<
       <Outlet />
     </AuthProvider>
   );
+};
+
+export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
+  requiredRoles,
+  requireCompanyId = false,
+}) => {
+  const { authState } = useAuth();
+
+  if (!authState.isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  const allowedRoles = requiredRoles.map((role) => normalizeRole(role));
+  const hasRole = allowedRoles.includes(normalizeRole(authState.userRole));
+
+  if (!hasRole) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  if (requireCompanyId && !authState.userCompanyId) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return <Outlet />;
 };

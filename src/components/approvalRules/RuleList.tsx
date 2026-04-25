@@ -2,32 +2,33 @@
  * Description: Component to display the list of approval rules with edit and delete actions.
  */
 
-import React, { useState } from 'react';
-import { ApprovalRule, RuleCondition } from '../../types/approvalRules';
-import { Button } from '../ui/Button';
-import { useGetApprovalRules } from '../../hooks/approvalRules/useGetApprovalRules';
-import { useDeleteApprovalRule } from '../../hooks/approvalRules/useDeleteApprovalRule';
+import React, { useState } from "react";
+import { ApprovalRule, RuleCondition } from "../../types/approvalRules";
+import { Button } from "../ui/Button";
+import { useGetApprovalRules } from "../../hooks/approvalRules/useGetApprovalRules";
+import { useDeleteApprovalRule } from "../../hooks/approvalRules/useDeleteApprovalRule";
+import { ConfirmationModal } from "../ui/ConfirmationModal";
 
 const FIELD_LABELS: Record<string, string> = {
-  trip_type: 'Tipo',
-  cost: 'Costo',
-  priority: 'Prioridad',
+  trip_type: "Tipo",
+  cost: "Costo",
+  priority: "Prioridad",
 };
 
 const OPERATOR_LABELS: Record<string, string> = {
-  gt: '>',
-  gte: '>=',
-  lt: '<',
-  lte: '<=',
-  eq: '=',
+  gt: ">",
+  gte: ">=",
+  lt: "<",
+  lte: "<=",
+  eq: "=",
 };
 
 const VALUE_LABELS: Record<string, string> = {
-  nacional: 'Nacional',
-  internacional: 'Internacional',
-  alta: 'Alta',
-  media: 'Media',
-  baja: 'Baja',
+  nacional: "Nacional",
+  internacional: "Internacional",
+  alta: "Alta",
+  media: "Media",
+  baja: "Baja",
 };
 
 /**
@@ -37,7 +38,9 @@ const VALUE_LABELS: Record<string, string> = {
  */
 const formatCondition = (condition: RuleCondition): string => {
   const field = FIELD_LABELS[condition.field] ?? condition.field;
-  const operator = condition.operator ? ` ${OPERATOR_LABELS[condition.operator]}` : '';
+  const operator = condition.operator
+    ? ` ${OPERATOR_LABELS[condition.operator]}`
+    : "";
   const value = VALUE_LABELS[String(condition.value)] ?? condition.value;
   return `${field}${operator} ${value}`;
 };
@@ -57,16 +60,34 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
   const { data: rules, isLoading } = useGetApprovalRules();
   const { mutate: deleteRule, isPending: isDeleting } = useDeleteApprovalRule();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>("");
 
   /**
-   * Prompts the user for confirmation before deleting a rule.
+   * Opens the confirmation modal before permanently deleting an approval rule.
    * @param ruleId The unique identifier of the rule to delete.
-   * @param ruleName The rule name shown in the confirmation dialog.
+   * @param ruleName The rule name shown in the confirmation modal.
    */
   const handleDelete = (ruleId: string, ruleName: string) => {
-    if (!confirm(`¿Seguro que deseas eliminar la regla "${ruleName}"?`)) return;
-    setDeletingId(ruleId);
-    deleteRule(ruleId, { onSettled: () => setDeletingId(null) });
+    setPendingDeleteId(ruleId);
+    setPendingDeleteName(ruleName);
+    setConfirmOpen(true);
+  };
+
+  /**
+   * Executes the rule deletion after the user confirms in the modal.
+   */
+  const handleConfirmDelete = () => {
+    if (!pendingDeleteId) return;
+    setConfirmOpen(false);
+    setDeletingId(pendingDeleteId);
+    deleteRule(pendingDeleteId, {
+      onSettled: () => {
+        setDeletingId(null);
+        setPendingDeleteId(null);
+      },
+    });
   };
 
   if (isLoading) {
@@ -81,10 +102,17 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="flex items-center justify-between p-6 border-b border-gray-200">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Reglas de aprobación</h3>
-          <p className="text-sm text-gray-500 mt-0.5">Define quién autoriza cada tipo de solicitud</p>
+          <h3 className="text-lg font-semibold text-gray-800">
+            Reglas de aprobación
+          </h3>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Define quién autoriza cada tipo de solicitud
+          </p>
         </div>
-        <Button onClick={onCreate} className="bg-blue-600 text-white hover:bg-blue-700">
+        <Button
+          onClick={onCreate}
+          className="bg-blue-600 text-white hover:bg-blue-700"
+        >
           + Nueva Regla
         </Button>
       </div>
@@ -93,26 +121,46 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="py-3 px-6 text-sm font-medium text-gray-600">Nombre</th>
-              <th className="py-3 px-6 text-sm font-medium text-gray-600">Condiciones</th>
-              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">Niveles</th>
-              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">Estado</th>
-              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">Acciones</th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600">
+                Nombre
+              </th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600">
+                Condiciones
+              </th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">
+                Niveles
+              </th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">
+                Estado
+              </th>
+              <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
             {rules?.map((rule) => (
-              <tr key={rule.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="py-4 px-6 font-medium text-gray-800">{rule.name}</td>
+              <tr
+                key={rule.id}
+                className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              >
+                <td className="py-4 px-6 font-medium text-gray-800">
+                  {rule.name}
+                </td>
                 <td className="py-4 px-6">
                   <div className="flex flex-col gap-1">
                     {rule.conditions.map((condition, i) => (
-                      <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full w-fit">
+                      <span
+                        key={i}
+                        className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full w-fit"
+                      >
                         {formatCondition(condition)}
                       </span>
                     ))}
                     {rule.conditions.length === 0 && (
-                      <span className="text-xs text-gray-400 italic">Sin condiciones</span>
+                      <span className="text-xs text-gray-400 italic">
+                        Sin condiciones
+                      </span>
                     )}
                   </div>
                 </td>
@@ -120,12 +168,14 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
                   {rule.approvalChain.length}
                 </td>
                 <td className="py-4 px-6 text-center">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    rule.isActive
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    {rule.isActive ? 'Activa' : 'Inactiva'}
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      rule.isActive
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {rule.isActive ? "Activa" : "Inactiva"}
                   </span>
                 </td>
                 <td className="py-4 px-6">
@@ -142,7 +192,9 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
                       disabled={isDeleting && deletingId === rule.id}
                       className="text-sm text-red-500 hover:text-red-700 font-medium disabled:opacity-50"
                     >
-                      {isDeleting && deletingId === rule.id ? 'Eliminando...' : 'Eliminar'}
+                      {isDeleting && deletingId === rule.id
+                        ? "Eliminando..."
+                        : "Eliminar"}
                     </button>
                   </div>
                 </td>
@@ -151,7 +203,10 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
 
             {rules?.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-gray-400 text-sm">
+                <td
+                  colSpan={5}
+                  className="py-12 text-center text-gray-400 text-sm"
+                >
                   Sin reglas. Crea la primera para comenzar.
                 </td>
               </tr>
@@ -159,6 +214,16 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
           </tbody>
         </table>
       </div>
+      <ConfirmationModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar regla"
+        description={`¿Estás seguro de que deseas eliminar la regla "${pendingDeleteName}"?`}
+        confirmText="Eliminar"
+        isDestructive
+        warningNote="Esta acción es irreversible. La regla será eliminada permanentemente."
+      />
     </div>
   );
 };
@@ -166,4 +231,5 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
 /*
  * Modification History:
  * - 2026-04-08 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-04-21 | Juan de Dios Gastélum Flores | Replaced native confirm() with ConfirmationModal for rule deletion.
  */

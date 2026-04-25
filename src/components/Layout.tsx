@@ -52,7 +52,7 @@ const [isSidebarOpen, setIsSidebarOpen] = useState(false);
         )}
 
         <main className="flex-1 min-w-0 lg:ml-[240px] pt-28 px-4 sm:px-10 pb-16">
-          <div className="max-w-full overflow-hidden">
+          <div className="max-w-full">
             {children}
           </div>
         </main>
@@ -81,4 +81,5 @@ Modification History:
 
 - 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
 - 2026-04-09 | Fabrizio | Implemented responsive logic, sidebar toggle state, and fixed tutorial button positioning.
+- 2026-04-23 | Juan de Dios Gastélum | Removed overflow-hidden from main content wrapper to allow sticky positioning in child components.
 */

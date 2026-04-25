@@ -2,27 +2,40 @@
  * Description: Hook to fetch the list of active substitute delegations for the current user.
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { SubstituteDelegation } from '../../types/auth';
+import { useQuery } from "@tanstack/react-query";
+import { SubstituteDelegation } from "../../types/auth";
+import { getRequest } from "../../utils/apiService";
 
-const MOCK_SUBSTITUTES: SubstituteDelegation[] = [
-  {
-    id: 'sub_1',
-    roleId: 'role_2',
-    targetUserId: 'usr_1',
-    startDate: '2026-04-01',
-    endDate: '2026-04-07',
-    notes: 'Semana de vacaciones',
-  },
-];
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+
+const toString = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
+const normalizeSubstitute = (value: unknown): SubstituteDelegation | null => {
+  const raw = toRecord(value);
+  const id = toString(raw.id);
+  if (!id) return null;
+  return {
+    id,
+    roleId: toString(raw.roleId),
+    targetUserId: toString(raw.targetUserId),
+    startDate: toString(raw.startDate),
+    endDate: toString(raw.endDate),
+    notes: toString(raw.notes) || undefined,
+  };
+};
 
 /**
- * Fetches all active substitute delegations belonging to the current user.
+ * Fetches all active substitute delegations from the API.
  * @returns Promise resolving to an array of SubstituteDelegation objects.
  */
 const fetchSubstitutes = async (): Promise<SubstituteDelegation[]> => {
-  // TODO: replace with API call → return getRequest('/substitutes');
-  return MOCK_SUBSTITUTES;
+  const response = await getRequest("/substitutes");
+  const list = Array.isArray(response) ? response : [];
+  return list
+    .map((item) => normalizeSubstitute(item))
+    .filter((item): item is SubstituteDelegation => item !== null);
 };
 
 /**
@@ -31,7 +44,7 @@ const fetchSubstitutes = async (): Promise<SubstituteDelegation[]> => {
  */
 export const useGetSubstitutes = () => {
   return useQuery<SubstituteDelegation[]>({
-    queryKey: ['substitutes'],
+    queryKey: ["substitutes"],
     queryFn: fetchSubstitutes,
   });
 };
@@ -39,4 +52,5 @@ export const useGetSubstitutes = () => {
 /*
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-04-16 | Juan de Dios Gastélum Flores | Connected to real API endpoint GET /substitutes.
  */

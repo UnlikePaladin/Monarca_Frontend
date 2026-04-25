@@ -32,7 +32,8 @@ export interface Column {
     value: CellValueType,
     handleFieldChange: (newValue: CellValueType) => void,
     rowIndex?: number,
-    cellIndex?: number
+    cellIndex?: number,
+    patchRow?: (fields: Partial<TableRow>) => void
   ) => React.ReactNode;
 }
 /*
@@ -49,6 +50,7 @@ export interface DynamicTableProps {
   onDataChange?: (data: any[]) => void;
   expandedRows?: number[];
   renderExpandedRow?: (index: number) => React.ReactNode;
+  showRowNumbers?: boolean;
 }
 
 const DynamicTable: React.FC<DynamicTableProps> = ({
@@ -57,6 +59,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
   onDataChange,
   expandedRows = [],
   renderExpandedRow,
+  showRowNumbers = false,
 }) => {
   /*
    * State to manage the table data.
@@ -75,18 +78,32 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
     columnKey: string,
     newValue: CellValueType
   ): void => {
-    const updatedData = [...tableData];
+    setTableData((prev) => {
+      const updatedData = [...prev];
+      updatedData[rowIndex] = {
+        ...updatedData[rowIndex],
+        [columnKey]: newValue,
+      };
+      if (onDataChange) {
+        onDataChange(updatedData);
+      }
+      return updatedData;
+    });
+  };
 
-    updatedData[rowIndex] = {
-      ...updatedData[rowIndex],
-      [columnKey]: newValue,
-    };
-
-    setTableData(updatedData);
-
-    if (onDataChange) {
-      onDataChange(updatedData);
-    }
+  /** Uses functional updates so async callers (e.g. CFDI preview) never merge into stale rows and drop File fields. */
+  const patchRowFields = (rowIndex: number, partial: Partial<TableRow>): void => {
+    setTableData((prev) => {
+      const updatedData = [...prev];
+      updatedData[rowIndex] = {
+        ...updatedData[rowIndex],
+        ...partial,
+      };
+      if (onDataChange) {
+        onDataChange(updatedData);
+      }
+      return updatedData;
+    });
   };
 
   const addItem = () => {
@@ -127,11 +144,14 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
         <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border-separate border-spacing-y-2">
           <thead>
             <tr className="text-xs text-white uppercase bg-[#0a2c6d]">
+              {showRowNumbers && (
+                <th className="px-4 py-2 text-center rounded-l-lg">Fila</th>
+              )}
               {columns.map((column, index) => (
                 <th
                   key={index}
                   className={`px-4 py-2 text-center ${
-                    index === 0 ? "rounded-l-lg" : ""
+                    index === 0 && !showRowNumbers ? "rounded-l-lg" : ""
                   } ${index === columns.length - 1 ? "rounded-r-lg" : ""}`}
                 >
                   {column.header}
@@ -143,11 +163,16 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
             {tableData.map((row, rowIndex) => (
               <React.Fragment key={rowIndex}>
                 <tr className="bg-[#4C6997] text-white text-center">
+                  {showRowNumbers && (
+                    <td className="px-4 py-3 rounded-l-lg font-semibold">
+                      {rowIndex + 1}
+                    </td>
+                  )}
                   {columns.map((column, cellIndex) => (
                     <td
                       key={cellIndex}
                       className={`px-4 py-3 ${
-                        cellIndex === 0 ? "rounded-l-lg" : ""
+                        cellIndex === 0 && !showRowNumbers ? "rounded-l-lg" : ""
                       } ${
                         cellIndex === columns.length - 1 ? "rounded-r-lg" : ""
                       }`}
@@ -172,7 +197,8 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                                   newValue
                                 ),
                               rowIndex,
-                              cellIndex
+                              cellIndex,
+                              (fields) => patchRowFields(rowIndex, fields)
                             )
                           : renderCellContent(row[column.key])
                       }

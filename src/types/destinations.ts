@@ -11,8 +11,14 @@ export interface Destination {
   id: string;
   country: string;
   city: string;
+  airports?: Airport[];
 }
-
+export interface Airport {
+  id:string;
+  name: string;
+  iata_code: string;
+  is_primary?: boolean;
+}
 export type DestinationOption = {
   id: string;
   name: string;

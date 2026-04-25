@@ -17,6 +17,7 @@ import { toast } from "react-toastify";
 import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
 import { PolicyAlert } from "../../components/Refunds/PolicyAlert";
+import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
 
 interface FormDataRow extends DynamicTableRow {
   spentClass: string;
@@ -52,6 +53,27 @@ interface UploadResult {
   rowNumber: number;
   status: "success" | "failed";
   reason?: string;
+}
+
+interface PolicyViolation {
+  policy_code: string;
+  message: string;
+  severity: "BLOCKING" | "WARNING";
+  evaluated_value?: any;
+  voucher_id?: string;
+}
+
+interface PolicySummary {
+  total_rules?: number;
+  passed?: number;
+  failed?: number;
+  blocking_violations?: number;
+  can_submit?: boolean;
+  violations?: PolicyViolation[];
+}
+
+interface PolicyPreviewResponse {
+  policy_summary?: PolicySummary;
 }
 
 const getUploadErrorMessage = (errorData?: UploadVoucherErrorResponse) => {
@@ -122,8 +144,13 @@ export const Vouchers = () => {
     },
   });
   const [commentValue, setCommentValue] = useState<string>("");
-  const [policyViolations, setPolicyViolations] = useState<any[]>([]);
+  const [policyViolations, setPolicyViolations] = useState<PolicyViolation[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreviewingPolicy, setIsPreviewingPolicy] = useState(false);
+  const [needsWarningConfirmation, setNeedsWarningConfirmation] = useState(false);
+  const [hasPreviewedPolicy, setHasPreviewedPolicy] = useState(false);
+  // Controls the confirmation modal shown before submitting all vouchers.
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
 
   useEffect(() => {
     const fetchTrip = async () => {
@@ -133,21 +160,162 @@ export const Vouchers = () => {
       } catch (err) {
         console.error(
           "Error al cargar el viaje: ",
-          err instanceof Error ? err.message : err
+          err instanceof Error ? err.message : err,
         );
       }
     };
     fetchTrip();
   }, [id]);
 
-   /**
+  /**
    * Processes each row of the table, uploads files to the server and handles policy engine rejections.
    * If a 422 error occurs, it extracts policy violations to display them to the requester.
    */
 
+  const runPolicyPreview = async () => {
+    if (!id) {
+      return { hasWarnings: false, hasBlocking: false };
+    }
+
+    const vouchersPayload: Array<{
+      class: string;
+      amount: number;
+      currency: string;
+      date: string;
+      has_xml: boolean;
+      has_pdf: boolean;
+    }> = [];
+    const voucherRowNumbers: number[] = [];
+
+    formData.forEach((row, index) => {
+      if (isEmptyVoucherRow(row)) {
+        return;
+      }
+
+      vouchersPayload.push({
+        class: row.spentClass,
+        amount: row.amount,
+        currency: "MXN",
+        date: row.date,
+        has_xml: Boolean(row.XMLFile),
+        has_pdf: Boolean(row.PDFFile),
+      });
+      voucherRowNumbers.push(index + 1);
+    });
+
+    if (vouchersPayload.length === 0) {
+      setPolicyViolations([]);
+      return { hasWarnings: false, hasBlocking: false };
+    }
+
+    setIsPreviewingPolicy(true);
+
+    try {
+      const response = (await postRequest(
+        `/requests/${id}/vouchers-policy-preview`,
+        { vouchers: vouchersPayload },
+      )) as PolicyPreviewResponse;
+
+      const summary = response.policy_summary;
+      const violations = Array.isArray(summary?.violations)
+        ? summary?.violations
+        : [];
+
+      const normalizedViolations: PolicyViolation[] = [];
+
+      const addRowPrefix = (violation: PolicyViolation, voucherId?: string) => {
+        if (!voucherId || !voucherId.startsWith("preview-")) {
+          normalizedViolations.push(violation);
+          return;
+        }
+
+        const indexValue = Number(voucherId.replace("preview-", ""));
+        if (!Number.isFinite(indexValue) || indexValue < 1) {
+          normalizedViolations.push(violation);
+          return;
+        }
+
+        const rowNumber = voucherRowNumbers[indexValue - 1];
+        if (!rowNumber) {
+          normalizedViolations.push(violation);
+          return;
+        }
+
+        normalizedViolations.push({
+          ...violation,
+          message: `[Fila ${rowNumber}] ${violation.message}`,
+        });
+      };
+
+      violations.forEach((violation) => {
+        const outOfWindowIds =
+          violation.evaluated_value?.out_of_window_voucher_ids as
+                | string[]
+                | undefined;
+
+        if (outOfWindowIds && outOfWindowIds.length > 0) {
+          outOfWindowIds.forEach((voucherId) => {
+            addRowPrefix({ ...violation, voucher_id: voucherId }, voucherId);
+          });
+          return;
+        }
+
+        addRowPrefix(violation, violation.voucher_id);
+      });
+
+      setPolicyViolations(normalizedViolations);
+
+      return {
+        hasWarnings: normalizedViolations.some(
+          (violation: PolicyViolation) => violation.severity === "WARNING",
+        ),
+        hasBlocking: normalizedViolations.some(
+          (violation: PolicyViolation) => violation.severity === "BLOCKING",
+        ),
+      };
+    } catch (err) {
+      console.error("Error al prevalidar comprobantes:", err);
+      toast.error(
+        "No pudimos validar las políticas del reembolso. Inténtalo nuevamente.",
+      );
+      return { hasWarnings: false, hasBlocking: false };
+    } finally {
+      setIsPreviewingPolicy(false);
+    }
+  };
+
+  const handleSubmitClick = async () => {
+    if (isSubmitting || isPreviewingPolicy) {
+      return;
+    }
+
+    if (needsWarningConfirmation) {
+      setShowSubmitModal(true);
+      return;
+    }
+
+    setHasPreviewedPolicy(true);
+    const previewResult = await runPolicyPreview();
+
+    if (previewResult.hasBlocking) {
+      toast.error("Existen comprobantes que no cumplen con las políticas.");
+      return;
+    }
+
+    if (previewResult.hasWarnings) {
+      setNeedsWarningConfirmation(true);
+      toast.warning(
+        "Hay advertencias en la validación. Puedes enviar de todos modos.",
+      );
+      return;
+    }
+
+    setShowSubmitModal(true);
+  };
+
   const handleSubmitRefund = async () => {
     let currentStep: "upload" | "finish" = "upload";
-    setPolicyViolations([]); 
+    setPolicyViolations([]);
     setIsSubmitting(true);
 
     try {
@@ -162,9 +330,9 @@ export const Vouchers = () => {
         }
 
         if (!rowData.date) {
-            toast.error(`La fila ${index + 1} no tiene una fecha seleccionada.`);
-            setIsSubmitting(false);
-            return;
+          toast.error(`La fila ${index + 1} no tiene una fecha seleccionada.`);
+          setIsSubmitting(false);
+          return;
         }
 
         attemptedUploads += 1;
@@ -198,12 +366,13 @@ export const Vouchers = () => {
               ? getUploadErrorMessage(axiosError.response?.data)
               : axiosError.response?.data?.message ||
                 "Error al subir el comprobante.";
-          
+
           if (statusCode === 422 && axiosError.response?.data?.policy_summary) {
-            const violations = axiosError.response.data.policy_summary.violations;
-            setPolicyViolations(prev => [...prev, ...violations]);
+            const violations =
+              axiosError.response.data.policy_summary.violations;
+            setPolicyViolations((prev) => [...prev, ...violations]);
           }
-          
+
           const userUploadMessage =
             statusCode === 400
               ? getUploadUserMessage(axiosError.response?.data)
@@ -227,7 +396,7 @@ export const Vouchers = () => {
       }
 
       const successfulUploads = uploadResults.filter(
-        (result) => result.status === "success"
+        (result) => result.status === "success",
       ).length;
       const failedUploads: UploadFailureDetail[] = uploadResults
         .filter((result) => result.status === "failed")
@@ -259,7 +428,7 @@ export const Vouchers = () => {
             rowsAttempted: 0,
             rowsInForm: formData.length,
             successfulUploads,
-          }
+          },
         );
         toast.error("No se subió ningún comprobante válido.");
         setIsSubmitting(false);
@@ -282,10 +451,10 @@ export const Vouchers = () => {
             successfulUploads,
             failedUploads: failedUploads.length,
             failedRows,
-          }
+          },
         );
         toast.error(
-          `No pudimos subir ${failedUploads.length} comprobante(s) en ${rowLabel}. ${firstFailureReason}`
+          `No pudimos subir ${failedUploads.length} comprobante(s) en ${rowLabel}. ${firstFailureReason}`,
         );
         setIsSubmitting(false);
         return;
@@ -307,11 +476,11 @@ export const Vouchers = () => {
             successfulUploads,
             failedUploads: failedUploads.length,
             failedRows,
-          }
+          },
         );
 
         toast.error(
-          `Se subieron ${successfulUploads} comprobante(s), pero ${failedUploads.length} falló/fallaron (${rowLabel}). ${firstFailureReason}`
+          `Se subieron ${successfulUploads} comprobante(s), pero ${failedUploads.length} falló/fallaron (${rowLabel}). ${firstFailureReason}`,
         );
 
         setFormData(failedUploads.map((failure) => failure.rowData));
@@ -328,13 +497,13 @@ export const Vouchers = () => {
     } catch (err) {
       console.error(
         "Error al enviar la solicitud de reembolso: ",
-        err instanceof Error ? err.message : err
+        err instanceof Error ? err.message : err,
       );
 
       const axiosError = err as AxiosError<UploadVoucherErrorResponse>;
       const statusCode = axiosError.response?.status;
 
-       if (statusCode === 422 && axiosError.response?.data?.policy_summary) {
+      if (statusCode === 422 && axiosError.response?.data?.policy_summary) {
         setPolicyViolations(axiosError.response.data.policy_summary.violations);
         toast.error("La solicitud excede los límites de anticipo o tiempo.");
         return;
@@ -359,16 +528,16 @@ export const Vouchers = () => {
         });
         toast.error(
           backendMessage ||
-            "No hay comprobantes válidos cargados para finalizar la solicitud."
+            "No hay comprobantes válidos cargados para finalizar la solicitud.",
         );
         return;
       }
 
       toast.error(
-        "Error al enviar la solicitud de reembolso. Por favor, inténtelo de nuevo más tarde."
+        "Error al enviar la solicitud de reembolso. Por favor, inténtelo de nuevo más tarde.",
       );
-    }finally {
-      setIsSubmitting(false); 
+    } finally {
+      setIsSubmitting(false);
     }
   };
   const columnsSchemaVauchers = [
@@ -389,7 +558,7 @@ export const Vouchers = () => {
         value: CellValueType,
         onChangeComponentFunction: (newValue: CellValueType) => void,
         _rowIndex?: number,
-        _cellIndex?: number
+        _cellIndex?: number,
       ) => (
         <Dropdown
           id={`spend_class-${_rowIndex}-${_cellIndex}`}
@@ -408,7 +577,7 @@ export const Vouchers = () => {
         value: CellValueType,
         onChangeComponentFunction: (newValue: CellValueType) => void,
         _rowIndex?: number,
-        _cellIndex?: number
+        _cellIndex?: number,
       ) => (
         <InputField
           id={`amount-${_rowIndex}-${_cellIndex}`}
@@ -427,7 +596,7 @@ export const Vouchers = () => {
         value: CellValueType,
         onChangeComponentFunction: (newValue: CellValueType) => void,
         _rowIndex?: number,
-        _cellIndex?: number
+        _cellIndex?: number,
       ) => (
         <Dropdown
           id={`tax_indicator-${_rowIndex}-${_cellIndex}`}
@@ -446,7 +615,7 @@ export const Vouchers = () => {
         value: CellValueType,
         onChangeComponentFunction: (newValue: CellValueType) => void,
         _rowIndex?: number,
-        _cellIndex?: number
+        _cellIndex?: number,
       ) => (
         <InputField
           id={`date-${_rowIndex}-${_cellIndex}`}
@@ -464,25 +633,50 @@ export const Vouchers = () => {
         _value: CellValueType,
         onChangeComponentFunction: (newValue: CellValueType) => void,
         rowIndex?: number,
-        _cellIndex?: number
+        _cellIndex?: number,
       ) => (
         <InputField
           id={`xml_file-${rowIndex}-${_cellIndex}`}
           selectedFileName={formData[rowIndex || 0]?.XMLFile?.name || ""}
           type="file"
           accept=".xml"
-          onChange={(e) => {
+          onChange={async (e) => {
             const file = e.target.files?.[0];
-            if (file) {
-              onChangeComponentFunction(file);
-              if (rowIndex !== undefined) {
-                const updatedFormData = [...formData];
+            if (!file || rowIndex === undefined) {
+              return;
+            }
+            onChangeComponentFunction(file);
 
-                if (updatedFormData[rowIndex]) {
-                  updatedFormData[rowIndex].XMLFile = file;
-                  setFormData(updatedFormData);
-                }
+            if (!patchRow) {
+              return;
+            }
+
+            const fd = new FormData();
+            fd.append("file", file);
+
+            try {
+              const res = (await postRequest("/cfdi/preview", fd)) as {
+                total: number | null;
+                fecha: string | null;
+                taxIndicator: string | null;
+              };
+
+              const partial: Partial<FormDataRow> = {};
+              if (res.total != null && !Number.isNaN(Number(res.total))) {
+                partial.amount = Number(res.total);
               }
+              if (res.fecha) {
+                partial.date = res.fecha;
+              }
+              if (res.taxIndicator) {
+                partial.taxIndicator = res.taxIndicator;
+              }
+              patchRow(partial);
+            } catch (err) {
+              console.error("CFDI preview:", err);
+              toast.error(
+                "No se pudieron leer el total, la fecha o el indicador de impuesto del XML."
+              );
             }
           }}
           placeholder="Subir archivo XML"
@@ -497,7 +691,7 @@ export const Vouchers = () => {
         _value: CellValueType,
         onChangeComponentFunction: (newValue: CellValueType) => void,
         rowIndex?: number,
-        _cellIndex?: number
+        _cellIndex?: number,
       ) => (
         <InputField
           id={`pdf_file-${rowIndex}-${_cellIndex}`}
@@ -526,7 +720,25 @@ export const Vouchers = () => {
 
   const handleFormDataChange = (newData: FormDataRow[]) => {
     setFormData(newData);
+    setNeedsWarningConfirmation(false);
+    if (hasPreviewedPolicy) {
+      setPolicyViolations([]);
+    }
   };
+
+  useEffect(() => {
+    if (!hasPreviewedPolicy) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (!isSubmitting) {
+        runPolicyPreview();
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [formData, hasPreviewedPolicy, isSubmitting]);
 
   // Wrapper function to handle the type conversion
   const handleDynamicTableDataChange = (data: DynamicTableRow[]) => {
@@ -575,6 +787,7 @@ export const Vouchers = () => {
               columns={columnsSchemaVauchers}
               initialData={formData}
               onDataChange={handleDynamicTableDataChange}
+              showRowNumbers
             />
           </div>
           {/*
@@ -602,25 +815,42 @@ export const Vouchers = () => {
             </Link>
             <button
               id="submit-refund"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isPreviewingPolicy}
               className={`px-4 py-2 text-white rounded-md transition-colors ${
-                isSubmitting 
+                isSubmitting || isPreviewingPolicy 
                   ? "bg-gray-400 cursor-not-allowed" 
                   : "bg-[#0a2c6d] hover:bg-[#0d3d94] hover:cursor-pointer"
               }`}
-              onClick={
-                handleSubmitRefund
-              }
+              onClick={handleSubmitClick}
             >
-              {isSubmitting ? "Procesando..." : "Enviar Solicitud"}
+              {isSubmitting
+                ? "Procesando..."
+                : needsWarningConfirmation
+                ? "Enviar de todos modos"
+                : "Enviar Solicitud"}
             </button>
           </div>
         </div>
       </Tutorial>
+      <ConfirmationModal
+        isOpen={showSubmitModal}
+        onClose={() => setShowSubmitModal(false)}
+        onConfirm={() => {
+          setShowSubmitModal(false);
+          handleSubmitRefund();
+        }}
+        title="Enviar comprobantes de gasto"
+        description="Estás a punto de enviar todos los comprobantes listados para revisión contable. Asegúrate de que los archivos XML/PDF y montos sean correctos antes de continuar."
+        warningNote="Una vez enviados, no podrás modificar ni eliminar los comprobantes. El equipo de contabilidad revisará cada uno individualmente."
+        confirmText="Sí, enviar comprobantes"
+        isDestructive={false}
+      />
     </>
   );
 };
+
 /*
 Modification History:
 2026-04-11 | Fabrizio | Integrated policy engine validation (422 error handling) and trip window date synchronization.
+2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modal before voucher submission to prevent accidental sends.
 */

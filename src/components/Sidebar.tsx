@@ -27,6 +27,10 @@ interface SidebarProps {
  * @param isOpen Boolean state to control mobile visibility toggle.
  */
 function Sidebar({ user, isOpen }: SidebarProps) {
+  const normalizedRole = (user.userRole || "").toLowerCase().replace(/[_\s-]/g, "");
+  const isSuperAdmin = normalizedRole === "superadmin";
+  const isCompanyAdmin = normalizedRole === "companyadmin";
+
   return (
     <aside
       id="logo-sidebar"
@@ -103,6 +107,41 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/company-admin/import-employees"
               />
             )}
+            {user.userPermissions.includes("check_budgets" as Permission) && (
+              <SidebarOption 
+                label="Póliza" 
+                pathIcon="/assets/policies.png" 
+                link="/policies"
+              />
+            )}
+            {isSuperAdmin && (
+              <SidebarOption
+                label="Empresas"
+                pathIcon="/assets/roles.png"
+                link="/admin/companies"
+              />
+            )}
+            {isCompanyAdmin && (
+              <SidebarOption
+                label="Departamentos"
+                pathIcon="/assets/roles.png"
+                link="/admin/departments"
+              />
+            )}
+            {isCompanyAdmin && (
+              <SidebarOption
+                label="Centros de costos"
+                pathIcon="/assets/roles.png"
+                link="/admin/cost-centers"
+              />
+            )}
+            {isCompanyAdmin && (
+              <SidebarOption
+                label="Políticas de reembolso"
+                pathIcon="/assets/matrix.png"
+                link="/admin/refund-policies"
+              />
+            )}
         </ul>
       </div>
     </aside>
@@ -116,4 +155,5 @@ Modification History:
 
 - 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and fixed import path.
 - 2026-04-09 | Fabrizio | Converted to a responsive drawer with transition effects.
+- 2026-04-14 | Fabrizio | Integrated the 'Policy' option, visible only to users with 'check_budgets' permission.
 */

@@ -120,6 +120,112 @@ const createRequestSteps = [
 }
 ]
 
+const createCompanySteps = [
+  {
+    element: "#tenant_info",
+    popover: {
+      title: "Datos de la Empresa",
+      description: "Un Super Administrador registra una empresa con su Clave y Nombre.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_currency",
+    popover: {
+      title: "Moneda Local",
+      description: "Selecciona la moneda local (localCurrency).",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa crea departamentos sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_departments",
+    popover: {
+      title: "Departamentos",
+      description: "Crea el departamento con su nombre y centro de costos.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_admin",
+    popover: {
+      title: "Administrador por Defecto",
+      description:
+        "La empresa se crea junto con su CompanyAdmin inicial. Define su nombre, apellido, correo y contraseña aquí.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_tenant",
+    popover: {
+      title: "Crear Empresa",
+      description: "Cuando termines, guarda la empresa y su administrador por defecto con este botón.",
+      position: "bottom",
+    },
+  },
+]
+
+const createDepartmentSteps = [
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa crea departamentos sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_departments",
+    popover: {
+      title: "Departamentos",
+      description: "Crea el departamento con su nombre y centro de costos.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_department",
+    popover: {
+      title: "Crear Departamento",
+      description: "Guarda el departamento en la empresa seleccionada.",
+      position: "bottom",
+    },
+  },
+]
+
+const createCostCenterSteps = [
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa gestiona centros de costos sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_cost_centers",
+    popover: {
+      title: "Centros de Costos",
+      description: "Revisa los centros de costos existentes antes de registrar uno nuevo.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_cost_center",
+    popover: {
+      title: "Crear Centro de Costos",
+      description: "Guarda el centro de costos en la empresa seleccionada.",
+      position: "bottom",
+    },
+  },
+]
+
 const historySteps = [
   {
     element: "#list_requests",
@@ -181,6 +287,63 @@ const checkRefundsSteps = [
     popover: {
       title: "Lista de Solicitudes",
       description: "Lista de reembolsos pendientes por registrar.",
+      position: "bottom",
+    },
+  },
+]
+
+const refundPoliciesSteps = [
+  {
+    element: "#refund_policies_overview",
+    popover: {
+      title: "Qué estás viendo",
+      description:
+        "Esta vista administra políticas de reembolso por compañía. Una política contiene reglas para validar comprobantes y solicitudes.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#refund_policies_create",
+    popover: {
+      title: "Cómo crear una política",
+      description:
+        "Primero define nombre, descripción y compañía. Luego agrega una o varias reglas.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#refund_policy_rules",
+    popover: {
+      title: "Cómo crear una regla correcta",
+      description:
+        "Selecciona clase de gasto y operador desde catálogo. Si el operador requiere umbral, captura valor y unidad.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#refund_policy_consequence",
+    popover: {
+      title: "Qué significa Consecuencia",
+      description:
+        "WARNING muestra observación sin bloquear. POLICY_VIOLATION bloquea el flujo hasta corregir.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#refund_policy_replace_warning",
+    popover: {
+      title: "Importante al editar",
+      description:
+        "Al guardar una política con lista de reglas, el sistema reemplaza todo el conjunto de reglas de esa política.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#refund_policies_tutorial_end",
+    popover: {
+      title: "Cierre del tutorial",
+      description:
+        "Empieza con una política simple de archivos obligatorios y valida su efecto antes de agregar reglas de monto o tiempo.",
       position: "bottom",
     },
   },
@@ -394,6 +557,10 @@ const requestInfoSteps = [
 const stepsMap: Record<string, typeof dashboardSteps> = {
   dashboard: dashboardSteps,
   createRequest: createRequestSteps,
+  createCompany: createCompanySteps,
+  createDepartment: createDepartmentSteps,
+  createCostCenter: createCostCenterSteps,
+  createTenant: createCompanySteps,
   history: historySteps,
   refunds: refundsSteps,
   vouchers: vouchersSteps,
@@ -402,13 +569,14 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
   bookings: bookingsSteps,
   reservations: assignReservationSteps,
   checkRefunds: checkRefundsSteps,
+  refundPolicies: refundPoliciesSteps,
   refundReview: refundReviewSteps,
   requestInfo: requestInfoSteps,
 };
 
 interface TutorialProps {
    children: React.ReactNode;
-   page: "dashboard" | "createRequest" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundReview" | "requestInfo";
+  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createCostCenter" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundPolicies" | "refundReview" | "requestInfo";
    run?: boolean;
   }
 

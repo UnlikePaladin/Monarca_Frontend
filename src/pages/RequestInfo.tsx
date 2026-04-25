@@ -12,17 +12,16 @@ import { Permission, useAuth } from "../hooks/auth/authContext";
 import { useNavigate } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import { Tutorial } from "../components/Tutorial";
-import { PolicyAlert } from '../components/Refunds/PolicyAlert';
 import { Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import FilePreviewer from "../components/Refunds/FilePreviewer";
 import FilePreviewerReservation from "../components/Refunds/FilePreviewerReservation";
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { useApp } from "../hooks/app/appContext";
+import { ConfirmationModal } from "../components/ui/ConfirmationModal";
 
 const renderStatus = (status: string) => {
   switch (status) {
@@ -70,7 +69,38 @@ const RequestInfo: React.FC = () => {
 
   const { handleVisitPage, tutorial } = useApp();
 
-  const [policyViolations, setPolicyViolations] = useState<any[]>([]);
+  // Single modal state drives all confirmation dialogs on this page.
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    warningNote?: string;
+    confirmText: string;
+    isDestructive: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    confirmText: "Confirm",
+    isDestructive: false,
+    onConfirm: () => {},
+  });
+
+  /**
+   * Opens the confirmation modal with the provided configuration.
+   * @param config - Modal content and the callback to invoke on confirmation.
+   */
+  const openConfirm = (config: Omit<typeof confirmModal, "isOpen">) => {
+    setConfirmModal({ ...config, isOpen: true });
+  };
+
+  /**
+   * Closes the confirmation modal without executing any action.
+   */
+  const closeConfirm = () =>
+    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+
   /**
    * Fetches the main request data and the history of policy violations for auditing purposes.
    */
@@ -90,15 +120,12 @@ const RequestInfo: React.FC = () => {
           advance_money_str: formatMoney(response.advance_money),
           admin: response.admin.name + " " + response.admin.lastName,
           id_origin_city: response.destination.city,
-          destinations: response.requests_destinations
+          destinations: [...response.requests_destinations]
+            .sort((a: any, b: any) => a.destination_order - b.destination_order)
             .map((dest: any) => dest.destination.city)
             .join(", "),
         });
         setSelectedAgency(response.idTravelAgency || "");
-        const violationsRes = await getRequest(`/requests/${id}/policy-violations`);
-        if (violationsRes && violationsRes.violations) {
-          setPolicyViolations(violationsRes.violations);
-        }
       } catch (error) {
         console.error("Error fetching request data:", error);
       }
@@ -110,7 +137,7 @@ const RequestInfo: React.FC = () => {
   useEffect(() => {
     // Get the visited pages from localStorage
     const visitedPages = JSON.parse(
-      localStorage.getItem("visitedPages") || "[]"
+      localStorage.getItem("visitedPages") || "[]",
     );
     // Check if the current page is already in the visited pages
     const isPageVisited = visitedPages.includes(location.pathname);
@@ -243,7 +270,7 @@ const RequestInfo: React.FC = () => {
   const register = async () => {
     try {
       await patchRequest(`/requests/SOI-approve/${id}`, {});
-      toast.success("Solicitud marcada como registrada", {
+      toast.success("Contabilidad aprobada; la agencia puede reservar", {
         position: "top-right",
         autoClose: 3000,
       });
@@ -319,87 +346,135 @@ const RequestInfo: React.FC = () => {
               <p className="block text-sm font-medium text-gray-700 mb-4">
                 Detalles de los destinos
               </p>
-              {data?.requests_destinations?.map((dest: any, index: number) => (
-                <div
-                  className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8"
-                  key={dest.id}
-                >
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Lugar
-                    </label>
-                    <input
-                      id={`destination-${index}`}
-                      type="text"
-                      readOnly
-                      value={dest.destination.city}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
+              {[...(data?.requests_destinations ?? [])]
+                .sort(
+                  (a: any, b: any) => a.destination_order - b.destination_order,
+                )
+                .map((dest: any, index: number) => (
+                  <div
+                    className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8"
+                    key={dest.id}
+                  >
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Lugar
+                      </label>
+                      <input
+                        id={`destination-${index}`}
+                        type="text"
+                        readOnly
+                        value={dest.destination.city}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Fecha de llegada
+                      </label>
+                      <input
+                        id={`arrival-${index}`}
+                        type="text"
+                        readOnly
+                        value={formatDate(dest.departure_date)}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Fecha de salida
+                      </label>
+                      <input
+                        id={`departure-${index}`}
+                        type="text"
+                        readOnly
+                        value={formatDate(dest.arrival_date)}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        Detalles
+                      </label>
+                      <input
+                        id={`details-${index}`}
+                        type="text"
+                        readOnly
+                        value={dest.details}
+                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                      />
+                    </div>
+                    <div className="flex items-center justify-start gap-1">
+                      {dest.is_hotel_required && (
+                        <p
+                          id={`hotel-${index}`}
+                          className="text-sm bg-[var(--yellow)] rounded-full px-2 py-1 w-fit"
+                        >
+                          Hotel
+                        </p>
+                      )}
+                      {dest.is_plane_required && (
+                        <p
+                          id={`plane-${index}`}
+                          className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
+                        >
+                          Avión
+                        </p>
+                      )}
+                      {dest.stay_days && (
+                        <p
+                          id={`stay-days-${index}`}
+                          className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
+                        >
+                          {dest.stay_days} días
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Fecha de llegada
-                    </label>
-                    <input
-                      id={`arrival-${index}`}
-                      type="text"
-                      readOnly
-                      value={formatDate(dest.arrival_date)}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Fecha de salida
-                    </label>
-                    <input
-                      id={`departure-${index}`}
-                      type="text"
-                      readOnly
-                      value={formatDate(dest.departure_date)}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">
-                      Detalles
-                    </label>
-                    <input
-                      id={`details-${index}`}
-                      type="text"
-                      readOnly
-                      value={dest.details}
-                      className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                    />
-                  </div>
-                  <div className="flex items-center justify-start gap-1">
-                    {dest.is_hotel_required && (
-                      <p
-                        id={`hotel-${index}`}
-                        className="text-sm bg-[var(--yellow)] rounded-full px-2 py-1 w-fit"
-                      >
-                        Hotel
-                      </p>
-                    )}
-                    {dest.is_plane_required && (
-                      <p
-                        id={`plane-${index}`}
-                        className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
-                      >
-                        Avión
-                      </p>
-                    )}
-                    {dest.stay_days && (
-                      <p
-                        id={`stay-days-${index}`}
-                        className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
-                      >
-                        {dest.stay_days} días
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
+              {data?.is_round_trip &&
+                (() => {
+                  const sorted = [...(data?.requests_destinations ?? [])].sort(
+                    (a: any, b: any) =>
+                      a.destination_order - b.destination_order,
+                  );
+                  const lastDest = sorted[sorted.length - 1];
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          Lugar
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={data?.destination?.city ?? "Origen"}
+                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          Fecha de salida
+                        </label>
+                        <input
+                          type="text"
+                          readOnly
+                          value={formatDate(lastDest?.arrival_date)}
+                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+                        />
+                      </div>
+                      <div />
+                      <div />
+                      <div className="flex items-center justify-start gap-1">
+                        <p className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit">
+                          Avión
+                        </p>
+                        <p className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit">
+                          Regreso
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
             </section>
 
             {data?.revisions?.length > 0 && (
@@ -508,8 +583,8 @@ const RequestInfo: React.FC = () => {
                             (acc: number, file: { price: number }) => {
                               return acc + +file.price;
                             },
-                            0
-                          ) ?? 0
+                            0,
+                          ) ?? 0,
                         )}
                         className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
                       />
@@ -594,15 +669,15 @@ const RequestInfo: React.FC = () => {
                           data?.vouchers?.reduce(
                             (
                               acc: number,
-                              file: { status: string; amount: number }
+                              file: { status: string; amount: number },
                             ) => {
                               if (file.status === "Voucher Approved") {
                                 return acc + +file.amount;
                               }
                               return acc;
                             },
-                            0
-                          ) ?? 0
+                            0,
+                          ) ?? 0,
                         )}
                         className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
                       />
@@ -634,14 +709,14 @@ const RequestInfo: React.FC = () => {
                           (data?.vouchers?.reduce(
                             (
                               acc: number,
-                              file: { status: string; amount: number }
+                              file: { status: string; amount: number },
                             ) => {
                               if (file.status === "Voucher Approved") {
                                 return acc + Number(file.amount);
                               }
                               return acc;
                             },
-                            0
+                            0,
                           ) ?? 0) <
                         0
                           ? "a favor"
@@ -659,16 +734,16 @@ const RequestInfo: React.FC = () => {
                               (data?.vouchers?.reduce(
                                 (
                                   acc: number,
-                                  file: { status: string; amount: number }
+                                  file: { status: string; amount: number },
                                 ) => {
                                   if (file.status === "Voucher Approved") {
                                     return acc + Number(file.amount);
                                   }
                                   return acc;
                                 },
-                                0
-                              ) ?? 0)
-                          )
+                                0,
+                              ) ?? 0),
+                          ),
                         )}
                         className={`w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200
                       ${
@@ -678,14 +753,14 @@ const RequestInfo: React.FC = () => {
                           (data?.vouchers?.reduce(
                             (
                               acc: number,
-                              file: { status: string; amount: number }
+                              file: { status: string; amount: number },
                             ) => {
                               if (file.status === "Voucher Approved") {
                                 return acc + Number(file.amount);
                               }
                               return acc;
                             },
-                            0
+                            0,
                           ) ?? 0) >
                         0
                           ? "text-red-500"
@@ -699,7 +774,7 @@ const RequestInfo: React.FC = () => {
             )}
 
             {authState.userPermissions.includes(
-              "approve_request" as Permission
+              "approve_request" as Permission,
             ) && (
               <section className="mb-10" id="travel-agency">
                 <label
@@ -731,7 +806,7 @@ const RequestInfo: React.FC = () => {
                     readOnly
                     value={
                       agencies?.find(
-                        (agency) => agency.id === data.idTravelAgency
+                        (agency) => agency.id === data.idTravelAgency,
                       )?.name
                     }
                     className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
@@ -741,7 +816,7 @@ const RequestInfo: React.FC = () => {
             )}
 
             {authState.userPermissions.includes(
-              "approve_request" as Permission
+              "approve_request" as Permission,
             ) &&
               data.status === "Pending Review" && (
                 <section className="mb-8" id="comment-section">
@@ -763,28 +838,8 @@ const RequestInfo: React.FC = () => {
               )}
 
             {/* Botones de acción */}
-            {policyViolations.length > 0 && (
-              <section className="mb-8 border-2 border-red-200 rounded-lg p-4 bg-white shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <MagnifyingGlassIcon className="h-6 w-6 text-red-700" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-red-700">Resultado de Auditoría Automática</h3>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                  El sistema detectó los siguientes conflictos. Revise cada uno antes de proceder. 
-                  <span className="block mt-1 font-semibold text-orange-700">
-                    Usted puede "Aprobar con Excepción" si considera que el gasto es justificable.
-                  </span>
-                </p>
-                
-                <PolicyAlert violations={policyViolations} />
-              </section>
-            )}
             {authState.userPermissions.includes(
-              "approve_request" as Permission
+              "approve_request" as Permission,
             ) && (
               <>
                 {data.status === "Pending Review" && (
@@ -808,24 +863,41 @@ const RequestInfo: React.FC = () => {
                   </section>
                 )}
                 <footer className="flex flex-col sm:flex-row gap-4">
+                  
                   <button
-                    onClick={approve}
+                    onClick={() =>
+                      openConfirm({
+                        title: "Aprobar solicitud de viaje",
+                        description:
+                          "Estás a punto de aprobar esta solicitud. La agencia de viaje seleccionada recibirá la confirmación y procederá con las reservaciones.",
+                        warningNote:
+                          "Esta acción es irreversible. No podrás revertir la aprobación una vez confirmada.",
+                        confirmText: "Sí, aprobar",
+                        isDestructive: false,
+                        onConfirm: approve,
+                      })
+                    }
                     disabled={
                       !selectedAgency || data.status !== "Pending Review"
                     }
                     className={`flex-1 py-3 rounded-lg font-semibold transition
-                    ${
-                     policyViolations.length > 0 
-                        ? 'bg-orange-600 hover:bg-orange-700 text-white' 
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }
-                     ${(!selectedAgency) && 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                    bg-green-600 hover:bg-green-700 text-white
+                     ${!selectedAgency && "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
                     id="approve-request-button"
                   >
-                     {policyViolations.length > 0 ? 'Aprobar con Excepción' : 'Aprobar'}
+                    Aprobar
                   </button>
                   <button
-                    onClick={requestChanges}
+                    onClick={() =>
+                      openConfirm({
+                        title: "Solicitar cambios al viajero",
+                        description:
+                          "Se pausará el proceso de aprobación y el viajero recibirá una notificación con tu comentario para que realice los ajustes necesarios.",
+                        confirmText: "Sí, solicitar cambios",
+                        isDestructive: false,
+                        onConfirm: requestChanges,
+                      })
+                    }
                     disabled={
                       !comment.trim() || data.status !== "Pending Review"
                     }
@@ -840,7 +912,18 @@ const RequestInfo: React.FC = () => {
                     Solicitar cambios
                   </button>
                   <button
-                    onClick={deny}
+                    onClick={() =>
+                      openConfirm({
+                        title: "Denegar solicitud de viaje",
+                        description:
+                          "Estás a punto de denegar esta solicitud. El solicitante será notificado y deberá iniciar una nueva solicitud si desea continuar.",
+                        warningNote:
+                          "Esta acción es irreversible. Una vez denegada, no podrás revertirla.",
+                        confirmText: "Sí, denegar",
+                        isDestructive: true,
+                        onConfirm: deny,
+                      })
+                    }
                     disabled={data.status !== "Pending Review"}
                     className={`flex-1 py-3 rounded-lg font-semibold transition
                     ${
@@ -857,7 +940,7 @@ const RequestInfo: React.FC = () => {
             )}
 
             {authState.userPermissions.includes(
-              "create_request" as Permission
+              "create_request" as Permission,
             ) && (
               <footer className="flex flex-col sm:flex-row gap-4">
                 <button
@@ -873,7 +956,18 @@ const RequestInfo: React.FC = () => {
                   Editar
                 </button>
                 <button
-                  onClick={cancel}
+                  onClick={() =>
+                    openConfirm({
+                      title: "Cancelar solicitud de viaje",
+                      description:
+                        "Estás a punto de cancelar tu solicitud de viaje. Se notificará al aprobador y se detendrá el proceso.",
+                      warningNote:
+                        "Esta acción es irreversible. No podrás reactivar esta solicitud.",
+                      confirmText: "Sí, cancelar solicitud",
+                      isDestructive: true,
+                      onConfirm: cancel,
+                    })
+                  }
                   disabled={
                     data.status !== "Pending Review" &&
                     data.status !== "Changes Needed"
@@ -892,13 +986,23 @@ const RequestInfo: React.FC = () => {
             )}
 
             {authState.userPermissions.includes(
-              "check_budgets" as Permission
+              "check_budgets" as Permission,
             ) &&
               data.status === "Pending Accounting Approval" && (
                 <footer className="flex flex-col sm:flex-row gap-4">
                   <button
                     id="register-spend"
-                    onClick={register}
+                    onClick={() =>
+                      openConfirm({
+                        title: "Marcar gasto como registrado",
+                        description:
+                          "Confirmas que el anticipo de esta solicitud ha sido registrado correctamente en el sistema contable. Se habilitará la siguiente etapa del proceso para el viajero.",
+                        warningNote: "Esta acción es irreversible.",
+                        confirmText: "Sí, marcar como registrado",
+                        isDestructive: false,
+                        onConfirm: register,
+                      })
+                    }
                     disabled={data.status !== "Pending Accounting Approval"}
                     className={`flex-1 py-3 rounded-lg font-semibold transition ${
                       data.status === "Pending Accounting Approval"
@@ -906,19 +1010,29 @@ const RequestInfo: React.FC = () => {
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >
-                    Marcar como registrado
+                    Aprobar
                   </button>
                 </footer>
               )}
 
             {authState.userPermissions.includes(
-              "check_budgets" as Permission
+              "check_budgets" as Permission,
             ) &&
               data.status === "Pending Refund Approval" && (
                 <footer className="flex flex-col sm:flex-row gap-4">
                   <button
                     id="complete-refund-request"
-                    onClick={complete}
+                    onClick={() =>
+                      openConfirm({
+                        title: "Marcar viaje como completado",
+                        description:
+                          "Confirmas que el viaje ha concluido. Esto habilitará al viajero para cargar sus comprobantes de gasto e iniciar el proceso de reembolso.",
+                        warningNote: "Esta acción es irreversible.",
+                        confirmText: "Sí, marcar como completado",
+                        isDestructive: false,
+                        onConfirm: complete,
+                      })
+                    }
                     disabled={data.status !== "Pending Refund Approval"}
                     className={`flex-1 py-3 rounded-lg font-semibold transition ${
                       data.status === "Pending Refund Approval"
@@ -933,6 +1047,19 @@ const RequestInfo: React.FC = () => {
           </div>
         </main>
       </div>
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={closeConfirm}
+        onConfirm={() => {
+          closeConfirm();
+          confirmModal.onConfirm();
+        }}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        warningNote={confirmModal.warningNote}
+        confirmText={confirmModal.confirmText}
+        isDestructive={confirmModal.isDestructive}
+      />
     </Tutorial>
   );
 };
@@ -941,5 +1068,7 @@ export default RequestInfo;
 
 /*
 Modification History:
-2026-04-11 | Fabrizio | Added policy violations audit section to provide transparency for the approver role.
+- 2026-04-11 | Fabrizio | Added policy violations audit section to provide transparency for the approver role.
+- 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for all irreversible actions (approve, deny, cancel, register, complete).
+- 2026-04-23 | Juan de Dios Gastélum | Fixed destination sort order and added return leg row for round trips.
 */
