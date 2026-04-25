@@ -226,6 +226,33 @@ const createCostCenterSteps = [
   },
 ]
 
+const createAccountingAccountsSteps = [
+  {
+    element: "#tenant_company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa gestiona cuentas contables sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#tenant_accounting_accounts",
+    popover: {
+      title: "Cuentas Contables",
+      description: "Revisa las cuentas registradas y elimina las que ya no necesites.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#create_accounting_account",
+    popover: {
+      title: "Crear Cuenta Contable",
+      description: "Guarda la cuenta contable en la empresa seleccionada.",
+      position: "bottom",
+    },
+  },
+]
+
 const historySteps = [
   {
     element: "#list_requests",
@@ -560,6 +587,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
   createCompany: createCompanySteps,
   createDepartment: createDepartmentSteps,
   createCostCenter: createCostCenterSteps,
+  createAccountingAccounts: createAccountingAccountsSteps,
   createTenant: createCompanySteps,
   history: historySteps,
   refunds: refundsSteps,
@@ -576,7 +604,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
 
 interface TutorialProps {
    children: React.ReactNode;
-  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createCostCenter" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundPolicies" | "refundReview" | "requestInfo";
+  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createCostCenter" | "createAccountingAccounts" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundPolicies" | "refundReview" | "requestInfo";
    run?: boolean;
   }
 

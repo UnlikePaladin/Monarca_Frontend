@@ -41,7 +41,9 @@ import CreateCompany from "./pages/Admin/CreateCompany.tsx";
 import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 import Departments from "./pages/Admin/Departments.tsx";
+import AccountingAccounts from "./pages/Admin/AccountingAccounts.tsx";
 import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
+import CostCenterList from "./components/Admin/CostCenterList.tsx";
 
 
 export const router = createBrowserRouter([
@@ -199,7 +201,26 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "",
+            element: <CostCenterList />,
+          },
+          {
+            path: "create",
             element: <CreateCostCenter />,
+          }
+        ],
+      },
+      {
+        path: "/admin/accounting-accounts",
+        element: (
+          <RoleProtectedRoute
+            requiredRoles={["CompanyAdmin"]}
+            requireCompanyId={true}
+          />
+        ),
+        children: [
+          {
+            path: "",
+            element: <AccountingAccounts />,
           },
         ],
       },

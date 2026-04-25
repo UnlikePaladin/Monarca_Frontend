@@ -177,7 +177,7 @@ function CreateDepartmentForm() {
 
   if (!companyIdForDepartment) {
     return (
-      <section className="rounded-md bg-gray-200">
+      <section className="rounded-md">
         <div className="mx-auto max-w-3xl px-4 py-8 lg:py-16">
           <h2 className="text-xl font-bold text-gray-900">Crear departamento</h2>
           <p className="mt-2 text-sm text-red-600">
@@ -189,7 +189,7 @@ function CreateDepartmentForm() {
   }
 
   return (
-    <section className="rounded-md bg-gray-200">
+    <section className="rounded-md">
       <div className="mx-auto max-w-3xl px-4 py-8 lg:py-16">
         <div className="mb-6 space-y-2">
           <h2 className="text-xl font-bold text-gray-900">Crear departamento</h2>
@@ -276,7 +276,7 @@ function CreateDepartmentForm() {
               />
             </div>
 
-            <div className="rounded-md bg-white p-4 shadow-sm">
+            <div className="rounded-md bg-white p-4 shadow-lg">
               <p className="text-sm font-medium text-gray-900">Departamentos registrados</p>
               {isLoadingDepartments ? (
                 <p className="mt-2 text-sm text-gray-600">Cargando departamentos...</p>
