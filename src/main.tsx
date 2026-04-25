@@ -41,9 +41,10 @@ import CreateCompany from "./pages/Admin/CreateCompany.tsx";
 import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 import Departments from "./pages/Admin/Departments.tsx";
-import AccountingAccounts from "./pages/Admin/AccountingAccounts.tsx";
+import CreateAccountingAccount from "./pages/Admin/CreateAccountingAccount.tsx";
 import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
 import CostCenterList from "./components/Admin/CostCenterList.tsx";
+import AccountingAccountsList from "./components/Admin/AccountingAccountList.tsx";
 
 
 export const router = createBrowserRouter([
@@ -220,8 +221,12 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "",
-            element: <AccountingAccounts />,
+            element: <AccountingAccountsList />,
           },
+          {
+            path: "create",
+            element: <CreateAccountingAccount />,
+          }
         ],
       },
       {

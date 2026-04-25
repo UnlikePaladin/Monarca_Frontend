@@ -11,6 +11,7 @@ import { useAuth } from "../../hooks/auth/authContext";
 import { useCreateCostCenter } from "../../hooks/companies/useCreateCostCenter";
 import { useGetCompany } from "../../hooks/companies/useGetCompany";
 import { CreateCostCenterPayload } from "../../types/costCenter";
+import { useNavigate } from "react-router-dom";
 
 const costCenterSchema = z.object({
   name: z.string().trim().min(1, {
@@ -51,6 +52,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 
 function CreateCostCenterForm() {
   const { authState } = useAuth();
+  const navigate = useNavigate();
 
   const profileCompanyId = authState.userCompanyId ?? "";
 
@@ -122,6 +124,7 @@ function CreateCostCenterForm() {
         pauseOnHover: true,
       });
     }
+    navigate("/admin/cost-centers")
   };
 
   if (!profileCompanyId) {
@@ -225,31 +228,40 @@ function CreateCostCenterForm() {
               <FieldError msg={errors.key?.message} />
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex justify-between">            
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                id="create_cost_center"
+                type="submit"
+                disabled={
+                  isCreatingCostCenter ||
+                  isSubmitting ||
+                  isLoadingCompany ||
+                  !selectedCompany
+                }
+              >
+                {isCreatingCostCenter || isSubmitting ? "Guardando..." : "Crear centro de costos"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() =>
+                  reset({
+                    name: "",
+                    numericId: "",
+                    key: "",
+                  })
+                }
+              >
+                Limpiar formulario
+              </Button>
+            </div>
             <Button
-              id="create_cost_center"
-              type="submit"
-              disabled={
-                isCreatingCostCenter ||
-                isSubmitting ||
-                isLoadingCompany ||
-                !selectedCompany
-              }
-            >
-              {isCreatingCostCenter || isSubmitting ? "Guardando..." : "Crear centro de costos"}
-            </Button>
-            <Button
-              type="button"
-              onClick={() =>
-                reset({
-                  name: "",
-                  numericId: "",
-                  key: "",
-                })
-              }
-            >
-              Limpiar formulario
+                type="button"
+                onClick={() =>
+                  navigate("/admin/cost-centers")
+                }
+              >
+                Cancelar
             </Button>
           </div>
         </form>

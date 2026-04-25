@@ -12,10 +12,9 @@ import { Input } from "../ui/Input";
 import Switch from "../ui/Switch";
 import { useAuth } from "../../hooks/auth/authContext";
 import { useGetCompany } from "../../hooks/companies/useGetCompany";
-import { useGetCompanyAccountingAccounts } from "../../hooks/companies/useGetCompanyAccountingAccounts";
 import { useCreateCompanyAccountingAccount } from "../../hooks/companies/useCreateCompanyAccountingAccount";
-import { useDeleteCompanyAccountingAccount } from "../../hooks/companies/useDeleteCompanyAccountingAccount";
 import { CreateAccountingAccountPayload } from "../../types/accountingAccount";
+import { useNavigate } from "react-router-dom";
 
 const accountingAccountSchema = z.object({
   key: z.string().trim().min(1, {
@@ -50,11 +49,9 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
-function AccountingAccountsManagement() {
+function CreateAccountingAccountForm() {
   const { authState } = useAuth();
-  const [deletingAccountingAccountId, setDeletingAccountingAccountId] = useState<string | null>(
-    null
-  );
+  const navigate = useNavigate();
 
   const profileCompanyId = authState.userCompanyId ?? "";
 
@@ -65,20 +62,9 @@ function AccountingAccountsManagement() {
   } = useGetCompany(profileCompanyId);
 
   const {
-    data: accountingAccounts = [],
-    isLoading: isLoadingAccountingAccounts,
-    error: accountingAccountsError,
-  } = useGetCompanyAccountingAccounts(profileCompanyId);
-
-  const {
     mutateAsync: createCompanyAccountingAccountMutation,
     isPending: isCreatingAccountingAccount,
   } = useCreateCompanyAccountingAccount(profileCompanyId);
-
-  const {
-    mutateAsync: deleteCompanyAccountingAccountMutation,
-    isPending: isDeletingAccountingAccount,
-  } = useDeleteCompanyAccountingAccount(profileCompanyId);
 
   const {
     control,
@@ -137,31 +123,7 @@ function AccountingAccountsManagement() {
         pauseOnHover: true,
       });
     }
-  };
-
-  const handleDeleteAccountingAccount = async (accountingAccountId: string, key: string) => {
-    if (!profileCompanyId) return;
-
-    const confirmed = window.confirm(
-      `¿Estas seguro de eliminar la cuenta contable ${key}?`
-    );
-    if (!confirmed) return;
-
-    try {
-      setDeletingAccountingAccountId(accountingAccountId);
-      await deleteCompanyAccountingAccountMutation(accountingAccountId);
-      toast.success("Cuenta contable eliminada correctamente", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-    } catch (error) {
-      toast.error(getErrorMessage(error, "Error al eliminar la cuenta contable"), {
-        position: "top-right",
-        autoClose: 5000,
-      });
-    } finally {
-      setDeletingAccountingAccountId(null);
-    }
+    navigate("/admin/accounting-accounts")
   };
 
   if (!profileCompanyId) {
@@ -212,78 +174,6 @@ function AccountingAccountsManagement() {
           <FieldError msg={companyError instanceof Error ? companyError.message : undefined} />
         </div>
 
-        <div id="tenant_accounting_accounts" className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-900">Cuentas contables registradas</h3>
-
-          <div className="rounded-md bg-white p-4 shadow-lg">
-            {isLoadingAccountingAccounts ? (
-              <p className="text-sm text-gray-600">Cargando cuentas contables...</p>
-            ) : accountingAccounts.length === 0 ? (
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-900">Aun no hay cuentas contables</p>
-                <p className="text-sm text-gray-600">Crea la primera para empezar.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-md shadow-md">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Clave</th>
-                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Descripcion</th>
-                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Requiere centro de costos</th>
-                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {accountingAccounts.map((accountingAccount) => (
-                      <tr key={accountingAccount.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4 text-sm text-gray-900">{accountingAccount.key}</td>
-                        <td className="py-3 px-4 text-sm text-gray-700">{accountingAccount.description}</td>
-                        <td className="py-3 px-4 text-sm text-gray-700">
-                          {accountingAccount.requiresCostCenter ? "Si" : "No"}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-700">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteAccountingAccount(
-                                accountingAccount.id,
-                                accountingAccount.key
-                              )
-                            }
-                            disabled={
-                              isDeletingAccountingAccount &&
-                              deletingAccountingAccountId === accountingAccount.id
-                            }
-                            className="font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
-                          >
-                            {isDeletingAccountingAccount &&
-                            deletingAccountingAccountId === accountingAccount.id
-                              ? "Eliminando..."
-                              : "Eliminar"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {!isLoadingAccountingAccounts && (
-              <p className="mt-3 text-sm text-gray-600">Total actual: {accountingAccounts.length}</p>
-            )}
-
-            <FieldError
-              msg={
-                accountingAccountsError instanceof Error
-                  ? accountingAccountsError.message
-                  : undefined
-              }
-            />
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-6">
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Nueva cuenta contable</h3>
@@ -332,32 +222,42 @@ function AccountingAccountsManagement() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              id="create_accounting_account"
-              type="submit"
-              disabled={
-                isCreatingAccountingAccount ||
-                isSubmitting ||
-                isLoadingCompany ||
-                !selectedCompany
-              }
-            >
-              {isCreatingAccountingAccount || isSubmitting
-                ? "Guardando..."
-                : "Crear cuenta contable"}
-            </Button>
-            <Button
+          <div className="flex justify-between">            
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                id="create_accounting_account"
+                type="submit"
+                disabled={
+                  isCreatingAccountingAccount ||
+                  isSubmitting ||
+                  isLoadingCompany ||
+                  !selectedCompany
+                }
+              >
+                {isCreatingAccountingAccount || isSubmitting
+                  ? "Guardando..."
+                  : "Crear cuenta contable"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() =>
+                  reset({
+                    key: "",
+                    description: "",
+                    requiresCostCenter: false,
+                  })
+                }
+              >
+                Limpiar formulario
+              </Button>
+            </div>
+              <Button
               type="button"
               onClick={() =>
-                reset({
-                  key: "",
-                  description: "",
-                  requiresCostCenter: false,
-                })
+                navigate("/admin/accounting-accounts")
               }
-            >
-              Limpiar formulario
+              >
+                Cancelar
             </Button>
           </div>
         </form>
@@ -366,4 +266,4 @@ function AccountingAccountsManagement() {
   );
 }
 
-export default AccountingAccountsManagement;
+export default CreateAccountingAccountForm;

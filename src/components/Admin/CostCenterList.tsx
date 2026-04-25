@@ -43,7 +43,7 @@ function CostCenterList() {
         <div className="mb-6 space-y-2">
           <h2 className="text-xl font-bold text-gray-900">Centros de costos</h2>
           <p className="text-sm text-gray-600">
-            Como CompanyAdmin, solo puedes gestionar centros de costos para tu empresa.
+            Como CompanyAdmin, solo puedes ver y gestionar centros de costos para tu empresa.
           </p>
         </div>
 

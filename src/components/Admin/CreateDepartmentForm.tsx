@@ -16,6 +16,7 @@ import { useGetCompany } from "../../hooks/companies/useGetCompany";
 import { useGetCostCenters } from "../../hooks/companies/useGetCostCenters";
 import { useGetCompanyDepartments } from "../../hooks/companies/useGetCompanyDepartments";
 import { CreateCompanyDepartmentPayload } from "../../types/company";
+import { useNavigate } from "react-router-dom";
 
 type CostCenterOption = { id: number; name: string };
 
@@ -50,6 +51,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 
 function CreateDepartmentForm() {
   const { authState } = useAuth();
+  const navigate = useNavigate();
 
   const profileCompanyId = authState.userCompanyId ?? "";
   const companyIdForDepartment = profileCompanyId;
@@ -173,6 +175,7 @@ function CreateDepartmentForm() {
         pauseOnHover: true,
       });
     }
+    navigate("/admin/departments")
   };
 
   if (!companyIdForDepartment) {
@@ -293,31 +296,41 @@ function CreateDepartmentForm() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              id="create_department"
-              type="submit"
-              disabled={
-                isCreatingDepartment ||
-                isSubmitting ||
-                isLoadingCompany ||
-                isLoadingCostCenters ||
-                costCenterSelectOptions.length === 0 ||
-                !selectedCompany
-              }
-            >
-              {isCreatingDepartment || isSubmitting ? "Guardando..." : "Crear departamento"}
-            </Button>
+          <div className="flex justify-between">            
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                id="create_department"
+                type="submit"
+                disabled={
+                  isCreatingDepartment ||
+                  isSubmitting ||
+                  isLoadingCompany ||
+                  isLoadingCostCenters ||
+                  costCenterSelectOptions.length === 0 ||
+                  !selectedCompany
+                }
+              >
+                {isCreatingDepartment || isSubmitting ? "Guardando..." : "Crear departamento"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() =>
+                  reset({
+                    name: "",
+                    cost_center_id: costCenterSelectOptions[0]?.id,
+                  })
+                }
+              >
+                Limpiar formulario
+              </Button>
+            </div>
             <Button
               type="button"
               onClick={() =>
-                reset({
-                  name: "",
-                  cost_center_id: costCenterSelectOptions[0]?.id,
-                })
+                navigate("/admin/departments")
               }
-            >
-              Limpiar formulario
+              >
+                Cancelar
             </Button>
           </div>
         </form>

@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 
 import { Tutorial } from "../../components/Tutorial";
-import AccountingAccountsManagement from "../../components/Admin/AccountingAccountsManagement";
 import { useApp } from "../../hooks/app/appContext";
+import CreateAccountingAccountForm from "../../components/Admin/CreateAccountingAccountForm";
 
-function AccountingAccounts() {
+function CreateAccountingAccount() {
   const { handleVisitPage, tutorial, setTutorial } = useApp();
 
   useEffect(() => {
@@ -21,10 +21,10 @@ function AccountingAccounts() {
   return (
     <div>
       <Tutorial page="createAccountingAccounts" run={tutorial}>
-        <AccountingAccountsManagement />
+        <CreateAccountingAccountForm />
       </Tutorial>
     </div>
   );
 }
 
-export default AccountingAccounts;
+export default CreateAccountingAccount;
