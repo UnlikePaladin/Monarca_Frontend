@@ -1,14 +1,12 @@
-import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "../ui/Button";
 import FieldError from "../ui/FieldError";
 import { useAuth } from "../../hooks/auth/authContext";
 import { useGetCompany } from "../../hooks/companies/useGetCompany";
-import { useGetCompanyDepartments } from "../../hooks/companies/useGetCompanyDepartments";
 import { useGetCostCenters } from "../../hooks/companies/useGetCostCenters";
 
-function DepartmentList() {
+function CostCenterList() {
   const navigate = useNavigate();
   const { authState } = useAuth();
 
@@ -21,42 +19,16 @@ function DepartmentList() {
   } = useGetCompany(profileCompanyId);
 
   const {
-    data: companyDepartments = [],
-    isLoading: isLoadingDepartments,
-    error: departmentsError,
-  } = useGetCompanyDepartments(profileCompanyId);
-
-  const {
     data: costCenters = [],
+    isLoading: isLoadingCostCenters,
     error: costCentersError,
   } = useGetCostCenters();
-
-  const costCenterLabelsById = useMemo(() => {
-    const labels = new Map<number, string>();
-
-    costCenters.forEach((costCenter) => {
-      const candidateId =
-        typeof costCenter.numericId === "number" && Number.isInteger(costCenter.numericId)
-          ? costCenter.numericId
-          : Number(costCenter.id);
-
-      if (!Number.isInteger(candidateId) || candidateId <= 0) return;
-
-      const label = costCenter.key
-        ? `${costCenter.name} (${costCenter.key})`
-        : costCenter.name;
-
-      labels.set(candidateId, label);
-    });
-
-    return labels;
-  }, [costCenters]);
 
   if (!profileCompanyId) {
     return (
       <section className="rounded-md">
         <div className="mx-auto max-w-5xl px-4 py-8 lg:py-16">
-          <h2 className="text-xl font-bold text-gray-900">Departamentos</h2>
+          <h2 className="text-xl font-bold text-gray-900">Centros de costos</h2>
           <p className="mt-2 text-sm text-red-600">
             No se pudo resolver tu empresa desde el departamento del perfil.
           </p>
@@ -69,21 +41,21 @@ function DepartmentList() {
     <section className="rounded-md">
       <div className="mx-auto max-w-5xl px-4 py-8 lg:py-16">
         <div className="mb-6 space-y-2">
-          <h2 className="text-xl font-bold text-gray-900">Departamentos</h2>
+          <h2 className="text-xl font-bold text-gray-900">Centros de costos</h2>
           <p className="text-sm text-gray-600">
-            Como CompanyAdmin, solo puedes ver y gestionar departamentos para tu empresa.
+            Como CompanyAdmin, solo puedes ver y gestionar centros de costos para tu empresa.
           </p>
         </div>
 
         <div id="tenant_company" className="mb-6">
           <label
-            htmlFor="department-list-company"
+            htmlFor="cost-center-list-company"
             className="mb-2 block text-sm font-medium text-gray-900"
           >
             Empresa
           </label>
           <div
-            id="department-list-company"
+            id="cost-center-list-company"
             className="rounded-md bg-white px-3 py-2.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300"
           >
             {isLoadingCompany
@@ -100,24 +72,24 @@ function DepartmentList() {
           <FieldError msg={companyError instanceof Error ? companyError.message : undefined} />
         </div>
 
-        <div id="tenant_departments" className="space-y-4">
+        <div id="tenant_cost_centers" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="text-lg font-semibold text-gray-900">Departamentos registrados</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Centros de costos registrados</h3>
             <Button
-              id="create_department"
+              id="create_cost_center"
               type="button"
-              onClick={() => navigate("/admin/departments/create")}
+              onClick={() => navigate("/admin/cost-centers/create")}
             >
-              Crear departamento
+              Crear centro de costos
             </Button>
           </div>
 
           <div className="rounded-md bg-white p-4 shadow-lg">
-            {isLoadingDepartments ? (
-              <p className="text-sm text-gray-600">Cargando departamentos...</p>
-            ) : companyDepartments.length === 0 ? (
+            {isLoadingCostCenters ? (
+              <p className="text-sm text-gray-600">Cargando centros de costos...</p>
+            ) : costCenters.length === 0 ? (
               <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-900">Aun no hay departamentos</p>
+                <p className="text-sm font-medium text-gray-900">Aun no hay centros de costos</p>
                 <p className="text-sm text-gray-600">Crea el primero para empezar.</p>
               </div>
             ) : (
@@ -126,34 +98,27 @@ function DepartmentList() {
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Nombre</th>
-                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Centro de costos</th>
+                      <th className="py-3 px-4 text-sm font-medium text-gray-600">ID numérico</th>
+                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Clave</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {companyDepartments.map((department) => {
-                      const costCenterLabel =
-                        costCenterLabelsById.get(department.cost_center_id) ??
-                        `ID ${department.cost_center_id}`;
-
-                      return (
-                        <tr key={department.id} className="border-b border-gray-100">
-                          <td className="py-3 px-4 text-sm text-gray-900">{department.name}</td>
-                          <td className="py-3 px-4 text-sm text-gray-700">{costCenterLabel}</td>
-                        </tr>
-                      );
-                    })}
+                    {costCenters.map((costCenter) => (
+                      <tr key={costCenter.id} className="border-b border-gray-100">
+                        <td className="py-3 px-4 text-sm text-gray-900">{costCenter.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-700">{costCenter.numericId ?? "-"}</td>
+                        <td className="py-3 px-4 text-sm text-gray-700">{costCenter.key ?? "-"}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
 
-            {!isLoadingDepartments && (
-              <p className="mt-3 text-sm text-gray-600">Total actual: {companyDepartments.length}</p>
+            {!isLoadingCostCenters && (
+              <p className="mt-3 text-sm text-gray-600">Total actual: {costCenters.length}</p>
             )}
 
-            <FieldError
-              msg={departmentsError instanceof Error ? departmentsError.message : undefined}
-            />
             <FieldError
               msg={costCentersError instanceof Error ? costCentersError.message : undefined}
             />
@@ -164,4 +129,4 @@ function DepartmentList() {
   );
 }
 
-export default DepartmentList;
+export default CostCenterList;

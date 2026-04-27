@@ -130,6 +130,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
             )}
             {isCompanyAdmin && (
               <SidebarOption
+                label="Cuentas contables"
+                pathIcon="/assets/roles.png"
+                link="/admin/accounting-accounts"
+              />
+            )}
+            {isCompanyAdmin && (
+              <SidebarOption
                 label="Políticas de reembolso"
                 pathIcon="/assets/matrix.png"
                 link="/admin/refund-policies"
