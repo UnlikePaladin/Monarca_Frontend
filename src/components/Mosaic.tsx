@@ -12,6 +12,7 @@ interface MosaicProps {
   iconPath: string;
   link: string;
   id?: string;
+  onClick?: () => void;
 }
 
 /**
@@ -20,12 +21,20 @@ interface MosaicProps {
  * @param iconPath - Path to the icon image
  * @param link - Route to navigate to when clicked
  * @param id - Optional HTML id attribute
+ * @param onClick - Optional click handler for custom actions (e.g. downloads)
  * @returns Mosaic card component
  */
-const Mosaic = ({ title, iconPath, link, id}: MosaicProps) => {
+const Mosaic = ({ title, iconPath, link, id, onClick }: MosaicProps) => {
+
+    const handleClick = (e: React.MouseEvent) => {
+      if (onClick) {
+        e.preventDefault();
+        onClick();
+      }
+    };
 
     return (
-        <Link to={link} data-cy={`mosaic-${title.toLowerCase().replace(/\s+/g, '-')}`}>
+        <Link to={link} onClick={handleClick} data-cy={`mosaic-${title.toLowerCase().replace(/\s+/g, '-')}`}>
           <div
           className="relative bg-[#F4F6F8] w-64 h-30 rounded-2xl shadow-md flex items-end justify-center hover:shadow-lg transition-shadow duration-300 ease-in-out"
           id={id ? id : undefined}
@@ -47,4 +56,5 @@ export default Mosaic;
 Modification History:
 
 - 2026-02-26 | Santiago Arista | Added file description and JSDoc documentation.
+- 2026-04-23 | Katia Alvarez | Added onClick handler for custom actions (e.g. downloads).
 */
