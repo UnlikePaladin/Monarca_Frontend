@@ -38,6 +38,7 @@ import { Approvals } from "./pages/Approvals/Approvals.tsx";
 import { RefundsReview } from "./pages/Refunds/RefundsReview.tsx";
 import { CheckRefunds } from "./pages/Refunds/CheckRefunds.tsx";
 import CreateCompany from "./pages/Admin/CreateCompany.tsx";
+import Companies from "./pages/Admin/Companies.tsx";
 import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 import Departments from "./pages/Admin/Departments.tsx";
@@ -168,6 +169,10 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "",
+            element: <Companies />,
+          },
+          {
+            path: "create",
             element: <CreateCompany />,
           },
         ],
