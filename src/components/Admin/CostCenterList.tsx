@@ -1,14 +1,40 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
+import { toast } from "react-toastify";
 
 import { Button } from "../ui/Button";
 import FieldError from "../ui/FieldError";
 import { useAuth } from "../../hooks/auth/authContext";
 import { useGetCompany } from "../../hooks/companies/useGetCompany";
 import { useGetCostCenters } from "../../hooks/companies/useGetCostCenters";
+import { useDeleteCostCenter } from "../../hooks/companies/useDeleteCostCenter";
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof AxiosError) {
+    if (error.response?.status === 403) {
+      return "Solo CompanyAdmin puede gestionar centros de costos de su propia empresa.";
+    }
+
+    if (error.response?.data) {
+      const responseData = error.response.data as { message?: unknown };
+      if (typeof responseData.message === "string" && responseData.message) {
+        return responseData.message;
+      }
+    }
+
+    if (!error.response) {
+      return "No se pudo conectar con el servidor. Verifique su conexion e intente de nuevo.";
+    }
+  }
+
+  return fallback;
+};
 
 function CostCenterList() {
   const navigate = useNavigate();
   const { authState } = useAuth();
+  const [deletingCostCenterId, setDeletingCostCenterId] = useState<string | null>(null);
 
   const profileCompanyId = authState.userCompanyId ?? "";
 
@@ -23,6 +49,37 @@ function CostCenterList() {
     isLoading: isLoadingCostCenters,
     error: costCentersError,
   } = useGetCostCenters();
+
+  const {
+    mutateAsync: deleteCostCenterMutation,
+    isPending: isDeletingCostCenter,
+  } = useDeleteCostCenter();
+
+  const handleDeleteCostCenter = async (costCenterId: string, name: string) => {
+    const confirmed = window.confirm(
+      `¿Estás seguro de eliminar el centro de costos ${name}?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingCostCenterId(costCenterId);
+      await deleteCostCenterMutation(costCenterId);
+      toast.success("Centro de costos eliminado correctamente", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, "Error al eliminar el centro de costos"),
+        {
+          position: "top-right",
+          autoClose: 5000,
+        }
+      );
+    } finally {
+      setDeletingCostCenterId(null);
+    }
+  };
 
   if (!profileCompanyId) {
     return (
@@ -100,6 +157,7 @@ function CostCenterList() {
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Nombre</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">ID numérico</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Clave</th>
+                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -108,6 +166,20 @@ function CostCenterList() {
                         <td className="py-3 px-4 text-sm text-gray-900">{costCenter.name}</td>
                         <td className="py-3 px-4 text-sm text-gray-700">{costCenter.numericId ?? "-"}</td>
                         <td className="py-3 px-4 text-sm text-gray-700">{costCenter.key ?? "-"}</td>
+                        <td className="py-3 px-4 text-sm text-gray-700">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCostCenter(costCenter.id, costCenter.name)}
+                            disabled={
+                              isDeletingCostCenter && deletingCostCenterId === costCenter.id
+                            }
+                            className="font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                          >
+                            {isDeletingCostCenter && deletingCostCenterId === costCenter.id
+                              ? "Eliminando..."
+                              : "Eliminar"}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
