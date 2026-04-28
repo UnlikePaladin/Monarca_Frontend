@@ -56,6 +56,8 @@ interface Dest {
   destination: {
     city: string;
   };
+  arrival_date?: string;
+  departure_date?: string;
 }
 
 
@@ -66,6 +68,103 @@ interface PolicyPreviewViolation {
   evaluated_value?: Record<string, unknown>;
   voucher_id?: string;
 }
+
+const normalizePolicyDate = (rawDate?: string): string => {
+  if (!rawDate) {
+    return "";
+  }
+
+  const trimmedDate = rawDate.trim();
+  if (!trimmedDate) {
+    return "";
+  }
+
+  // The policy engine expects a plain YYYY-MM-DD date for trip-window checks.
+  return trimmedDate.includes("T") ? trimmedDate.split("T")[0] : trimmedDate;
+};
+
+const resolveVoucherPolicyDate = (voucher: Record<string, unknown>): string => {
+  const candidateFields = [
+    voucher.date,
+    voucher.voucher_date,
+    voucher.issue_date,
+    voucher.createdAt,
+    voucher.created_at,
+  ];
+
+  for (const candidate of candidateFields) {
+    if (typeof candidate === "string") {
+      const normalized = normalizePolicyDate(candidate);
+      if (normalized) {
+        return normalized;
+      }
+    }
+  }
+
+  return "";
+};
+
+const parseDateSafe = (rawDate?: string): Date | null => {
+  const normalized = normalizePolicyDate(rawDate);
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = new Date(`${normalized}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const buildTripWindowFallbackViolation = (
+  vouchers: Array<Record<string, unknown>>,
+  destinations: Dest[] = [],
+): PolicyPreviewViolation | null => {
+  const destinationDates = destinations
+    .flatMap((dest) => [dest.arrival_date, dest.departure_date])
+    .map((date) => parseDateSafe(date))
+    .filter((date): date is Date => Boolean(date));
+
+  if (destinationDates.length === 0) {
+    return null;
+  }
+
+  const tripStartDate = new Date(
+    Math.min(...destinationDates.map((date) => date.getTime())),
+  );
+  const tripEndDate = new Date(
+    Math.max(...destinationDates.map((date) => date.getTime())),
+  );
+
+  const outOfWindowVoucherIds = vouchers
+    .map((voucher, index) => {
+      const voucherDate = parseDateSafe(resolveVoucherPolicyDate(voucher));
+      if (!voucherDate) {
+        return null;
+      }
+
+      const isOutOfWindow =
+        voucherDate.getTime() < tripStartDate.getTime() ||
+        voucherDate.getTime() > tripEndDate.getTime();
+
+      return isOutOfWindow ? `preview-${index + 1}` : null;
+    })
+    .filter((id): id is string => Boolean(id));
+
+  if (outOfWindowVoucherIds.length === 0) {
+    return null;
+  }
+
+  return {
+    policy_code: "VOUCHER_DATE_WITHIN_TRIP_WINDOW",
+    message:
+      "Comprobante fuera del periodo del viaje (validación de respaldo).",
+    severity: "BLOCKING",
+    evaluated_value: {
+      trip_start_date: tripStartDate.toISOString().split("T")[0],
+      trip_end_date: tripEndDate.toISOString().split("T")[0],
+      out_of_window_voucher_ids: outOfWindowVoucherIds,
+    },
+  };
+};
 
 export const renderStatus = (status: string) => {
   let statusText = "";
@@ -173,12 +272,16 @@ const RefundsAcceptance: React.FC = () => {
         let previewViolations: PolicyPreviewViolation[] = [];
         try {
 
+        const rawVouchers = (response.vouchers || []) as Array<
+          Record<string, unknown>
+        >;
+
         const previewPayload = {
-          vouchers: (response.vouchers || []).map((voucher: any) => ({
+          vouchers: rawVouchers.map((voucher: any) => ({
             class: voucher.class,
             amount: voucher.amount,
             currency: voucher.currency || "MXN",
-            date: voucher.date,
+            date: resolveVoucherPolicyDate(voucher),
             has_xml: Boolean(voucher.file_url_xml),
             has_pdf: Boolean(voucher.file_url_pdf),
           })),
@@ -190,7 +293,26 @@ const RefundsAcceptance: React.FC = () => {
         console.log("Preview policy summary:", previewRes?.policy_summary);
         if (previewRes && previewRes.policy_summary?.violations) {
           previewViolations = previewRes.policy_summary.violations;
+        }
+
+        const hasTripWindowViolation = previewViolations.some(
+          (violation) =>
+            violation?.policy_code === "VOUCHER_DATE_WITHIN_TRIP_WINDOW",
+        );
+
+        if (!hasTripWindowViolation) {
+          const fallbackTripWindowViolation = buildTripWindowFallbackViolation(
+            rawVouchers,
+            response.requests_destinations,
+          );
+
+          if (fallbackTripWindowViolation) {
+            previewViolations = [
+              ...previewViolations,
+              fallbackTripWindowViolation,
+            ];
           }
+        }
         } catch (previewError) {
           console.error("Error fetching preview violations:", previewError);
         }
@@ -433,7 +555,7 @@ const RefundsAcceptance: React.FC = () => {
                   {data?.vouchers?.map((file, index) => (
                     <SwiperSlide key={index}>
                       <FilePreviewer file={file} fileIndex={index} />
-                      {getVoucherViolations(file.id).length > 0 && (
+                      {getVoucherViolations(file.id, index).length > 0 && (
                         <section className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
                           <div className="flex items-center gap-3 mb-3">
                             <div className="p-2 bg-orange-100 rounded-lg">
@@ -449,7 +571,7 @@ const RefundsAcceptance: React.FC = () => {
                             </div>
                           </div>
                           <PolicyAlert
-                            violations={getVoucherViolations(file.id)}
+                            violations={getVoucherViolations(file.id, index)}
                           />
                         </section>
                       )}
