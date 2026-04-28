@@ -9,7 +9,7 @@ import { getRequest } from "../../utils/apiService";
 import formatDate from "../../utils/formatDate";
 import { Permission, useAuth } from "../../hooks/auth/authContext";
 import RefreshButton from "../../components/RefreshButton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../../components/Refunds/Button";
 import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
@@ -86,7 +86,35 @@ export const Historial = () => {
   const [dataWithActions, setDataWithActions] = useState([]);
   const { authState } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
+
+  const scope = searchParams.get("scope");
+  const isApproverHistoryView =
+    scope === "approver" ||
+    (authState.userPermissions.includes("approve_request" as Permission) &&
+      authState.userPermissions.includes(
+        "view_assigned_requests_readonly" as Permission
+      ) &&
+      !authState.userPermissions.includes("create_request" as Permission));
+  const isSoiTripsToRegisterView =
+    scope === "soi-trips" ||
+    (authState.userPermissions.includes("check_budgets" as Permission) &&
+      !authState.userPermissions.includes("create_request" as Permission) &&
+      !isApproverHistoryView);
+  const isTravelAgentReservedHistoryView =
+    scope === "travel-agent" ||
+    (authState.userPermissions.includes("submit_reservations" as Permission) &&
+      authState.userPermissions.includes("view_assigned_requests_readonly" as Permission) &&
+      !authState.userPermissions.includes("create_request" as Permission) &&
+      !isApproverHistoryView);
+  const pageTitle = isSoiTripsToRegisterView
+    ? "Viajes por registrar"
+    : isApproverHistoryView
+      ? "Historial"
+      : isTravelAgentReservedHistoryView
+        ? "Historial"
+        : "Historial de viajes";
 
   // Fetch travel records data from API
   useEffect(() => {
@@ -171,7 +199,7 @@ export const Historial = () => {
         <div className="p-4 sm:p-6 bg-[#eaeced] rounded-lg shadow-xl overflow-hidden">
           <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl sm:text-2xl font-bold text-[#0a2c6d]">
-                Historial de viajes
+                {pageTitle}
               </h2>
               <RefreshButton />
           </div>

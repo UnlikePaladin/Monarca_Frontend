@@ -12,7 +12,7 @@ describe("Register Spend as SOI", () => {
         cy.get('a[data-cy="mosaic-viajes-por-registrar"]').should("be.visible");
         cy.get('a[data-cy="mosaic-viajes-por-registrar"]').click();
         cy.url().should("include", "/history");
-        cy.contains("Historial de viajes").should("be.visible");
+        cy.contains("Viajes por registrar").should("be.visible");
         cy.get('button[id="details-0"]').should("be.visible");
         cy.get('button[id="details-0"]').click();
         cy.get('input[id="id"]').should("be.visible");

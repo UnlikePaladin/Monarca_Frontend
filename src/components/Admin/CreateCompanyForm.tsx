@@ -12,6 +12,7 @@ import { Input } from "../ui/Input";
 import Select from "../ui/Select";
 import { useCreateCompany } from "../../hooks/companies/useCreateCompany";
 import { CreateCompanyPayload } from "../../types/company";
+import { useNavigate } from "react-router-dom";
 
 type SelectOption = { id: number | string; name: string };
 
@@ -86,6 +87,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 };
 
 function CreateCompanyForm() {
+  const navigate = useNavigate();
   const currencySelectOptions = useMemo<SelectOption[]>(
     () => currencyCodes.map((code) => ({ id: code, name: code })),
     []
@@ -169,10 +171,11 @@ function CreateCompanyForm() {
         }
       );
     }
+    navigate("/admin/companies")
   };
 
   return (
-    <section className="rounded-md bg-gray-200">
+    <section className="rounded-md">
       <div className="mx-auto max-w-3xl px-4 py-8 lg:py-16">
         <div className="mb-6 space-y-2">
           <h2 className="text-xl font-bold text-gray-900">Crear empresa</h2>
@@ -291,32 +294,42 @@ function CreateCompanyForm() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              id="create_tenant"
-              type="submit"
-              disabled={isCreatingCompany || isSubmitting}
-            >
-              {isCreatingCompany || isSubmitting ? "Guardando..." : "Crear empresa"}
-            </Button>
-            <Button
-              type="button"
-              onClick={() =>
-                reset({
-                  key: "",
-                  name: "",
-                  localCurrency: "MXN",
-                  admin: {
-                    email: "",
+          <div className="flex justify-between">            
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                id="create_tenant"
+                type="submit"
+                disabled={isCreatingCompany || isSubmitting}
+              >
+                {isCreatingCompany || isSubmitting ? "Guardando..." : "Crear empresa"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() =>
+                  reset({
+                    key: "",
                     name: "",
-                    lastName: "",
-                    password: "",
-                    username: "",
-                  },
-                })
-              }
-            >
-              Limpiar formulario
+                    localCurrency: "MXN",
+                    admin: {
+                      email: "",
+                      name: "",
+                      lastName: "",
+                      password: "",
+                      username: "",
+                    },
+                  })
+                }
+              >
+                Limpiar formulario
+              </Button>
+            </div>
+             <Button
+                type="button"
+                onClick={() =>
+                  navigate("/admin/companies")
+                }
+              >
+                Cancelar
             </Button>
           </div>
         </form>

@@ -66,13 +66,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
               <SidebarOption label="Viajes por aprobar" pathIcon="/assets/viajes_por_aprobar.png" link="/approvals"/>
             )}
             {user.userPermissions.includes("view_assigned_requests_readonly" as Permission) && user.userPermissions.includes("approve_request" as Permission) && (
-              <SidebarOption label="Historial de viajes aprobados" pathIcon="/assets/historial_de_viajes_aprobados.png" link="/history"/>
+              <SidebarOption label="Historial de viajes aprobados" pathIcon="/assets/historial_de_viajes_aprobados.png" link="/history?scope=approver"/>
             )}
             {user.userPermissions.includes("approve_vouchers" as Permission) && (
               <SidebarOption label="Comprobantes de gastos por aprobar" pathIcon="/assets/comprobantes_de_gastos_por_aprobar.png" link="/refunds-review"/>
             )}
             {user.userPermissions.includes("request_history" as Permission) && (
-              <SidebarOption label="Viajes por registrar" pathIcon="/assets/historial_de_reembolsos_aprobados.png" link="/history"/>
+              <SidebarOption label="Viajes por registrar" pathIcon="/assets/historial_de_reembolsos_aprobados.png" link="/history?scope=soi-trips"/>
             )}
             {user.userPermissions.includes("check_budgets" as Permission) && (
               <SidebarOption label="Reembolsos por registrar" pathIcon="/assets/reembolsos_por_aprobar.png" link="/check-refunds"/>
@@ -84,7 +84,7 @@ function Sidebar({ user, isOpen }: SidebarProps) {
               <SidebarOption label="Formulario de ingreso de reservación" pathIcon="/assets/formulario_de_ingreso_de_reservacion.png" link=""/>
             )} */}
             {user.userPermissions.includes("view_assigned_requests_readonly" as Permission) && user.userPermissions.includes("submit_reservations" as Permission) && (
-              <SidebarOption label="Historial de viajes reservados" pathIcon="/assets/historial_de_viajes_reservados.png" link="/history"/>
+              <SidebarOption label="Historial de viajes reservados" pathIcon="/assets/historial_de_viajes_reservados.png" link="/history?scope=travel-agent"/>
             )}
             {user.userPermissions.includes("manage_users" as Permission) && (
               <SidebarOption
@@ -102,14 +102,14 @@ function Sidebar({ user, isOpen }: SidebarProps) {
             )}
             {user.userPermissions.includes("check_budgets" as Permission) && (
               <SidebarOption 
-                label="Póliza" 
+                label="Gestión de pólizas" 
                 pathIcon="/assets/policies.png" 
                 link="/policies"
               />
             )}
             {isSuperAdmin && (
               <SidebarOption
-                label="Empresas"
+                label="Crear empresa"
                 pathIcon="/assets/roles.png"
                 link="/admin/companies"
               />
