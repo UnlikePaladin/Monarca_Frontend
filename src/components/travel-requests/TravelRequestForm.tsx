@@ -154,6 +154,8 @@ function DestinationFields({
     name: `requests_destinations.${idx}.is_plane_required`,
   });
 
+  const hideArrival = isLast && !isRoundTrip && isPlaneRequired;
+
   const currentDestination = destinations.find((d) => d.id === destinationId);
   const destinationName = currentDestination
     ? `${currentDestination.city}, ${currentDestination.country}`
@@ -174,6 +176,12 @@ function DestinationFields({
   useEffect(() => {
     setValue(`requests_destinations.${idx}.stay_days`, stayDays);
   }, [arrivalDate, departureDate, idx, setValue, stayDays]);
+
+  useEffect(() => {
+    if (hideArrival && departureDate) {
+      setValue(`requests_destinations.${idx}.arrival_date`, departureDate);
+    }
+  }, [hideArrival, departureDate, idx, setValue]);
 
   const destinationErrors = errors?.[idx];
 
@@ -288,57 +296,70 @@ function DestinationFields({
                   field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
                 }
                 onChange={(e) => field.onChange(e.target.value)}
+                readOnly={idx > 0}
+                className={
+                  idx > 0 ? "bg-gray-100 cursor-not-allowed text-gray-500" : ""
+                }
               />
             )}
           />
+          {idx > 0 && (
+            <p className="text-xs text-gray-400 mt-1">
+              Fecha fijada por la llegada del tramo anterior.
+            </p>
+          )}
           <FieldError msg={destinationErrors?.departure_date?.message} />
         </div>
 
-        <div>
-          <label
-            htmlFor={`arrival-${idx}`}
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            {isLast
-              ? isRoundTrip
-                ? `Fecha de regreso a ${originName}`
-                : `Llegada a ${destinationName}`
-              : `Salida de ${destinationName}`}
-          </label>
-          <Controller
-            control={control}
-            name={`requests_destinations.${idx}.arrival_date`}
-            render={({ field }) => (
-              <Input
-                id={`arrival-${idx}`}
-                type="date"
-                value={
-                  field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
-                }
-                onChange={(e) => {
-                  field.onChange(e.target.value);
-                  onArrivalDateChange(e.target.value);
-                }}
-              />
-            )}
-          />
-          <FieldError msg={destinationErrors?.arrival_date?.message} />
-        </div>
+        {!hideArrival && (
+          <div>
+            <label
+              htmlFor={`arrival-${idx}`}
+              className="block mb-2 text-sm font-medium text-gray-900"
+            >
+              {isLast
+                ? isRoundTrip
+                  ? `Fecha de regreso a ${originName}`
+                  : `Llegada a ${destinationName}`
+                : `Salida de ${destinationName}`}
+            </label>
+            <Controller
+              control={control}
+              name={`requests_destinations.${idx}.arrival_date`}
+              render={({ field }) => (
+                <Input
+                  id={`arrival-${idx}`}
+                  type="date"
+                  value={
+                    field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
+                  }
+                  onChange={(e) => {
+                    field.onChange(e.target.value);
+                    onArrivalDateChange(e.target.value);
+                  }}
+                />
+              )}
+            />
+            <FieldError msg={destinationErrors?.arrival_date?.message} />
+          </div>
+        )}
 
-        <div>
-          <label
-            htmlFor={`stay-days-${idx}`}
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            No. días estancia
-          </label>
-          <Input
-            id={`stay-days-${idx}`}
-            type="number"
-            value={stayDays}
-            readOnly
-          />
-        </div>
+        {!hideArrival && (
+          <div>
+            <label
+              htmlFor={`stay-days-${idx}`}
+              className="block mb-2 text-sm font-medium text-gray-900"
+            >
+              No. días estancia
+            </label>
+            <Input
+              id={`stay-days-${idx}`}
+              type="number"
+              value={stayDays}
+              readOnly
+            />
+          </div>
+        )}
 
         <div>
           <label
@@ -483,7 +504,9 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       return;
     }
 
-    const hasInvalidStay = data.requests_destinations.some((d) => {
+    const hasInvalidStay = data.requests_destinations.some((d, idx, arr) => {
+      const isLastDest = idx === arr.length - 1;
+      if (isLastDest && d.is_plane_required && !isRoundTrip) return false;
       const diff = dayjs(d.arrival_date).diff(dayjs(d.departure_date), "day");
       return diff <= 0;
     });
