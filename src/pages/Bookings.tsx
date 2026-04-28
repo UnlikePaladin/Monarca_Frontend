@@ -134,7 +134,7 @@ const Bookings = () => {
         <div className="flex-1 p-6 bg-[#eaeced] rounded-lg shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-[#0a2c6d]">
-              Viajes por Reservar
+              Viajes por reservar
             </h2>
             <RefreshButton />
           </div>

@@ -95,7 +95,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
             <Mosaic
               title="Historial de viajes aprobados"
               iconPath="/assets/historial_de_viajes_aprobados.png"
-              link="/history"
+              link="/history?scope=approver"
               id="approved_requests"
             />
           )}
@@ -116,7 +116,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
           <Mosaic
             title="Viajes por registrar"
             iconPath="/assets/historial_de_reembolsos_aprobados.png"
-            link="/history"
+            link="/history?scope=soi-trips"
             id="check_budgets"
           />
         )}
@@ -140,7 +140,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
         )}
         {authState.userPermissions.includes("check_budgets" as Permission) && (
           <Mosaic 
-            title="Gestión de Pólizas" 
+            title="Gestión de pólizas" 
             iconPath="/assets/policies.png" 
             link="/policies" 
             id="policies-card"
@@ -158,13 +158,13 @@ export const Dashboard = ({ title }: DashboardProps) => {
             <Mosaic
               title="Historial de viajes reservados"
               iconPath="/assets/historial_de_viajes_reservados.png"
-              link="/history"
+              link="/history?scope=travel-agent"
               id="reserved_requests"
             />
           )}
         {isSuperAdmin && (
           <Mosaic
-            title="Empresas"
+            title="Crear empresa"
             iconPath="/assets/roles.png"
             link="/admin/companies"
             id="tenant_management"

@@ -11,7 +11,7 @@ describe("Register Refund as SOI", () => {
         cy.get('a[data-cy="mosaic-reembolsos-por-registrar"]').should("be.visible");
         cy.get('a[data-cy="mosaic-reembolsos-por-registrar"]').click();
         cy.url().should("include", "/check-refunds");
-        cy.contains("Viajes con reembolsos por revisar").should("be.visible");
+        cy.contains("Reembolsos por registrar").should("be.visible");
         cy.get('button[id="refund-details-0"]').should("be.visible");
         cy.get('button[id="refund-details-0"]').click();
         cy.get('input[id="id"]').should("be.visible");

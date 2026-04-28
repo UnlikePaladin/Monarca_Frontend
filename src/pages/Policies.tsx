@@ -18,7 +18,7 @@ export const PoliciesDashboard = () => {
   const { setPageTitle } = useApp();
 
   useEffect(() => {
-    setPageTitle("Gestión de Pólizas");
+    setPageTitle("Gestión de pólizas");
   }, [setPageTitle]);
 
   const handleDownloadAdvancePolicies = async () => {
