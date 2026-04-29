@@ -297,6 +297,19 @@ const normalizeRulesForPayload = (
   }));
 };
 
+const mapPolicyRulesToFormRules = (policy?: RefundPolicy): PolicyFormData["rules"] => {
+  if (!policy) return [defaultRule];
+
+  return policy.rules.map((rule) => ({
+    expense_class: rule.expense_class,
+    operator: rule.operator,
+    threshold_value: rule.threshold_value ?? null,
+    threshold_unit: rule.threshold_unit ?? "",
+    consequence: rule.consequence ?? "POLICY_VIOLATION",
+    is_active: rule.is_active !== false,
+  }));
+};
+
 export const RefundPolicyForm = ({
   policy,
   groups,
@@ -345,15 +358,7 @@ export const RefundPolicyForm = ({
       description: policy?.description ?? "",
       is_active: policy?.is_active ?? true,
       id_company: initialCompanyId,
-      rules:
-        policy?.rules.map((rule) => ({
-          expense_class: rule.expense_class,
-          operator: rule.operator,
-          threshold_value: rule.threshold_value ?? null,
-          threshold_unit: rule.threshold_unit ?? "",
-          consequence: rule.consequence ?? "POLICY_VIOLATION",
-          is_active: rule.is_active !== false,
-        })) ?? [defaultRule],
+      rules: mapPolicyRulesToFormRules(policy),
       replaceRules: !isEditMode,
     },
   });
@@ -365,6 +370,9 @@ export const RefundPolicyForm = ({
 
   const selectedCompanyId = watch("id_company");
   const selectedCompany = companyOptions.find((option) => option.id === selectedCompanyId) ?? null;
+  const initialRulesPayload = normalizeRulesForPayload(mapPolicyRulesToFormRules(policy)).filter(
+    (rule) => rule.expense_class && rule.operator
+  );
 
   const onSubmit = async (formData: PolicyFormData) => {
     if (!formData.id_company) {
@@ -381,6 +389,10 @@ export const RefundPolicyForm = ({
 
     try {
       if (isEditMode && policy) {
+        const shouldSendRulesInUpdate =
+          formData.replaceRules ||
+          JSON.stringify(rulesPayload) !== JSON.stringify(initialRulesPayload);
+
         if (formData.replaceRules) {
           const confirmed = confirm(
             "Estas por reemplazar todas las reglas actuales de la política. ¿Deseas continuar?"
@@ -396,7 +408,7 @@ export const RefundPolicyForm = ({
           id_company: formData.id_company,
         };
 
-        if (formData.replaceRules) {
+        if (shouldSendRulesInUpdate) {
           payload.rules = rulesPayload;
         }
 
@@ -562,7 +574,7 @@ export const RefundPolicyForm = ({
               <p className="text-sm font-medium text-gray-700">Reglas</p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {isEditMode
-                  ? "Si activas reemplazo, se enviará la lista completa de reglas."
+                  ? "Si editas reglas y guardas, se enviará la lista completa actual."
                   : "Define las reglas que se crearán junto con la política."}
               </p>
             </div>
@@ -796,7 +808,7 @@ export const RefundPolicyForm = ({
         </div>
 
         <div id="refund_policy_replace_warning" className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-          Al editar y enviar reglas, se reemplaza el conjunto completo actual.
+          Al editar reglas, el backend recibe el conjunto completo actual de reglas.
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
