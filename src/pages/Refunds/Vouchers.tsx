@@ -634,6 +634,7 @@ export const Vouchers = () => {
         onChangeComponentFunction: (newValue: CellValueType) => void,
         rowIndex?: number,
         _cellIndex?: number,
+        patchRow?: (fields: Partial<FormDataRow>) => void
       ) => (
         <InputField
           id={`xml_file-${rowIndex}-${_cellIndex}`}
@@ -788,6 +789,7 @@ export const Vouchers = () => {
               initialData={formData}
               onDataChange={handleDynamicTableDataChange}
               showRowNumbers
+              allowDelete
             />
           </div>
           {/*

@@ -6,6 +6,8 @@
  */
 
 import React, { useState, ReactNode } from "react";
+import { HiOutlineTrash } from "react-icons/hi";
+import { ConfirmationModal } from "../ui/ConfirmationModal";
 
 // Define a type for all possible cell values including File objects
 export type CellValueType =
@@ -51,6 +53,7 @@ export interface DynamicTableProps {
   expandedRows?: number[];
   renderExpandedRow?: (index: number) => React.ReactNode;
   showRowNumbers?: boolean;
+  allowDelete?: boolean;
 }
 
 const DynamicTable: React.FC<DynamicTableProps> = ({
@@ -60,6 +63,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
   expandedRows = [],
   renderExpandedRow,
   showRowNumbers = false,
+  allowDelete = false,
 }) => {
   /*
    * State to manage the table data.
@@ -67,6 +71,13 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
    * This is useful if there are data that is already loaded in the table.
    */
   const [tableData, setTableData] = useState<TableRow[]>(initialData);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [rowIndexToDelete, setRowIndexToDelete] = useState<number | null>(null);
+
+  // Sync internal state with prop if it changes from outside (e.g. after a partial upload failure)
+  React.useEffect(() => {
+    setTableData(initialData);
+  }, [initialData]);
 
   /*
    * Function to handle changes in the table data.
@@ -121,6 +132,26 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
     }
   };
 
+  const handleDeleteRow = (index: number) => {
+    setRowIndexToDelete(index);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (rowIndexToDelete === null) return;
+
+    setTableData((prev) => {
+      const updatedData = prev.filter((_, i) => i !== rowIndexToDelete);
+      if (onDataChange) {
+        onDataChange(updatedData);
+      }
+      return updatedData;
+    });
+
+    setDeleteModalOpen(false);
+    setRowIndexToDelete(null);
+  };
+
   // Function to render cell content safely
   const renderCellContent = (value: CellValueType): React.ReactNode => {
     if (value instanceof File) {
@@ -152,11 +183,14 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                   key={index}
                   className={`px-4 py-2 text-center ${
                     index === 0 && !showRowNumbers ? "rounded-l-lg" : ""
-                  } ${index === columns.length - 1 ? "rounded-r-lg" : ""}`}
+                  } ${index === columns.length - 1 && !allowDelete ? "rounded-r-lg" : ""}`}
                 >
                   {column.header}
                 </th>
               ))}
+              {allowDelete && (
+                <th className="px-4 py-2 text-center rounded-r-lg">Acciones</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -174,7 +208,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                       className={`px-4 py-3 ${
                         cellIndex === 0 && !showRowNumbers ? "rounded-l-lg" : ""
                       } ${
-                        cellIndex === columns.length - 1 ? "rounded-r-lg" : ""
+                        cellIndex === columns.length - 1 && !allowDelete ? "rounded-r-lg" : ""
                       }`}
                     >
                       {
@@ -204,6 +238,17 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                       }
                     </td>
                   ))}
+                  {allowDelete && (
+                    <td className="px-4 py-3 rounded-r-lg text-center">
+                      <button
+                        onClick={() => handleDeleteRow(rowIndex)}
+                        className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full hover:bg-red-50"
+                        title="Eliminar fila"
+                      >
+                        <HiOutlineTrash className="h-5 w-5" />
+                      </button>
+                    </td>
+                  )}
                 </tr>
 
                 {/* Expanded row (optional) */}
@@ -228,6 +273,17 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
           + Añadir comprobante de gasto
         </button>
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="Eliminar comprobante"
+        description="¿Estás seguro de que deseas eliminar este comprobante? Esta acción no se puede deshacer y se perderán todos los datos capturados y archivos subidos para esta fila."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        isDestructive={true}
+      />
     </div>
   );
 };
