@@ -597,12 +597,34 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     };
 
     try {
-      if (isEditing && requestId) {
-        await updateTravelRequestMutation({ requestId, payload });
-        toast.success("¡Solicitud de viaje actualizada exitosamente!");
+      const response =
+        isEditing && requestId
+          ? await updateTravelRequestMutation({ requestId, payload })
+          : await createTravelRequestMutation(payload);
+
+      const emailWarnings = Array.isArray(response.emailWarnings)
+        ? response.emailWarnings
+        : [];
+
+      if (emailWarnings.length > 0) {
+        toast.warning(
+          isEditing
+            ? "Solicitud actualizada. No se pudo enviar la notificación por correo."
+            : "Solicitud creada. No se pudo enviar la notificación por correo.",
+          {
+            position: "top-right",
+            autoClose: 6000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+          },
+        );
       } else {
-        await createTravelRequestMutation(payload);
-        toast.success("¡Solicitud de viaje creada exitosamente!");
+        toast.success(
+          isEditing
+            ? "¡Solicitud de viaje actualizada exitosamente!"
+            : "¡Solicitud de viaje creada exitosamente!",
+        );
       }
 
       reset();
@@ -1026,4 +1048,5 @@ Modification History:
 - 2026-04-18 | Juan de Dios Gastélum Flores | Added pre-submission confirmation modal. Split onSubmit into validation and submitConfirmed phases.
 - 2026-04-22 | Juan de Dios Gastélum Flores | Improved multi-destination flow: sequential leg headers, round trip toggle, return leg indicator, auto-fill dates between legs, cross-leg date validation, and itinerary summary.
 - 2026-04-23 | Juan de Dios Gastélum | Replaced inline itinerary summary with sticky sidebar for better visibility during form navigation.
+- 2026-04-29 | Juan de Dios Gastélum Flores | Added warning toast when request creation or update succeeds but email notification delivery fails.
 */

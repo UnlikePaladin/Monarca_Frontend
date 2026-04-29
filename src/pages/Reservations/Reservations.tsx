@@ -16,6 +16,41 @@ import { DestinationCard } from "../../components/Reservations/DestinationCard";
 import { ReturnLegCard } from "../../components/Reservations/ReturnLegCard";
 import { DuffelOffer } from "../../types/duffel";
 
+/**
+ * Shows a warning toast when the API response includes email delivery warnings.
+ * Otherwise, shows the normal success toast for the completed operation.
+ *
+ * @param response API response that may include emailWarnings.
+ * @param successMessage Message shown when no email warning exists.
+ * @param warningMessage Message shown when email delivery failed.
+ */
+const showEmailAwareToast = (
+  response: unknown,
+  successMessage: string,
+  warningMessage: string,
+) => {
+  const responseData = response as { emailWarnings?: unknown };
+  const emailWarnings = Array.isArray(responseData.emailWarnings)
+    ? responseData.emailWarnings
+    : [];
+
+  if (emailWarnings.length > 0) {
+    toast.warning(warningMessage, {
+      position: "top-right",
+      autoClose: 6000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+    });
+    return;
+  }
+
+  toast.success(successMessage, {
+    position: "top-right",
+    autoClose: 3000,
+  });
+};
+
 export const Reservations = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -601,10 +636,22 @@ export const Reservations = () => {
     setIsSubmitting(false);
 
     if (responses) {
-      toast.success("Reservaciones enviadas correctamente.");
+      const response = await patchRequest(
+        `/requests/finished-reservations/${id}`,
+        {},
+      );
+
+      showEmailAwareToast(
+        response,
+        "Reservaciones enviadas correctamente.",
+        "Reservaciones enviadas. No se pudo enviar la notificación por correo.",
+      );
+
       setFormData({});
-      await patchRequest(`/requests/finished-reservations/${id}`, {});
-      navigate("/dashboard");
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 800);
     } else {
       toast.error("Error al enviar las reservaciones.");
     }
@@ -759,5 +806,5 @@ Modification History:
 - 2026-04-20 | Fabrizio | Integrated Duffel search and order flow inside the agent booking view.
 - 2026-04-23 | Juan de Dios Gastélum | Fixed sequential origin mapping, one-way per leg search, and added independent return leg box for round-trip reservations.
 - 2026-04-27 | Juan de Dios Gastélum | Added confirmation modals before Duffel order emission and reservation submission.Split destination map and return leg into DestinationCard and ReturnLegCard components to keep file under 1000 lines. Made date labels dynamic per destination to clarify arrival vs departure context in multi-destination trips. Fixed arrival_date label for last destination in round-trip itineraries.
-
+- 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling after finishing reservations.
 */
