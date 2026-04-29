@@ -60,7 +60,6 @@ interface Dest {
   departure_date?: string;
 }
 
-
 interface PolicyPreviewViolation {
   policy_code: string;
   message: string;
@@ -166,6 +165,38 @@ const buildTripWindowFallbackViolation = (
   };
 };
 
+/**
+ * Shows a warning toast when the API response includes email delivery warnings.
+ * Otherwise, shows the normal success toast for the completed operation.
+ *
+ * @param response API response that may include emailWarnings.
+ * @param successMessage Message shown when no email warning exists.
+ * @param warningMessage Message shown when email delivery failed.
+ */
+const showEmailAwareToast = (
+  response: unknown,
+  successMessage: string,
+  warningMessage: string,
+) => {
+  const responseData = response as { emailWarnings?: unknown };
+  const emailWarnings = Array.isArray(responseData.emailWarnings)
+    ? responseData.emailWarnings
+    : [];
+
+  if (emailWarnings.length > 0) {
+    toast.warning(warningMessage, {
+      position: "top-right",
+      autoClose: 6000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+    });
+    return;
+  }
+
+  toast.success(successMessage);
+};
+
 export const renderStatus = (status: string) => {
   let statusText = "";
   switch (status) {
@@ -218,8 +249,9 @@ const RefundsAcceptance: React.FC = () => {
 
   const { handleVisitPage, tutorial } = useApp();
 
-  const [policyViolations, setPolicyViolations] =
-    useState<PolicyPreviewViolation[]>([]);
+  const [policyViolations, setPolicyViolations] = useState<
+    PolicyPreviewViolation[]
+  >([]);
   // Single modal state drives all voucher approval/denial confirmations on this page.
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -406,10 +438,8 @@ const RefundsAcceptance: React.FC = () => {
       typeof index === "number" ? `preview-${index + 1}` : undefined;
 
     return policyViolations.filter((violation) => {
-      const outOfWindowIds =
-        violation.evaluated_value?.out_of_window_voucher_ids as
-          | string[]
-          | undefined;
+      const outOfWindowIds = violation.evaluated_value
+        ?.out_of_window_voucher_ids as string[] | undefined;
 
       if (outOfWindowIds && previewId) {
         return outOfWindowIds.includes(previewId);
@@ -458,9 +488,20 @@ const RefundsAcceptance: React.FC = () => {
 
   const completeRequest = async () => {
     try {
-      await patchRequest(`/requests/finished-approving-vouchers/${id}`, {});
-      toast.success("Comprobación de solicitud completada");
-      navigate("/dashboard");
+      const response = await patchRequest(
+        `/requests/finished-approving-vouchers/${id}`,
+        {},
+      );
+
+      showEmailAwareToast(
+        response,
+        "Comprobación de solicitud completada",
+        "Comprobación completada. Falló el envío de una o más notificaciones.",
+      );
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 800);
     } catch (error) {
       console.error("Error completing request:", error);
     }
@@ -787,4 +828,5 @@ export default RefundsAcceptance;
 /*
 Modification History:
 - 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for approve, deny, and complete voucher review actions.
+- 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling after completing voucher approval.
 */
