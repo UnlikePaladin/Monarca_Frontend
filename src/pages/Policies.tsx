@@ -3,12 +3,13 @@ Policies.tsx
 Main view for accounting policies management, exclusive to the SOI role.
 */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Mosaic from "../components/Mosaic";
 import GoBack from "../components/GoBack";
 import { useApp } from "../hooks/app/appContext";
 import { getRequest } from "../utils/apiService";
 import { toast } from "react-toastify";
+import { DateRangeModal } from "../components/Refunds/DateRangeModal";
 
 /**
  * Component that renders the policy options menu (Advances, Vouchers).
@@ -16,14 +17,17 @@ import { toast } from "react-toastify";
  */
 export const PoliciesDashboard = () => {
   const { setPageTitle } = useApp();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [pendingAction, setPendingAction] = useState<((start: string, end: string) => Promise<void>) | null>(null);
 
   useEffect(() => {
     setPageTitle("Gestión de pólizas");
   }, [setPageTitle]);
 
-  const handleDownloadAdvancePolicies = async () => {
+  const handleDownloadAdvancePolicies = async (startDate: string, endDate: string) => {
     try {
-      const data = await getRequest("/policy-exports/advance-policies");
+      const data = await getRequest(`/policy-exports/advance-policies?startDate=${startDate}&endDate=${endDate}`);
       
       const fileName = `polizas_anticipo_${new Date().toISOString().split('T')[0]}.json`;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -44,9 +48,9 @@ export const PoliciesDashboard = () => {
     }
   };
 
-  const handleDownloadReconciliationPolicies = async () => {
+  const handleDownloadReconciliationPolicies = async (startDate: string, endDate: string) => {
     try {
-      const data = await getRequest("/policy-exports/reconciliation-policies");
+      const data = await getRequest(`/policy-exports/reconciliation-policies?startDate=${startDate}&endDate=${endDate}`);
       
       const fileName = `polizas_comprobacion_${new Date().toISOString().split('T')[0]}.json`;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -67,9 +71,9 @@ export const PoliciesDashboard = () => {
     }
   };
 
-  const handleDownloadNoAdvanceReconciliationPolicies = async () => {
+  const handleDownloadNoAdvanceReconciliationPolicies = async (startDate: string, endDate: string) => {
     try {
-      const data = await getRequest("/policy-exports/no-advance-reconciliation-policies");
+      const data = await getRequest(`/policy-exports/no-advance-reconciliation-policies?startDate=${startDate}&endDate=${endDate}`);
       
       const fileName = `polizas_comprobacion_sin_anticipo_${new Date().toISOString().split('T')[0]}.json`;
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -90,6 +94,18 @@ export const PoliciesDashboard = () => {
     }
   };
 
+  const openModal = (title: string, action: (start: string, end: string) => Promise<void>) => {
+    setModalTitle(title);
+    setPendingAction(() => action);
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmDates = (startDate: string, endDate: string) => {
+    if (pendingAction) {
+      pendingAction(startDate, endDate);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
       <GoBack />
@@ -98,21 +114,28 @@ export const PoliciesDashboard = () => {
           title="Pólizas de anticipos" 
           iconPath="/assets/advance_payment_policy.png" 
           link="#"
-          onClick={handleDownloadAdvancePolicies}
+          onClick={() => openModal("Pólizas de anticipos", handleDownloadAdvancePolicies)}
         />
         <Mosaic 
           title="Pólizas de comprobaciones" 
           iconPath="/assets/verification_policies.png" 
           link="#"
-          onClick={handleDownloadReconciliationPolicies}
+          onClick={() => openModal("Pólizas de comprobaciones", handleDownloadReconciliationPolicies)}
         />
         <Mosaic 
           title="Pólizas de comprobaciones (sin anticipo)" 
           iconPath="/assets/verification_policies_n_p.png" 
           link="#"
-          onClick={handleDownloadNoAdvanceReconciliationPolicies}
+          onClick={() => openModal("Pólizas de comprobaciones (sin anticipo)", handleDownloadNoAdvanceReconciliationPolicies)}
         /> 
       </div>
+
+      <DateRangeModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmDates}
+        title={modalTitle}
+      />
     </div>
   );
 };
