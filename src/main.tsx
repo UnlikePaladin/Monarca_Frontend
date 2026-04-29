@@ -47,7 +47,6 @@ import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
 import CostCenterList from "./components/Admin/CostCenterList.tsx";
 import AccountingAccountsList from "./components/Admin/AccountingAccountList.tsx";
 
-
 export const router = createBrowserRouter([
   // Public routes (no authentication required)
   {
@@ -124,44 +123,29 @@ export const router = createBrowserRouter([
         path: "/refunds-review/:id",
         element: <RefundsAcceptance />,
       },
-      // ------ Rutas comentadas para testing -----
-      // {
-      //   path: "/roles",
-      //   element: (
-      //     <PermissionProtectedRoute requiredPermissions={["manage_users"]} />
-      //   ),
-      //   children: [
-      //     {
-      //       path: "",
-      //       element: <Roles />,
-      //     },
-      //   ],
-      // },
-      // {
-      //   path: "/approval-rules",
-      //   element: (
-      //     <PermissionProtectedRoute requiredPermissions={["manage_users"]} />
-      //   ),
-      //   children: [
-      //     {
-      //       path: "",
-      //       element: <ApprovalRules />,
-      //     },
-      //   ],
-      // },
-      
-      // Rutas sin protección (para testing)
       {
         path: "/policies", // Nueva ruta
         element: <PoliciesDashboard />,
       },
       {
         path: "/roles",
-        element: <Roles />,
+        element: <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} />,
+        children: [
+          {
+            path: "",
+            element: <Roles />,
+          },
+        ],
       },
       {
         path: "/approval-rules",
-        element: <ApprovalRules />,
+        element: <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} />,
+        children: [
+          {
+            path: "",
+            element: <ApprovalRules />,
+          },
+        ],
       },
       {
         path: "/admin/companies",
@@ -212,7 +196,7 @@ export const router = createBrowserRouter([
           {
             path: "create",
             element: <CreateCostCenter />,
-          }
+          },
         ],
       },
       {
@@ -231,14 +215,12 @@ export const router = createBrowserRouter([
           {
             path: "create",
             element: <CreateAccountingAccount />,
-          }
+          },
         ],
       },
       {
         path: "/admin/refund-policies",
-        element: (
-          <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} />
-        ),
+        element: <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} />,
         children: [
           {
             path: "",
