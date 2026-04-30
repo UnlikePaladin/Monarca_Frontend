@@ -1,6 +1,6 @@
 /*This component (RefundsReview) displays a list of travel requests that are waiting for voucher/refund review and lets the user open each one to approve its receipts. On mount, it calls GET /requests/all, filters the results to only those with status "Pending Vouchers Approval", and enriches each trip with table-friendly fields: it converts the backend status into a styled Spanish badge (renderStatus), sorts requests_destinations by destination_order to take the first destination’s departure_date as the trip date (formatted with formatDate), formats the advance amount with formatMoney, sets the origin city from trip.destination.city, and formats the request creation date. It then builds dataWithActions to render in a Refunds/Table, adding a “Ver comprobantes” button per row that navigates to /refunds-review/{trip.id}. The page also shows a loading state, includes GoBack and RefreshButton, wraps everything in a Tutorial step, and records the page visit using handleVisitPage with localStorage-based visited-page tracking. */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Table from "../../components/Refunds/Table";
 import RefreshButton from "../../components/RefreshButton";
 import formatDate from "../../utils/formatDate";
@@ -117,55 +117,52 @@ export const RefundsReview = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const { handleVisitPage, tutorial } = useApp();
 
-  useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        setLoading(true);
+  const fetchTrips = useCallback(async () => {
+    try {
+      setLoading(true);
 
-        // Fetch trips data
-        const response = await getRequest("/requests/all");
+      const response = await getRequest("/requests/all");
 
-        // Process the data to add formatted fields
-        const processedTrips = response
-          .filter((trip: Trip) => trip.status === "Pending Vouchers Approval")
-          .map((trip: Trip) => {
-            // Sort destinations by order
-            const sortedDestinations = [...trip.requests_destinations].sort(
-              (a, b) => a.destination_order - b.destination_order
-            );
+      const processedTrips = response
+        .filter((trip: Trip) => trip.status === "Pending Vouchers Approval")
+        .map((trip: Trip) => {
+          const sortedDestinations = [...trip.requests_destinations].sort(
+            (a, b) => a.destination_order - b.destination_order
+          );
 
-            // Get the first destination for departure date
-            const firstDestination =
-              sortedDestinations.length > 0 ? sortedDestinations[0] : null;
+          const firstDestination =
+            sortedDestinations.length > 0 ? sortedDestinations[0] : null;
 
-            return {
-              ...trip,
-              status: renderStatus(trip.status),
-              date: firstDestination
-                ? formatDate(firstDestination.departure_date)
-                : "N/A",
-              formattedAdvance: formatMoney(trip.advance_money),
-              origin: trip.destination.city,
-              formattedCreatedAt: formatDate(trip.createdAt),
-            };
-          });
+          return {
+            ...trip,
+            status: renderStatus(trip.status),
+            date: firstDestination
+              ? formatDate(firstDestination.departure_date)
+              : "N/A",
+            formattedAdvance: formatMoney(trip.advance_money),
+            origin: trip.destination.city,
+            formattedCreatedAt: formatDate(trip.createdAt),
+          };
+        });
 
-        setTrips(processedTrips);
-      } catch (err) {
-        toast.error(
-          "Error al cargar los viajes. Por favor, inténtelo de nuevo más tarde."
-        );
+      setTrips(processedTrips);
+    } catch (err) {
+      toast.error(
+        "Error al cargar los viajes. Por favor, inténtelo de nuevo más tarde."
+      );
 
-        console.error(
-          "Error al cargar viajes: ",
-          err instanceof Error ? err.message : err
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrips();
+      console.error(
+        "Error al cargar viajes: ",
+        err instanceof Error ? err.message : err
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   useEffect(() => {
     // Get the visited pages from localStorage
@@ -227,7 +224,7 @@ export const RefundsReview = () => {
             <h2 className="text-2xl font-bold text-[var(--blue)]">
               Solicitudes de Reembolso por Aprobar
             </h2>
-            <RefreshButton />
+            <RefreshButton onClick={fetchTrips} />
           </div>
 
           <div id="list_requests">
