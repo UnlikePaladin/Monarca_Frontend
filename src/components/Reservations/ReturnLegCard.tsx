@@ -2,12 +2,14 @@
    Computes the return leg destination object from the last sorted destination and
    the request origin. Displays manual plane form fields and the Duffel search flow. */
 
-import React from "react";
+import React, { useEffect } from "react";
 import Input from "../Refunds/InputField";
 import TextArea from "../Refunds/TextArea";
 import { DuffelOfferList } from "./DuffelOfferList";
 import { DuffelPassengerForm } from "./DuffelPassengerForm";
 import { DuffelOffer } from "../../types/duffel";
+import formatMoney from "../../utils/formatMoney";
+import { useExchangeRate } from "../../hooks/exchange-rate/useExchangeRate";
 
 interface ReturnLegCardProps {
   request: any;
@@ -22,6 +24,9 @@ interface ReturnLegCardProps {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     id: string,
   ) => void;
+  currencyOptions: string[];
+  onCurrencyChange: (id: string, field: "hotel" | "plane", currency: string) => void;
+  onRateChange: (id: string, field: "hotel" | "plane", rate?: number) => void;
   onDuffelSearch: (destination: any) => void;
   onSelectOffer: (destId: string, offer: DuffelOffer) => void;
   onSubmitDuffelOrder: (
@@ -49,6 +54,9 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
   isOrderPending,
   onFileChange,
   onFieldChange,
+  currencyOptions,
+  onCurrencyChange,
+  onRateChange,
   onDuffelSearch,
   onSelectOffer,
   onSubmitDuffelOrder,
@@ -62,6 +70,43 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
   if (!lastDest) return null;
 
   const returnLegId = "return_leg";
+  const today = new Date().toISOString().split("T")[0]??"";
+  const planeCurrency = formData[returnLegId]?.plane_currency || "MXN";
+  const planeRateQuery = useExchangeRate(
+    today,
+    planeCurrency,
+    planeCurrency !== "MXN",
+  );
+  const planeRate = Number(formData[returnLegId]?.plane_rate);
+  const planeAmount = Number(formData[returnLegId]?.plane_price);
+  const normalizedPlaneAmount = Number.isFinite(planeAmount) ? planeAmount : 0;
+  const planeRateValue = planeRateQuery.data?.rate ?? planeRate;
+  const planeMxnValue =
+    planeCurrency === "MXN"
+      ? normalizedPlaneAmount
+      : planeRateValue
+        ? Number((normalizedPlaneAmount * planeRateValue).toFixed(2))
+        : null;
+ 
+  useEffect(() => {
+    if (planeCurrency === "MXN") {
+      onRateChange(returnLegId, "plane", 1);
+      return;
+    }
+
+    if (planeRateQuery.data?.rate) {
+      onRateChange(returnLegId, "plane", planeRateQuery.data.rate);
+    } else if (planeRateQuery.isError) {
+      onRateChange(returnLegId, "plane", undefined);
+    }
+  }, [
+    onRateChange,
+    planeCurrency,
+    planeRateQuery.data?.rate,
+    planeRateQuery.isError,
+    returnLegId,
+  ])
+
   const returnLeg = {
     id: returnLegId,
     requestDestinationId: lastDest.id,
@@ -174,13 +219,42 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
               <label className="block mb-2 text-sm font-medium text-gray-900">
                 Precio
               </label>
+              <div className="flex gap-2">
               <Input
                 placeholder="Ingresa el precio del vuelo"
                 value={formData[returnLegId]?.plane_price || ""}
                 onChange={(e) => onFieldChange(e, returnLegId)}
                 name="plane_price"
                 type="number"
+                className="flex-1"
               />
+              <div className="min-w-[120px]">
+                  <label className="sr-only">Divisa</label>
+                  
+                <select
+                  value={planeCurrency}
+                  onChange={(e) =>
+                    onCurrencyChange(returnLegId, "plane", e.target.value)
+                  }
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                >
+                  {currencyOptions.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+              <p className="text-xs text-gray-600 mt-1">
+                {planeCurrency === "MXN"
+                  ? `Se guardara en MXN: ${formatMoney(normalizedPlaneAmount)}.`
+                  : planeRateQuery.isLoading
+                    ? "Consultando tipo de cambio a MXN..."
+                    : planeRateQuery.isError || planeMxnValue === null
+                      ? "No se pudo obtener el tipo de cambio a MXN."
+                      : `Equivalente en MXN: ${formatMoney(planeMxnValue)}.`}
+              </p>
             </div>
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-900">
@@ -254,4 +328,5 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
 /*
 Modification History:
 - 2026-04-27 | Juan de Dios Gastélum | Initial file creation. Extracted from Reservations.tsx to keep file under 1000 lines.
+- 2026-04-29 | Fabrizio Barrios Blanco | Applied exchange rate UI and inline currency layout for reservation prices.
 */

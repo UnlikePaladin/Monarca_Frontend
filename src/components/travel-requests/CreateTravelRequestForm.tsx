@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import { toast } from "react-toastify";
 import { AxiosError } from "axios";
 import { useNavigate } from "react-router-dom";
+import { useMemo } from "react";
 
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 
@@ -24,6 +25,8 @@ import FieldError from "../ui/FieldError";
 
 import { useCreateTravelRequest } from "../../hooks/requests/useCreateRequest";
 import { useDestinations } from "../../hooks/destinations/useDestinations";
+import { useExchangeRate } from "../../hooks/exchange-rate/useExchangeRate";
+import formatMoney from "../../utils/formatMoney";
 
 type Option = { id: number | string; name: string };
 
@@ -31,6 +34,14 @@ const priorityOptions: Option[] = [
   { id: "alta", name: "Alta" },
   { id: "media", name: "Media" },
   { id: "baja", name: "Baja" },
+];
+
+const currencyCodes: string[] = [
+  "MXN",
+  "USD",
+  "EUR",
+  "JPY",
+  "CNY",
 ];
 
 const destinationSchema = z.object({
@@ -72,6 +83,9 @@ const formSchema = z.object({
   title: z.string().nonempty({ message: "Escribe el título del viaje" }),
   priority: z.enum(["alta", "media", "baja"]),
   requirements: z.string().optional(),
+  advance_currency: z.enum([...currencyCodes] as [string, ...string[]], {
+    message: "Selecciona una divisa válida",
+  }),
   advance_money: z
     .number()
     .int()
@@ -102,6 +116,7 @@ function CreateTravelRequestForm() {
       motive: "",
       title: "",
       priority: "media",
+      advance_currency: "MXN",
       advance_money: 0,
       requirements: "",
       destinations: [
@@ -127,6 +142,37 @@ function CreateTravelRequestForm() {
   });
 
   const originCityId = watch("id_origin_city");
+  const advanceCurrency = watch("advance_currency");
+  const advanceMoney = watch("advance_money");
+
+  const currencySelectOptions = useMemo<Option[]>(
+    () => currencyCodes.map((code) => ({ id: code, name: code })),
+    []
+  );
+
+  const normalizedAdvanceMoney = Number.isFinite(advanceMoney)
+    ? advanceMoney
+    : 0;
+  const exchangeRateDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
+  const shouldFetchRate =
+    !!advanceCurrency && advanceCurrency !== "MXN" && normalizedAdvanceMoney > 0;
+  const {
+    data: exchangeRate,
+    isLoading: isRateLoading,
+    error: exchangeRateError,
+  } = useExchangeRate(exchangeRateDate, advanceCurrency || "MXN", shouldFetchRate);
+  const advanceMoneyMxn = useMemo(() => {
+    if (advanceCurrency === "MXN") {
+      return normalizedAdvanceMoney;
+    }
+    if (normalizedAdvanceMoney === 0) {
+      return 0;
+    }
+    if (!exchangeRate?.rate) {
+      return null;
+    }
+    return Number((normalizedAdvanceMoney * exchangeRate.rate).toFixed(2));
+  }, [advanceCurrency, normalizedAdvanceMoney, exchangeRate?.rate]);
 
   const originAirportOptions =
     destinations
@@ -140,6 +186,17 @@ function CreateTravelRequestForm() {
     if (!data.id_origin_city) {
       toast.error("Selecciona una ciudad de origen");
       return;
+    }
+
+    if (data.advance_currency !== "MXN" && data.advance_money > 0) {
+      if (isRateLoading) {
+        toast.info("Cargando tipo de cambio...");
+        return;
+      }
+      if (!exchangeRate?.rate) {
+        toast.error("No se pudo obtener el tipo de cambio a MXN");
+        return;
+      }
     }
 
     const requests_destinations = data.destinations.map((d, idx, arr) => {
@@ -168,7 +225,10 @@ function CreateTravelRequestForm() {
       motive: data.motive,
       requirements: data.requirements || undefined,
       priority: data.priority,
-      advance_money: data.advance_money,
+      advance_money: 
+        data.advance_currency === "MXN"
+          ? data.advance_money
+          : Number((data.advance_money * (exchangeRate?.rate || 0)).toFixed(2)),
       requests_destinations,
     };
 
@@ -318,15 +378,51 @@ function CreateTravelRequestForm() {
 
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-900">
-                Dinero adelantado (MXN)
+                Dinero adelantado 
               </label>
-              <Input
-                type="number"
-                min={1}
-                {...register(`advance_money` as const, {
-                  valueAsNumber: true,
-                })}
-              />
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  className="flex-1"
+                  {...register(`advance_money` as const, {
+                    valueAsNumber: true,
+                  })}
+                />
+                <div className="min-w-[120px]">
+                  <label htmlFor="advance_currency" className="sr-only">
+                    Divisa
+                  </label>
+                  <Controller
+                    control={control}
+                    name="advance_currency"
+                    render={({ field }) => (
+                      <Select
+                        id="advance_currency"
+                        options={currencySelectOptions}
+                        value={
+                          currencySelectOptions.find(
+                            (o) => o.id === field.value
+                          ) || null
+                        }
+                        onChange={(opt) => field.onChange(opt.id)}
+                        placeholder="Divisa"
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                {advanceCurrency === "MXN"
+                  ? `Se guardará en MXN: ${formatMoney(
+                      normalizedAdvanceMoney
+                    )}.`
+                  : isRateLoading
+                    ? "Consultando tipo de cambio a MXN..."
+                    : exchangeRateError || advanceMoneyMxn === null
+                      ? "No se pudo obtener el tipo de cambio a MXN."
+                      : `Equivalente en MXN: ${formatMoney(advanceMoneyMxn)}.`}
+              </p>
               <FieldError msg={errors?.advance_money?.message} />
             </div>
 
@@ -563,4 +659,5 @@ export default CreateTravelRequestForm;
 Modification History:
 
 - 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and translated validation messages to English.
+- 2026-04-29 | Fabrizio | Added currency selector and real-time conversion logic for advance money.
 */

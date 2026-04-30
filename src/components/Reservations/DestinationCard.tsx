@@ -3,12 +3,14 @@
    is required, it also manages the Duffel search flow: offer list, selection, and
    passenger form submission trigger. */
 
-import React from "react";
+import React, { useEffect } from "react";
 import Input from "../Refunds/InputField";
 import TextArea from "../Refunds/TextArea";
 import { DuffelOfferList } from "./DuffelOfferList";
 import { DuffelPassengerForm } from "./DuffelPassengerForm";
 import { DuffelOffer } from "../../types/duffel";
+import formatMoney from "../../utils/formatMoney";
+import { useExchangeRate } from "../../hooks/exchange-rate/useExchangeRate";
 
 interface DestinationCardProps {
   destination: any;
@@ -24,6 +26,9 @@ interface DestinationCardProps {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     id: string,
   ) => void;
+  currencyOptions: string[];
+  onCurrencyChange: (id: string, field: "hotel" | "plane", currency: string) => void;
+  onRateChange: (id: string, field: "hotel" | "plane", rate?: number) => void;
   onDuffelSearch: (destination: any) => void;
   onSelectOffer: (destId: string, offer: DuffelOffer) => void;
   onSubmitDuffelOrder: (
@@ -51,6 +56,9 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
   isOrderPending,
   onFileChange,
   onFieldChange,
+  currencyOptions,
+  onCurrencyChange,
+  onRateChange,
   onDuffelSearch,
   onSelectOffer,
   onSubmitDuffelOrder,
@@ -58,6 +66,78 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
   onClearSelectedOffer,
 }) => {
   const destId = destination.id;
+
+  const today = new Date().toISOString().split("T")[0]??"";
+  const hotelCurrency = formData[destId]?.hotel_currency || "MXN";
+  const planeCurrency = formData[destId]?.plane_currency || "MXN";
+  const hotelRateQuery = useExchangeRate(
+    today,
+    hotelCurrency,
+    hotelCurrency !== "MXN",
+  );
+  const planeRateQuery = useExchangeRate(
+    today,
+    planeCurrency,
+    planeCurrency !== "MXN",
+  );
+  const hotelRate = Number(formData[destId]?.hotel_rate);
+  const planeRate = Number(formData[destId]?.plane_rate);
+  const hotelAmount = Number(formData[destId]?.hotel_price);
+  const planeAmount = Number(formData[destId]?.plane_price);
+  const normalizedHotelAmount = Number.isFinite(hotelAmount) ? hotelAmount : 0;
+  const normalizedPlaneAmount = Number.isFinite(planeAmount) ? planeAmount : 0;
+  const hotelRateValue = hotelRateQuery.data?.rate ?? hotelRate;
+  const planeRateValue = planeRateQuery.data?.rate ?? planeRate;
+  const hotelMxnValue =
+    hotelCurrency === "MXN"
+      ? normalizedHotelAmount
+      : hotelRateValue
+        ? Number((normalizedHotelAmount * hotelRateValue).toFixed(2))
+        : null;
+  const planeMxnValue =
+    planeCurrency === "MXN"
+      ? normalizedPlaneAmount
+      : planeRateValue
+        ? Number((normalizedPlaneAmount * planeRateValue).toFixed(2))
+        : null;
+
+  useEffect(() => {
+    if (hotelCurrency === "MXN") {
+      onRateChange(destId, "hotel", 1);
+      return;
+    }
+
+    if (hotelRateQuery.data?.rate) {
+      onRateChange(destId, "hotel", hotelRateQuery.data.rate);
+    } else if (hotelRateQuery.isError) {
+      onRateChange(destId, "hotel", undefined);
+    }
+  }, [
+    destId,
+    hotelCurrency,
+    hotelRateQuery.data?.rate,
+    hotelRateQuery.isError,
+    onRateChange,
+  ]);
+
+  useEffect(() => {
+    if (planeCurrency === "MXN") {
+      onRateChange(destId, "plane", 1);
+      return;
+    }
+
+    if (planeRateQuery.data?.rate) {
+      onRateChange(destId, "plane", planeRateQuery.data.rate);
+    } else if (planeRateQuery.isError) {
+      onRateChange(destId, "plane", undefined);
+    }
+  }, [
+    destId,
+    onRateChange,
+    planeCurrency,
+    planeRateQuery.data?.rate,
+    planeRateQuery.isError,
+  ]);
 
   return (
     <div className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm">
@@ -144,14 +224,49 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
                 >
                   Precio
                 </label>
-                <Input
-                  placeholder="Ingresa el precio del hotel"
-                  value={formData[destId]?.hotel_price || ""}
-                  onChange={(e) => onFieldChange(e, destId)}
-                  name="hotel_price"
-                  type="number"
-                  id={`hotel_price_${destId}`}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ingresa el precio del hotel"
+                    value={formData[destId]?.hotel_price || ""}
+                    onChange={(e) => onFieldChange(e, destId)}
+                    name="hotel_price"
+                    type="number"
+                    id={`hotel_price_${destId}`}
+                    className="flex-1"
+                  />
+                <div className="min-w-[120px]">
+                  <label
+                    htmlFor={`hotel_currency_${destId}`}
+                    className="sr-only"
+                  >
+                    Divisa
+                  </label>
+                  <select
+                    id={`hotel_currency_${destId}`}
+                    value={hotelCurrency}
+                    onChange={(e) =>
+                      onCurrencyChange(destId, "hotel", e.target.value)
+                    }
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  >
+                    {currencyOptions.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  {hotelCurrency === "MXN"
+                    ? `Se guardara en MXN: ${formatMoney(normalizedHotelAmount)}.`
+                    : hotelRateQuery.isLoading
+                      ? "Consultando tipo de cambio a MXN..."
+                      : hotelRateQuery.isError || hotelMxnValue === null
+                        ? "No se pudo obtener el tipo de cambio a MXN."
+                        : `Equivalente en MXN: ${formatMoney(hotelMxnValue)}.`}
+                </p>
+                
               </div>
               <div>
                 <label
@@ -214,14 +329,49 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
                 >
                   Precio
                 </label>
-                <Input
-                  placeholder="Ingresa el precio del vuelo"
-                  value={formData[destId]?.plane_price || ""}
-                  onChange={(e) => onFieldChange(e, destId)}
-                  name="plane_price"
-                  type="number"
-                  id={`plane_price_${destId}`}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ingresa el precio del vuelo"
+                    value={formData[destId]?.plane_price || ""}
+                    onChange={(e) => onFieldChange(e, destId)}
+                    name="plane_price"
+                    type="number"
+                    id={`plane_price_${destId}`}
+                    className="flex-1"  
+                  />
+                  <div className="min-w-[120px]">
+                    <label
+                      htmlFor={`plane_currency_${destId}`}
+                      className="sr-only"
+                    >
+                      Divisa
+                    </label>
+                    <select
+                      id={`plane_currency_${destId}`}
+                      value={planeCurrency}
+                      onChange={(e) =>
+                        onCurrencyChange(destId, "plane", e.target.value)
+                      }
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                    >
+                      {currencyOptions.map((currency) => (
+                        <option key={currency} value={currency}>
+                          {currency}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  {planeCurrency === "MXN"
+                    ? `Se guardara en MXN: ${formatMoney(normalizedPlaneAmount)}.`
+                    : planeRateQuery.isLoading
+                      ? "Consultando tipo de cambio a MXN..."
+                      : planeRateQuery.isError || planeMxnValue === null
+                        ? "No se pudo obtener el tipo de cambio a MXN."
+                        : `Equivalente en MXN: ${formatMoney(planeMxnValue)}.`}
+                </p>
+                
               </div>
               <div>
                 <label
@@ -302,4 +452,5 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
 /*
 Modification History:
 - 2026-04-27 | Juan de Dios Gastélum | Initial file creation. Extracted from Reservations.tsx to keep file under 1000 lines.
+- 2026-04-29 | Fabrizio Barrios Blanco | Applied exchange rate UI and inline currency layout for reservation prices.
 */

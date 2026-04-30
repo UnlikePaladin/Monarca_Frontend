@@ -34,7 +34,9 @@ import { Destination } from "../../types/destinations";
 import { CreateRequest } from "../../types/requests";
 import GoBack from "../GoBack";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import formatMoney from "../../utils/formatMoney";
+import { useExchangeRate } from "../../hooks/exchange-rate/useExchangeRate";
 
 type Option = { id: number | string; name: string };
 
@@ -42,6 +44,14 @@ const priorityOptions: Option[] = [
   { id: "alta", name: "Alta" },
   { id: "media", name: "Media" },
   { id: "baja", name: "Baja" },
+];
+
+const currencyCodes: string[] = [
+  "MXN",
+  "USD",
+  "EUR",
+  "JPY",
+  "CNY",
 ];
 
 const destinationSchema = z
@@ -85,6 +95,9 @@ const formSchema = z.object({
   title: z.string().nonempty({ message: "Escribe el título del viaje" }),
   priority: z.enum(["alta", "media", "baja"]),
   requirements: z.string().optional(),
+  advance_currency: z.enum([...currencyCodes] as [string, ...string[]], {
+    message: "Selecciona una divisa válida",
+  }),
   advance_money: z
     .number()
     .int()
@@ -434,27 +447,33 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     setValue,
   } = useForm<RawFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
-      id_origin_city: null,
-      id_origin_airport: null,
-      motive: "",
-      title: "",
-      priority: "media",
-      advance_money: 0,
-      requirements: "",
-      requests_destinations: [
-        {
-          id_destination: null,
-          id_airport: null,
-          arrival_date: "",
-          departure_date: "",
-          stay_days: 1,
-          is_hotel_required: true,
-          is_plane_required: true,
-          details: "",
+    defaultValues: initialData
+      ? {
+          ...initialData,
+          advance_currency: "MXN",
+        }
+      : {
+          id_origin_city: null,
+          id_origin_airport: null,
+          motive: "",
+          title: "",
+          priority: "media",
+          advance_currency: "MXN",
+          advance_money: 0,
+          requirements: "",
+          requests_destinations: [
+            {
+              id_destination: null,
+              id_airport: null,
+              arrival_date: "",
+              departure_date: "",
+              stay_days: 1,
+              is_hotel_required: true,
+              is_plane_required: true,
+              details: "",
+            },
+          ],
         },
-      ],
-    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -466,6 +485,47 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     control,
     name: "id_origin_city",
   });
+
+  const advanceCurrency = useWatch({
+    control,
+    name: "advance_currency",
+  });
+
+  const advanceMoney = useWatch({
+    control,
+    name: "advance_money",
+  });
+
+  const currencySelectOptions = useMemo<Option[]>(
+    () => currencyCodes.map((code) => ({ id: code, name: code })),
+    []
+  );
+
+  const normalizedAdvanceMoney = Number.isFinite(advanceMoney)
+    ? advanceMoney
+    : 0;
+
+  const exchangeRateDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
+  const shouldFetchRate =
+    !!advanceCurrency && advanceCurrency !== "MXN" && normalizedAdvanceMoney > 0;
+  const {
+    data: exchangeRate,
+    isLoading: isRateLoading,
+    error: exchangeRateError,
+  } = useExchangeRate(exchangeRateDate, advanceCurrency || "MXN", shouldFetchRate);
+
+  const advanceMoneyMxn = useMemo(() => {
+    if (advanceCurrency === "MXN") {
+      return normalizedAdvanceMoney;
+    }
+    if (normalizedAdvanceMoney === 0) {
+      return 0;
+    }
+    if (!exchangeRate?.rate) {
+      return null;
+    }
+    return Number((normalizedAdvanceMoney * exchangeRate.rate).toFixed(2));
+  }, [advanceCurrency, normalizedAdvanceMoney, exchangeRate?.rate]);
 
   const originAirportOptions =
     destinations
@@ -502,6 +562,17 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     if (!data.id_origin_city) {
       toast.error("Selecciona una ciudad de origen");
       return;
+    }
+
+    if (data.advance_currency !== "MXN" && data.advance_money > 0) {
+      if (isRateLoading) {
+        toast.info("Cargando tipo de cambio...");
+        return;
+      }
+      if (!exchangeRate?.rate) {
+        toast.error("No se pudo obtener el tipo de cambio a MXN");
+        return;
+      }
     }
 
     const hasInvalidStay = data.requests_destinations.some((d, idx, arr) => {
@@ -591,7 +662,10 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       motive: data.motive,
       requirements: data.requirements || "",
       priority: data.priority,
-      advance_money: data.advance_money,
+      advance_money:  
+        data.advance_currency === "MXN"
+          ? data.advance_money
+          : Number((data.advance_money * (exchangeRate?.rate || 0)).toFixed(2)),
       is_round_trip: isRoundTrip,
       requests_destinations,
     };
@@ -802,11 +876,48 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                   >
                     Dinero adelantado
                   </label>
-                  <Input
-                    id="advance_money"
-                    type="number"
-                    {...register("advance_money", { valueAsNumber: true })}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="advance_money"
+                      type="number"
+                      min={0}
+                      className="flex-1"
+                      {...register("advance_money", { valueAsNumber: true })}
+                    />
+                    <div className="min-w-[120px]">
+                      <label htmlFor="advance_currency" className="sr-only">
+                        Divisa
+                      </label>
+                      <Controller
+                        control={control}
+                        name="advance_currency"
+                        render={({ field }) => (
+                          <Select
+                            id="advance_currency"
+                            options={currencySelectOptions}
+                            value={
+                              currencySelectOptions.find(
+                                (o) => o.id === field.value
+                              ) || null
+                            }
+                            onChange={(opt) => field.onChange(opt.id)}
+                            placeholder="Divisa"
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {advanceCurrency === "MXN"
+                      ? `Se guardará en MXN: ${formatMoney(
+                          normalizedAdvanceMoney
+                        )}.`
+                      : isRateLoading
+                        ? "Consultando tipo de cambio a MXN..."
+                        : exchangeRateError || advanceMoneyMxn === null
+                          ? "No se pudo obtener el tipo de cambio a MXN."
+                          : `Equivalente en MXN: ${formatMoney(advanceMoneyMxn)}.`}
+                  </p>
                   <FieldError msg={errors.advance_money?.message} />
                 </div>
 
@@ -1049,4 +1160,5 @@ Modification History:
 - 2026-04-22 | Juan de Dios Gastélum Flores | Improved multi-destination flow: sequential leg headers, round trip toggle, return leg indicator, auto-fill dates between legs, cross-leg date validation, and itinerary summary.
 - 2026-04-23 | Juan de Dios Gastélum | Replaced inline itinerary summary with sticky sidebar for better visibility during form navigation.
 - 2026-04-29 | Juan de Dios Gastélum Flores | Added warning toast when request creation or update succeeds but email notification delivery fails.
+- 2026-04-29 | Fabrizio | Integrated currency selection and real-time MXN conversion using useWatch and useExchangeRate.
 */

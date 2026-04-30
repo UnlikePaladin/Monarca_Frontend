@@ -1,6 +1,6 @@
 /*This component (Reservations) renders a page for assigning hotel and/or flight reservations for each destination in a travel request. It reads the request id from the URL, fetches the request data with GET /requests/{id}, and transforms each requests_destinations entry into display-friendly fields (origin/destination strings, formatted departure/arrival dates, “Sí/No” flags for whether hotel/plane are required, and other details). The UI then iterates through each destination and shows a read-only summary grid plus conditional form sections: if a destination requires a hotel, it shows inputs for hotel title, comments, price, and a PDF upload; if it requires a flight, it shows the equivalent flight fields. User input is stored in a formData object keyed by destination ID, and file uploads store both the File and its name for display. On submit, it validates that all required reservation fields/files are provided according to what each destination needs, builds a reservations payload, and uploads each reservation as FormData via POST /reservations; if successful, it marks the request as finished with PATCH /requests/finished-reservations/{id}, shows a success toast, clears the form, and navigates back to the dashboard. The page is wrapped in a Tutorial flow and also tracks the page visit via handleVisitPage. */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getRequest, patchRequest } from "../../utils/apiService";
@@ -79,6 +79,71 @@ export const Reservations = () => {
     backendDestId?: string;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const currencyOptions = ["MXN", "USD", "EUR", "JPY", "CNY"];
+
+  const updateFormData = (destId: string, updates: Record<string, unknown>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [destId]: {
+        ...prev[destId],
+        ...updates,
+      },
+    }));
+  };
+
+  const handleCurrencyChange = (
+    destId: string,
+    field: "hotel" | "plane",
+    currency: string,
+  ) => {
+    updateFormData(destId, {
+      [`${field}_currency`]: currency,
+      [`${field}_rate`]: currency === "MXN" ? 1 : undefined,
+    });
+  };
+
+  const handleRateChange = useCallback(
+    (destId: string, field: "hotel" | "plane", rate?: number) => {
+    setFormData((prev) => {
+      const prevRate = prev[destId]?.[`${field}_rate`];
+      if (prevRate === rate) return prev;
+
+      return {
+        ...prev,
+        [destId]: {
+          ...prev[destId],
+          [`${field}_rate`]: rate,
+        },
+      };
+    });
+    },
+    [],
+);
+
+  const getMxnPrice = (data: any, field: "hotel" | "plane") => {
+    const rawAmount = Number(data?.[`${field}_price`]);
+    if (Number.isNaN(rawAmount)) return NaN;
+
+    const currency = String(data?.[`${field}_currency`] || "MXN");
+    if (currency === "MXN") return rawAmount;
+
+    const rate = Number(data?.[`${field}_rate`]);
+    if (Number.isNaN(rate)) return NaN;
+
+    return rawAmount * rate;
+  };
+
+  const isRateReady = (data: any, field: "hotel" | "plane") => {
+    const rawAmount = data?.[`${field}_price`];
+    if (rawAmount === undefined || rawAmount === "") return true;
+
+    const currency = String(data?.[`${field}_currency`] || "MXN");
+    if (currency === "MXN") return true;
+
+    const rate = Number(data?.[`${field}_rate`]);
+    return !Number.isNaN(rate) && rate > 0;
+  };
 
   useEffect(() => {
     const fetchRequest = async () => {
@@ -514,6 +579,15 @@ export const Reservations = () => {
       return;
     }
 
+    const rateMissing = Object.values(formData).some(
+      (data) => !isRateReady(data, "hotel") || !isRateReady(data, "plane"),
+    );
+
+    if (rateMissing) {
+      toast.error("No hay tipo de cambio para la moneda seleccionada.");
+      return;
+    }
+
     const formattedData = {
       reservations: Object.entries(formData).flatMap(([key, value]) => {
         const lastDestId = [...(request.requests_destinations || [])].sort(
@@ -522,14 +596,14 @@ export const Reservations = () => {
         const hotelReservation = value.hotel_title && {
           title: value.hotel_title,
           comments: value.hotel_comments,
-          price: parseFloat(value.hotel_price),
+          price: getMxnPrice(value,"hotel"),
           file: value.hotel_file,
           id_request_destination: key === "return_leg" ? lastDestId : key,
         };
         const planeReservation = value.plane_title && {
           title: value.plane_title,
           comments: value.plane_comments,
-          price: parseFloat(value.plane_price),
+          price: getMxnPrice(value,"plane"),
           file: value.plane_file,
           id_request_destination: key === "return_leg" ? lastDestId : key,
         };
@@ -548,8 +622,13 @@ export const Reservations = () => {
         data.hotel_title && data.hotel_comments && data.hotel_file;
       const planeValid =
         data.plane_title && data.plane_comments && data.plane_file;
+      const hotelRateValid = isRateReady(data, "hotel");
+      const planeRateValid = isRateReady(data, "plane");
       if (key === "return_leg") {
-        return !!(data.plane_title && data.plane_comments && data.plane_file);
+        return (
+          !!(data.plane_title && data.plane_comments && data.plane_file) &&
+          planeRateValid
+        );
       }
       const requestDestination = request.requests_destinations.find(
         (destination: any) => destination.id === key,
@@ -559,17 +638,17 @@ export const Reservations = () => {
         requestDestination.is_hotel_required &&
         requestDestination.is_plane_required
       ) {
-        return hotelValid && planeValid;
+        return hotelValid && planeValid && hotelRateValid && planeRateValid;
       } else if (
         requestDestination.is_hotel_required &&
         !requestDestination.is_plane_required
       ) {
-        return hotelValid;
+        return hotelValid && hotelRateValid;
       } else if (
         requestDestination.is_plane_required &&
         !requestDestination.is_hotel_required
       ) {
-        return planeValid;
+        return planeValid && planeRateValid;
       }
       return true;
     });
@@ -599,14 +678,14 @@ export const Reservations = () => {
         const hotelReservation = value.hotel_title && {
           title: value.hotel_title,
           comments: value.hotel_comments,
-          price: parseFloat(value.hotel_price),
+          price: getMxnPrice(value,"hotel"),
           file: value.hotel_file,
           id_request_destination: key === "return_leg" ? lastDestId : key,
         };
         const planeReservation = value.plane_title && {
           title: value.plane_title,
           comments: value.plane_comments,
-          price: parseFloat(value.plane_price),
+          price: getMxnPrice(value,"plane"),
           file: value.plane_file,
           id_request_destination: key === "return_leg" ? lastDestId : key,
         };
@@ -715,6 +794,9 @@ export const Reservations = () => {
                     isOrderPending={createOrder.isPending}
                     onFileChange={handleFileChange}
                     onFieldChange={handleChange}
+                    currencyOptions={currencyOptions}
+                    onCurrencyChange={handleCurrencyChange}
+                    onRateChange={handleRateChange}
                     onDuffelSearch={handleDuffelSearch}
                     onSelectOffer={handleSelectOffer}
                     onSubmitDuffelOrder={handleSubmitDuffelOrder}
@@ -744,6 +826,9 @@ export const Reservations = () => {
                 isOrderPending={createOrder.isPending}
                 onFileChange={handleFileChange}
                 onFieldChange={handleChange}
+                currencyOptions={currencyOptions}
+                onCurrencyChange={handleCurrencyChange}
+                onRateChange={handleRateChange}
                 onDuffelSearch={handleDuffelSearch}
                 onSelectOffer={handleSelectOffer}
                 onSubmitDuffelOrder={handleSubmitDuffelOrder}
@@ -807,4 +892,5 @@ Modification History:
 - 2026-04-23 | Juan de Dios Gastélum | Fixed sequential origin mapping, one-way per leg search, and added independent return leg box for round-trip reservations.
 - 2026-04-27 | Juan de Dios Gastélum | Added confirmation modals before Duffel order emission and reservation submission.Split destination map and return leg into DestinationCard and ReturnLegCard components to keep file under 1000 lines. Made date labels dynamic per destination to clarify arrival vs departure context in multi-destination trips. Fixed arrival_date label for last destination in round-trip itineraries.
 - 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling after finishing reservations.
+- 2026-04-30 | Fabrizio Barrios Blanco | Wired exchange rate handling for reservation price conversions.
 */

@@ -623,13 +623,20 @@ export const Vouchers = () => {
         _rowIndex?: number,
         _cellIndex?: number,
       ) => (
-        <InputField
-          id={`amount-${_rowIndex}-${_cellIndex}`}
-          type="number"
-          value={value as string}
-          onChange={(e) => onChangeComponentFunction(Number(e.target.value))}
-          placeholder="Ingrese"
-        />
+        <div className="relative inline-block group">
+          <InputField
+            id={`amount-${_rowIndex}-${_cellIndex}`}
+            type="number"
+            value={value as string}
+            onChange={(e) => onChangeComponentFunction(Number(e.target.value))}
+            placeholder="Ingrese"
+            className="w-full"
+          />
+          <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-max -translate-x-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-gray-100 opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            Solo MXN por el formato del XML.
+            <div className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gray-900"></div>
+          </div>
+        </div>
       ),
     },
     {
@@ -900,4 +907,5 @@ Modification History:
 - 2026-04-11 | Fabrizio | Integrated policy engine validation (422 error handling) and trip window date synchronization.
 - 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modal before voucher submission to prevent accidental sends.
 - 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling after submitting vouchers.
+- 2026-04-29 | Fabrizio Barrios Blanco | Added floating helper text for MXN amount input.
 */
