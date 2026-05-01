@@ -6,7 +6,7 @@
  * data in a table format.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Table from "../../components/Approvals/Table";
 import { getRequest } from "../../utils/apiService";
 import RefreshButton from "../../components/RefreshButton";
@@ -100,33 +100,29 @@ export const Approvals: React.FC = () => {
   const location = useLocation();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
 
-  // Fetch travel records data from API and transform it for the table
-  useEffect(() => {
-    const fetchTravelRecords = async () => {
-      try {
-        const response = await getRequest("/requests/to-approve");
-        
-        // Transform API response to match table columns
-        setDataWithActions(
-          response.map((trip: any) => ({
-            ...trip,
-            status: renderStatus(trip.status),
-            country: trip.destination.city,
-            // Sort destinations by order to get the first departure date
-            departureDate: formatDate(
-              trip.requests_destinations.sort(
-                (a: any, b: any) => a.destination_order - b.destination_order
-              )[0].departure_date
-            ),
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching travel records:", error);
-      }
-    };
-
-    fetchTravelRecords();
+  const fetchTravelRecords = useCallback(async () => {
+    try {
+      const response = await getRequest("/requests/to-approve");
+      setDataWithActions(
+        response.map((trip: any) => ({
+          ...trip,
+          status: renderStatus(trip.status),
+          country: trip.destination.city,
+          departureDate: formatDate(
+            trip.requests_destinations.sort(
+              (a: any, b: any) => a.destination_order - b.destination_order
+            )[0].departure_date
+          ),
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching travel records:", error);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTravelRecords();
+  }, [fetchTravelRecords]);
 
   // Handle tutorial visibility based on visited pages history
   useEffect(() => {
@@ -151,7 +147,7 @@ export const Approvals: React.FC = () => {
             <h2 className="text-2xl font-bold text-[var(--blue)]">
               Viajes por Aprobar
             </h2>
-            <RefreshButton />
+            <RefreshButton onClick={fetchTravelRecords} />
           </div>
 
           <div id="list_requests">

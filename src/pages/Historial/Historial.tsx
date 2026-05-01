@@ -4,7 +4,7 @@
  */
 
 import Table from "../../components/Refunds/Table";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getRequest } from "../../utils/apiService";
 import formatDate from "../../utils/formatDate";
 import { Permission, useAuth } from "../../hooks/auth/authContext";
@@ -88,8 +88,8 @@ export const Historial = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
-
   const scope = searchParams.get("scope");
+  
   const isApproverHistoryView =
     scope === "approver" ||
     (authState.userPermissions.includes("approve_request" as Permission) &&
@@ -161,10 +161,34 @@ export const Historial = () => {
         console.error("Error fetching travel records:", error);
         toast.error("Error al obtener el historial de viajes.");
       }
-    };
+      setDataWithActions(response?.map((record: any, index: number) => ({
+        ...record,
+        status: renderStatus(record.status),
+        createdAt: formatDate(record.createdAt),
+        country: record.destination.city,
+        departureDate: formatDate(record.requests_destinations.sort((a: any, b: any) => a.destination_order - b.destination_order)[0].departure_date),
+        index,
+        action: (
+          <Button
+            className="bg-[var(--white)] text-[var(--blue)] px-2 py-1 text-xs sm:text-sm rounded-sm hover:bg-gray-100 transition-colors"
+            label="Ver detalles"
+            id={`details-${index}`}
+            driver-id="details"
+            onClickFunction={() => {
+              navigate(`/requests/${record.id}`);
+            }}
+          />
+        ),
+      })));
+    } catch (error) {
+      console.error("Error fetching travel records:", error);
+      toast.error("Error al obtener el historial de viajes.");
+    }
+  }, [authState.userPermissions, authState.userId, navigate]);
 
+  useEffect(() => {
     fetchTravelRecords();
-  }, []);
+  }, [fetchTravelRecords]);
 
   useEffect(() => {
       // Get the visited pages from localStorage
@@ -201,7 +225,7 @@ export const Historial = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-[#0a2c6d]">
                 {pageTitle}
               </h2>
-              <RefreshButton />
+              <RefreshButton onClick={fetchTravelRecords} />
           </div>
 
           {/* Travel history table component */}

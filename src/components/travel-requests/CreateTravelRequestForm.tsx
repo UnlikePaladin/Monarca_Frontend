@@ -34,7 +34,12 @@ const priorityOptions: Option[] = [
 ];
 
 const destinationSchema = z.object({
-  id_destination: z.string().nullable(),
+  id_destination: z
+    .string()
+    .nullable()
+    .refine((v) => v !== null && v !== "", {
+      message: "Selecciona un destino",
+    }),
   id_airport: z.string().nullable().optional(),
   arrival_date: z.string().nonempty({ message: "Selecciona fecha de llegada" }),
   departure_date: z
@@ -143,12 +148,9 @@ function CreateTravelRequestForm() {
     }
 
     const requests_destinations = data.destinations.map((d, idx, arr) => {
-      if (!d.id_destination) {
-        throw new Error("Selecciona un destino");
-      }
-
+      // id_destination is guaranteed non-empty by the Zod refine on destinationSchema
       return {
-        id_destination: d.id_destination,
+        id_destination: d.id_destination as string,
         ...(d.is_plane_required && d.id_airport ? { id_airport: d.id_airport } : {}),
         destination_order: idx + 1,
         stay_days: d.stay_days,
