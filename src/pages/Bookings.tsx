@@ -1,6 +1,6 @@
 /*This component (Bookings) renders the “Viajes por Reservar” (Trips to Book) page by fetching booking-pending travel requests from the API and showing them in a table with an action link. When it mounts, it calls GET /requests/to-reserve and maps each trip into a table-ready format: it converts the backend status into a styled Spanish badge using renderStatus, sets the “Lugar de Salida” field from trip.destination.city, and calculates the departure date by sorting requests_destinations by destination_order, taking the first destination’s departure_date, and formatting it with formatDate. It also adds an action column that renders a React Router Link to /bookings/{trip.id} labeled “Reservar.” A second effect integrates the tutorial/first-visit logic using useApp: it checks localStorage for visited pages, enables the tutorial on first visit, and records the page visit via handleVisitPage. The UI includes a back button (GoBack), a refresh control (RefreshButton), and wraps the page in a Tutorial component. */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import RefreshButton from "../components/RefreshButton";
 import Table from "../components/Refunds/Table";
 import { getRequest } from "../utils/apiService";
@@ -78,38 +78,37 @@ const Bookings = () => {
   const [dataWithActions, setDataWithActions] = useState([]);
   const { handleVisitPage, tutorial, setTutorial } = useApp();
 
-  // Fetch travel records data from API
-  useEffect(() => {
-    const fetchTravelRecords = async () => {
-      try {
-        const response = await getRequest("/requests/to-reserve");
-        setDataWithActions(
-          response.map((trip: any) => ({
-            ...trip,
-            status: renderStatus(trip.status),
-            country: trip.destination.city,
-            departureDate: formatDate(
-              trip.requests_destinations.sort(
-                (a: any, b: any) => a.destination_order - b.destination_order
-              )[0].departure_date
-            ),
-            action: (
-              <Link
-                to={`/bookings/${trip.id}`}
-                className="bg-[var(--white)] text-[var(--blue)] p-1 rounded-sm"
-              >
-                Reservar
-              </Link>
-            ),
-          }))
-        );
-      } catch (error) {
-        console.error("Error fetching travel records:", error);
-      }
-    };
-
-    fetchTravelRecords();
+  const fetchTravelRecords = useCallback(async () => {
+    try {
+      const response = await getRequest("/requests/to-reserve");
+      setDataWithActions(
+        response.map((trip: any) => ({
+          ...trip,
+          status: renderStatus(trip.status),
+          country: trip.destination.city,
+          departureDate: formatDate(
+            trip.requests_destinations.sort(
+              (a: any, b: any) => a.destination_order - b.destination_order
+            )[0].departure_date
+          ),
+          action: (
+            <Link
+              to={`/bookings/${trip.id}`}
+              className="bg-[var(--white)] text-[var(--blue)] p-1 rounded-sm"
+            >
+              Reservar
+            </Link>
+          ),
+        }))
+      );
+    } catch (error) {
+      console.error("Error fetching travel records:", error);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTravelRecords();
+  }, [fetchTravelRecords]);
 
   useEffect(() => {
     // Get the visited pages from localStorage
@@ -136,7 +135,7 @@ const Bookings = () => {
             <h2 className="text-2xl font-bold text-[#0a2c6d]">
               Viajes por reservar
             </h2>
-            <RefreshButton />
+            <RefreshButton onClick={fetchTravelRecords} />
           </div>
 
           <div id="list_requests">

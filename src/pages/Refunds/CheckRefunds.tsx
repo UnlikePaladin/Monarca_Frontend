@@ -4,7 +4,7 @@
  * When a refund is requested, a form is displayed with fields for entering details about the refund request.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Table from "../../components/Refunds/Table";
 import { getRequest } from "../../utils/apiService";
 import Button from "../../components/Refunds/Button";
@@ -89,34 +89,35 @@ export const CheckRefunds = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const { handleVisitPage, tutorial, setTutorial } = useApp();
 
-  useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        setLoading(true);
-        const response = await getRequest("/requests/refund-to-approve-SOI");
-        setTrips(response.map((trip: any) => ({
-          ...trip,
-          status: renderStatus(trip.status),
-          date: formatDate(trip.requests_destinations.sort((a: any, b: any) => a.destination_order - b.destination_order)[0].departure_date),
-          advance_money: formatMoney(trip.advance_money),
-          origin: trip.destination.city,
-          createdAt: formatDate(trip.createdAt),
-        })));
-      } catch (err) {
-        toast.error(
-          "Error al cargar los viajes. Por favor, inténtelo de nuevo más tarde."  
-        );
-    
-        console.error(
-          "Error al cargar viajes: ",
-          err instanceof Error ? err.message : err
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrips();
+  const fetchTrips = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getRequest("/requests/refund-to-approve-SOI");
+      setTrips(response.map((trip: any) => ({
+        ...trip,
+        status: renderStatus(trip.status),
+        date: formatDate(trip.requests_destinations.sort((a: any, b: any) => a.destination_order - b.destination_order)[0].departure_date),
+        advance_money: formatMoney(trip.advance_money),
+        origin: trip.destination.city,
+        createdAt: formatDate(trip.createdAt),
+      })));
+    } catch (err) {
+      toast.error(
+        "Error al cargar los viajes. Por favor, inténtelo de nuevo más tarde."
+      );
+
+      console.error(
+        "Error al cargar viajes: ",
+        err instanceof Error ? err.message : err
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchTrips();
+  }, [fetchTrips]);
 
   useEffect(() => {
       // Get the visited pages from localStorage
@@ -171,7 +172,7 @@ export const CheckRefunds = () => {
             <h2 className="text-2xl font-bold text-[var(--blue)]">
                 Reembolsos por registrar
             </h2>
-            <RefreshButton />
+            <RefreshButton onClick={fetchTrips} />
           </div>
 
           <div id="list_requests">

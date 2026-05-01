@@ -17,7 +17,9 @@ export const Dashboard = ({ title }: DashboardProps) => {
   const { setPageTitle } = useApp();
   const { authState } = useAuth();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
-  const normalizedRole = (authState.userRole || "").toLowerCase().replace(/[_\s-]/g, "");
+  const normalizedRole = (authState.userRole || "")
+    .toLowerCase()
+    .replace(/[_\s-]/g, "");
   const isSuperAdmin = normalizedRole === "superadmin";
   const isCompanyAdmin = normalizedRole === "companyadmin";
 
@@ -29,7 +31,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
   useEffect(() => {
     // Get the visited pages from localStorage
     const visitedPages = JSON.parse(
-      localStorage.getItem("visitedPages") || "[]"
+      localStorage.getItem("visitedPages") || "[]",
     );
     // Check if the current page is already in the visited pages
     const isPageVisited = visitedPages.includes(location.pathname);
@@ -54,10 +56,10 @@ export const Dashboard = ({ title }: DashboardProps) => {
           />
         )}
         {authState.userPermissions.includes(
-          "view_assigned_requests_readonly" as Permission
+          "view_assigned_requests_readonly" as Permission,
         ) &&
           authState.userPermissions.includes(
-            "create_request" as Permission
+            "create_request" as Permission,
           ) && (
             <Mosaic
               title="Historial de viajes"
@@ -67,7 +69,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
             />
           )}
         {authState.userPermissions.includes(
-          "upload_vouchers" as Permission
+          "upload_vouchers" as Permission,
         ) && (
           <Mosaic
             title="Comprobar Gastos"
@@ -77,7 +79,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
           />
         )}
         {authState.userPermissions.includes(
-          "approve_request" as Permission
+          "approve_request" as Permission,
         ) && (
           <Mosaic
             title="Viajes por aprobar"
@@ -87,10 +89,10 @@ export const Dashboard = ({ title }: DashboardProps) => {
           />
         )}
         {authState.userPermissions.includes(
-          "view_assigned_requests_readonly" as Permission
+          "view_assigned_requests_readonly" as Permission,
         ) &&
           authState.userPermissions.includes(
-            "approve_request" as Permission
+            "approve_request" as Permission,
           ) && (
             <Mosaic
               title="Historial de viajes aprobados"
@@ -100,7 +102,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
             />
           )}
         {authState.userPermissions.includes(
-          "approve_vouchers" as Permission
+          "approve_vouchers" as Permission,
         ) && (
           <Mosaic
             title="Comprobantes de gastos por aprobar"
@@ -129,7 +131,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
           />
         )}
         {authState.userPermissions.includes(
-          "submit_reservations" as Permission
+          "submit_reservations" as Permission,
         ) && (
           <Mosaic
             title="Viajes por reservar"
@@ -139,10 +141,10 @@ export const Dashboard = ({ title }: DashboardProps) => {
           />
         )}
         {authState.userPermissions.includes("check_budgets" as Permission) && (
-          <Mosaic 
-            title="Gestión de pólizas" 
-            iconPath="/assets/policies.png" 
-            link="/policies" 
+          <Mosaic
+            title="Gestión de Pólizas"
+            iconPath="/assets/policies.png"
+            link="/policies"
             id="policies-card"
           />
         )}
@@ -150,10 +152,10 @@ export const Dashboard = ({ title }: DashboardProps) => {
           <Mosaic title="Formulario de ingreso de reservación" iconPath="/assets/formulario_de_ingreso_de_reservacion.png" link=""/>
         )} */}
         {authState.userPermissions.includes(
-          "view_assigned_requests_readonly" as Permission
+          "view_assigned_requests_readonly" as Permission,
         ) &&
           authState.userPermissions.includes(
-            "submit_reservations" as Permission
+            "submit_reservations" as Permission,
           ) && (
             <Mosaic
               title="Historial de viajes reservados"
@@ -173,15 +175,15 @@ export const Dashboard = ({ title }: DashboardProps) => {
         {isCompanyAdmin && (
           <Mosaic
             title="Departamentos"
-            iconPath="/assets/roles.png"
+            iconPath="/assets/building.png"
             link="/admin/departments"
             id="tenant_departments"
           />
         )}
         {isCompanyAdmin && (
           <Mosaic
-            title="Centros de costos"
-            iconPath="/assets/roles.png"
+            title="Centro de costos"
+            iconPath="/assets/circle-dollar-sign.png"
             link="/admin/cost-centers"
             id="tenant_cost_centers"
           />
@@ -189,15 +191,31 @@ export const Dashboard = ({ title }: DashboardProps) => {
         {isCompanyAdmin && (
           <Mosaic
             title="Cuentas contables"
-            iconPath="/assets/roles.png"
+            iconPath="/assets/sheet.png"
             link="/admin/accounting-accounts"
             id="tenant_accounting_accounts"
           />
         )}
         {isCompanyAdmin && (
           <Mosaic
-            title="Políticas de reembolso"
+            title="Delegaciones de sustitutos"
+            iconPath="/assets/roles.png"
+            link="/roles"
+            id="substitute_delegations"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Matriz de autorización"
             iconPath="/assets/matrix.png"
+            link="/approval-rules"
+            id="approval_rules"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Políticas de reembolso"
+            iconPath="/assets/refresh-cw.png"
             link="/admin/refund-policies"
             id="refund_policies_admin"
           />
@@ -211,4 +229,5 @@ export const Dashboard = ({ title }: DashboardProps) => {
 Modification History:
 - 2026-04-09 | Fabrizio | Refactored grid system to support 1, 2, and 4 columns depending on device width.
 - 2026-04-14 | Fabrizio | Added the Policies Management mosaic for the SOI workflow.
+- 2026-04-27 | Juan de Dios Gastélum | Added Delegaciones de sustitutos and Matriz de autorización mosaics for CompanyAdmin. Updated asset paths for Departamentos, Centros de costos, and Cuentas contables.
 */
