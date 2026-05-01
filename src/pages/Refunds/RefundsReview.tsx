@@ -222,7 +222,7 @@ export const RefundsReview = () => {
         <div className="flex-1 p-6 bg-[#eaeced] rounded-lg shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-[var(--blue)]">
-              Solicitudes de Reembolso por Aprobar
+              Comprobantes por aprobar
             </h2>
             <RefreshButton onClick={fetchTrips} />
           </div>

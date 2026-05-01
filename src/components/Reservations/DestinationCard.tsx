@@ -1,0 +1,305 @@
+/* DestinationCard renders a single destination block within the reservation assignment form.
+   Displays a read-only info grid and conditional hotel/plane form fields. When a flight
+   is required, it also manages the Duffel search flow: offer list, selection, and
+   passenger form submission trigger. */
+
+import React from "react";
+import Input from "../Refunds/InputField";
+import TextArea from "../Refunds/TextArea";
+import { DuffelOfferList } from "./DuffelOfferList";
+import { DuffelPassengerForm } from "./DuffelPassengerForm";
+import { DuffelOffer } from "../../types/duffel";
+
+interface DestinationCardProps {
+  destination: any;
+  formData: Record<string, any>;
+  duffelSearchIds: Record<string, string>;
+  selectedOffer: Record<string, DuffelOffer | null>;
+  searchingDuffel: Record<string, boolean>;
+  labels: { key: string; label: string }[];
+  requestUser: { name: string; last_name: string; email: string };
+  isOrderPending: boolean;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>, id: string) => void;
+  onFieldChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    id: string,
+  ) => void;
+  onDuffelSearch: (destination: any) => void;
+  onSelectOffer: (destId: string, offer: DuffelOffer) => void;
+  onSubmitDuffelOrder: (
+    destId: string,
+    passengerData: any,
+    backendDestId?: string,
+  ) => void;
+  onClearDuffelSearch: (destId: string) => void;
+  onClearSelectedOffer: (destId: string) => void;
+}
+
+/**
+ * Renders a single destination card in the reservation assignment page.
+ * Handles hotel form, plane form, Duffel search flow, and passenger data collection.
+ * @param props - See DestinationCardProps.
+ */
+export const DestinationCard: React.FC<DestinationCardProps> = ({
+  destination,
+  formData,
+  duffelSearchIds,
+  selectedOffer,
+  searchingDuffel,
+  labels,
+  requestUser,
+  isOrderPending,
+  onFileChange,
+  onFieldChange,
+  onDuffelSearch,
+  onSelectOffer,
+  onSubmitDuffelOrder,
+  onClearDuffelSearch,
+  onClearSelectedOffer,
+}) => {
+  const destId = destination.id;
+
+  return (
+    <div className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm">
+      <div className="flex justify-between items-center border-b pb-2">
+        <h3 className="font-bold text-lg text-[var(--blue)]">
+          Destino #{destination.destination_order}
+        </h3>
+        {destination.is_plane_required && !selectedOffer[destId] && (
+          <button
+            type="button"
+            onClick={() => onDuffelSearch(destination)}
+            disabled={searchingDuffel[destId]}
+            className="text-xs bg-[#6032b3] text-white px-3 py-1 rounded hover:bg-[#4c2891] transition-colors"
+          >
+            {searchingDuffel[destId] ? "Buscando..." : "Buscar vuelos (Duffel)"}
+          </button>
+        )}
+      </div>
+
+      <section
+        className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8"
+        id="reservation-info"
+      >
+        {labels.map(({ key, label }) => (
+          <div key={key}>
+            <label
+              htmlFor={key}
+              className="block text-xs font-semibold text-gray-500 mb-1"
+            >
+              {label}
+            </label>
+            <input
+              id={key}
+              type="text"
+              readOnly
+              value={destination[key] || ""}
+              className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
+            />
+          </div>
+        ))}
+      </section>
+
+      {!duffelSearchIds[destId] && (
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+          {destination.is_hotel_required && (
+            <div className="flex flex-col gap-y-4" id="hotel-reservation">
+              <h3 className="text-[var(--blue)] mb-4 font-bold">
+                Información del hotel
+              </h3>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`hotel_title_${destId}`}
+                >
+                  Título
+                </label>
+                <Input
+                  placeholder="Ingresa el título de la reservación"
+                  value={formData[destId]?.hotel_title || ""}
+                  onChange={(e) => onFieldChange(e, destId)}
+                  name="hotel_title"
+                  id={`hotel_title_${destId}`}
+                />
+              </div>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`hotel_comments_${destId}`}
+                >
+                  Comentarios
+                </label>
+                <TextArea
+                  placeholder="Escribe tus comentarios"
+                  value={formData[destId]?.hotel_comments || ""}
+                  onChange={(e) => onFieldChange(e, destId)}
+                  name="hotel_comments"
+                  id={`hotel_comments_${destId}`}
+                />
+              </div>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`hotel_price_${destId}`}
+                >
+                  Precio
+                </label>
+                <Input
+                  placeholder="Ingresa el precio del hotel"
+                  value={formData[destId]?.hotel_price || ""}
+                  onChange={(e) => onFieldChange(e, destId)}
+                  name="hotel_price"
+                  type="number"
+                  id={`hotel_price_${destId}`}
+                />
+              </div>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`hotel_file_${destId}`}
+                >
+                  Subir archivos de hotel
+                </label>
+                <Input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onFileChange(e, destId)}
+                  name="hotel_file"
+                  id={`hotel_file_${destId}`}
+                  selectedFileName={formData[destId]?.hotel_file_name}
+                />
+              </div>
+            </div>
+          )}
+
+          {destination.is_plane_required && (
+            <div className="flex flex-col gap-y-4" id="plane-reservation">
+              <h3 className="text-[var(--blue)] mb-4 font-bold">
+                Información del vuelo
+              </h3>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`plane_title_${destId}`}
+                >
+                  Título
+                </label>
+                <Input
+                  placeholder="Ingresa el título de la reservación"
+                  value={formData[destId]?.plane_title || ""}
+                  onChange={(e) => onFieldChange(e, destId)}
+                  name="plane_title"
+                  id={`plane_title_${destId}`}
+                />
+              </div>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`plane_comments_${destId}`}
+                >
+                  Comentarios
+                </label>
+                <TextArea
+                  placeholder="Escribe tus comentarios"
+                  value={formData[destId]?.plane_comments || ""}
+                  onChange={(e) => onFieldChange(e, destId)}
+                  name="plane_comments"
+                  id={`plane_comments_${destId}`}
+                />
+              </div>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`plane_price_${destId}`}
+                >
+                  Precio
+                </label>
+                <Input
+                  placeholder="Ingresa el precio del vuelo"
+                  value={formData[destId]?.plane_price || ""}
+                  onChange={(e) => onFieldChange(e, destId)}
+                  name="plane_price"
+                  type="number"
+                  id={`plane_price_${destId}`}
+                />
+              </div>
+              <div>
+                <label
+                  className="block mb-2 text-sm font-medium text-gray-900"
+                  htmlFor={`plane_file_${destId}`}
+                >
+                  Subir archivos de avión
+                </label>
+                <Input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => onFileChange(e, destId)}
+                  name="plane_file"
+                  id={`plane_file_${destId}`}
+                  selectedFileName={formData[destId]?.plane_file_name}
+                />
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {duffelSearchIds[destId] && !selectedOffer[destId] && (
+        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 shadow-inner">
+          <div className="flex justify-between items-center mb-4">
+            <h4 className="text-sm font-bold text-purple-900">
+              Vuelos encontrados (Precios en tiempo real)
+            </h4>
+            <button
+              onClick={() => onClearDuffelSearch(destId)}
+              className="text-xs text-purple-600 hover:underline"
+            >
+              Cambiar a carga manual
+            </button>
+          </div>
+          <DuffelOfferList
+            offerRequestId={duffelSearchIds[destId] || ""}
+            onSelectOffer={(offer) => onSelectOffer(destId, offer)}
+          />
+        </div>
+      )}
+
+      {selectedOffer[destId] && (
+        <div className="bg-green-50 p-6 rounded-lg border-2 border-green-200">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h4 className="font-black text-green-900 uppercase tracking-tight">
+                Vuelo Seleccionado
+              </h4>
+              <p className="text-xs text-green-700">
+                Aerolínea: {selectedOffer[destId]?.owner?.name} Vuelo ID:{" "}
+                {(
+                  selectedOffer[destId]?.id ||
+                  selectedOffer[destId]?.offer_id ||
+                  ""
+                ).substring(0, 8)}
+              </p>
+            </div>
+            <button
+              onClick={() => onClearSelectedOffer(destId)}
+              className="text-xs bg-white border border-green-300 px-2 py-1 rounded text-green-700 hover:bg-green-100"
+            >
+              Elegir otro vuelo
+            </button>
+          </div>
+          <DuffelPassengerForm
+            offer={selectedOffer[destId]!}
+            initialData={requestUser}
+            isSubmitting={isOrderPending}
+            onSubmit={(data) => onSubmitDuffelOrder(destId, data)}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+/*
+Modification History:
+- 2026-04-27 | Juan de Dios Gastélum | Initial file creation. Extracted from Reservations.tsx to keep file under 1000 lines.
+*/

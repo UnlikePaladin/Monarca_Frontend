@@ -10,6 +10,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import RefundsAcceptance from "../../pages/Refunds/RefundsAcceptance";
 import React from "react";
+import { postRequest } from "../../utils/apiService";
+
+vi.mock("../../hooks/app/appContext", () => ({
+  useApp: () => ({
+    handleVisitPage: vi.fn(),
+    tutorial: false,
+  }),
+}));
 
 // Mock router hooks
 const mockNavigate = vi.fn();
@@ -30,8 +38,16 @@ vi.mock("../../utils/apiService", () => ({
       admin: { name: "John", last_name: "Doe" },
       destination: { city: "NYC" },
       requests_destinations: [
-        { destination: { city: "Chicago" } },
-        { destination: { city: "Boston" } },
+        {
+          destination: { city: "Chicago" },
+          arrival_date: "2024-01-10",
+          departure_date: "2024-01-12",
+        },
+        {
+          destination: { city: "Boston" },
+          arrival_date: "2024-01-12",
+          departure_date: "2024-01-14",
+        },
       ],
       createdAt: "2024-01-01",
       advance_money: 1000,
@@ -59,6 +75,13 @@ vi.mock("../../utils/apiService", () => ({
           date: "2024-01-02",
         },
       ],
+    }),
+  ),
+  postRequest: vi.fn(() =>
+    Promise.resolve({
+      policy_summary: {
+        violations: [],
+      },
     }),
   ),
   patchRequest: vi.fn(() => Promise.resolve({})),
@@ -140,7 +163,7 @@ describe("RefundsAcceptance", () => {
       { timeout: 3000 },
     );
 
-    expect(screen.getByText(/Empleado:/)).toBeInTheDocument();
+    expect(screen.getByText(/Información importante/i)).toBeInTheDocument();
   });
 
   it("renders form fields with correct labels", async () => {
@@ -243,5 +266,62 @@ describe("RefundsAcceptance", () => {
       },
       { timeout: 3000 },
     );
+  });
+
+  it("muestra violaciones de ventana de viaje solo para el voucher preview correspondiente", async () => {
+    vi.mocked(postRequest).mockResolvedValueOnce({
+      policy_summary: {
+        violations: [
+          {
+            policy_code: "VOUCHER_DATE_WITHIN_TRIP_WINDOW",
+            message: "Comprobante fuera del periodo del viaje",
+            severity: "BLOCKING",
+            evaluated_value: {
+              out_of_window_voucher_ids: ["preview-2"],
+              trip_start_date: "2024-01-01",
+              trip_end_date: "2024-01-05",
+            },
+          },
+        ],
+      },
+    });
+
+    renderWithRouter(<RefundsAcceptance />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Comprobante fuera del periodo del viaje")).toBeInTheDocument();
+    });
+
+    expect(screen.getAllByText("Observaciones de políticas")).toHaveLength(1);
+  });
+
+  it("agrega validación de respaldo de ventana de viaje cuando el backend no la regresa", async () => {
+    vi.mocked(postRequest).mockResolvedValueOnce({
+      policy_summary: {
+        violations: [
+          {
+            policy_code: "LT",
+            message: "Regla violada: LT con valor 50",
+            severity: "WARNING",
+            evaluated_value: {
+              amount: 1,
+              operator: "LT",
+              threshold: 50,
+              currency: "MXN",
+            },
+          },
+        ],
+      },
+    });
+
+    renderWithRouter(<RefundsAcceptance />);
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(
+          "Comprobante fuera del periodo del viaje (validación de respaldo).",
+        ).length,
+      ).toBeGreaterThan(0);
+    });
   });
 });

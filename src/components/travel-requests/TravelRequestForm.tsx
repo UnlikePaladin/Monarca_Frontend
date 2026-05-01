@@ -154,6 +154,8 @@ function DestinationFields({
     name: `requests_destinations.${idx}.is_plane_required`,
   });
 
+  const hideArrival = isLast && !isRoundTrip && isPlaneRequired;
+
   const currentDestination = destinations.find((d) => d.id === destinationId);
   const destinationName = currentDestination
     ? `${currentDestination.city}, ${currentDestination.country}`
@@ -174,6 +176,12 @@ function DestinationFields({
   useEffect(() => {
     setValue(`requests_destinations.${idx}.stay_days`, stayDays);
   }, [arrivalDate, departureDate, idx, setValue, stayDays]);
+
+  useEffect(() => {
+    if (hideArrival && departureDate) {
+      setValue(`requests_destinations.${idx}.arrival_date`, departureDate);
+    }
+  }, [hideArrival, departureDate, idx, setValue]);
 
   const destinationErrors = errors?.[idx];
 
@@ -288,57 +296,70 @@ function DestinationFields({
                   field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
                 }
                 onChange={(e) => field.onChange(e.target.value)}
+                readOnly={idx > 0}
+                className={
+                  idx > 0 ? "bg-gray-100 cursor-not-allowed text-gray-500" : ""
+                }
               />
             )}
           />
+          {idx > 0 && (
+            <p className="text-xs text-gray-400 mt-1">
+              Fecha fijada por la llegada del tramo anterior.
+            </p>
+          )}
           <FieldError msg={destinationErrors?.departure_date?.message} />
         </div>
 
-        <div>
-          <label
-            htmlFor={`arrival-${idx}`}
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            {isLast
-              ? isRoundTrip
-                ? `Fecha de regreso a ${originName}`
-                : `Llegada a ${destinationName}`
-              : `Salida de ${destinationName}`}
-          </label>
-          <Controller
-            control={control}
-            name={`requests_destinations.${idx}.arrival_date`}
-            render={({ field }) => (
-              <Input
-                id={`arrival-${idx}`}
-                type="date"
-                value={
-                  field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
-                }
-                onChange={(e) => {
-                  field.onChange(e.target.value);
-                  onArrivalDateChange(e.target.value);
-                }}
-              />
-            )}
-          />
-          <FieldError msg={destinationErrors?.arrival_date?.message} />
-        </div>
+        {!hideArrival && (
+          <div>
+            <label
+              htmlFor={`arrival-${idx}`}
+              className="block mb-2 text-sm font-medium text-gray-900"
+            >
+              {isLast
+                ? isRoundTrip
+                  ? `Fecha de regreso a ${originName}`
+                  : `Llegada a ${destinationName}`
+                : `Salida de ${destinationName}`}
+            </label>
+            <Controller
+              control={control}
+              name={`requests_destinations.${idx}.arrival_date`}
+              render={({ field }) => (
+                <Input
+                  id={`arrival-${idx}`}
+                  type="date"
+                  value={
+                    field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
+                  }
+                  onChange={(e) => {
+                    field.onChange(e.target.value);
+                    onArrivalDateChange(e.target.value);
+                  }}
+                />
+              )}
+            />
+            <FieldError msg={destinationErrors?.arrival_date?.message} />
+          </div>
+        )}
 
-        <div>
-          <label
-            htmlFor={`stay-days-${idx}`}
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
-            No. días estancia
-          </label>
-          <Input
-            id={`stay-days-${idx}`}
-            type="number"
-            value={stayDays}
-            readOnly
-          />
-        </div>
+        {!hideArrival && (
+          <div>
+            <label
+              htmlFor={`stay-days-${idx}`}
+              className="block mb-2 text-sm font-medium text-gray-900"
+            >
+              No. días estancia
+            </label>
+            <Input
+              id={`stay-days-${idx}`}
+              type="number"
+              value={stayDays}
+              readOnly
+            />
+          </div>
+        )}
 
         <div>
           <label
@@ -483,7 +504,9 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
       return;
     }
 
-    const hasInvalidStay = data.requests_destinations.some((d) => {
+    const hasInvalidStay = data.requests_destinations.some((d, idx, arr) => {
+      const isLastDest = idx === arr.length - 1;
+      if (isLastDest && d.is_plane_required && !isRoundTrip) return false;
       const diff = dayjs(d.arrival_date).diff(dayjs(d.departure_date), "day");
       return diff <= 0;
     });
@@ -574,12 +597,34 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
     };
 
     try {
-      if (isEditing && requestId) {
-        await updateTravelRequestMutation({ requestId, payload });
-        toast.success("¡Solicitud de viaje actualizada exitosamente!");
+      const response =
+        isEditing && requestId
+          ? await updateTravelRequestMutation({ requestId, payload })
+          : await createTravelRequestMutation(payload);
+
+      const emailWarnings = Array.isArray(response.emailWarnings)
+        ? response.emailWarnings
+        : [];
+
+      if (emailWarnings.length > 0) {
+        toast.warning(
+          isEditing
+            ? "Solicitud actualizada. No se pudo enviar la notificación por correo."
+            : "Solicitud creada. No se pudo enviar la notificación por correo.",
+          {
+            position: "top-right",
+            autoClose: 6000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+          },
+        );
       } else {
-        await createTravelRequestMutation(payload);
-        toast.success("¡Solicitud de viaje creada exitosamente!");
+        toast.success(
+          isEditing
+            ? "¡Solicitud de viaje actualizada exitosamente!"
+            : "¡Solicitud de viaje creada exitosamente!",
+        );
       }
 
       reset();
@@ -1003,4 +1048,5 @@ Modification History:
 - 2026-04-18 | Juan de Dios Gastélum Flores | Added pre-submission confirmation modal. Split onSubmit into validation and submitConfirmed phases.
 - 2026-04-22 | Juan de Dios Gastélum Flores | Improved multi-destination flow: sequential leg headers, round trip toggle, return leg indicator, auto-fill dates between legs, cross-leg date validation, and itinerary summary.
 - 2026-04-23 | Juan de Dios Gastélum | Replaced inline itinerary summary with sticky sidebar for better visibility during form navigation.
+- 2026-04-29 | Juan de Dios Gastélum Flores | Added warning toast when request creation or update succeeds but email notification delivery fails.
 */

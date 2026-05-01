@@ -9,7 +9,7 @@ import { getRequest } from "../../utils/apiService";
 import formatDate from "../../utils/formatDate";
 import { Permission, useAuth } from "../../hooks/auth/authContext";
 import RefreshButton from "../../components/RefreshButton";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Button from "../../components/Refunds/Button";
 import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
@@ -86,26 +86,80 @@ export const Historial = () => {
   const [dataWithActions, setDataWithActions] = useState([]);
   const { authState } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { handleVisitPage, tutorial, setTutorial } = useApp();
+  const scope = searchParams.get("scope");
+  
+  const isApproverHistoryView =
+    scope === "approver" ||
+    (authState.userPermissions.includes("approve_request" as Permission) &&
+      authState.userPermissions.includes(
+        "view_assigned_requests_readonly" as Permission
+      ) &&
+      !authState.userPermissions.includes("create_request" as Permission));
+  const isSoiTripsToRegisterView =
+    scope === "soi-trips" ||
+    (authState.userPermissions.includes("check_budgets" as Permission) &&
+      !authState.userPermissions.includes("create_request" as Permission) &&
+      !isApproverHistoryView);
+  const isTravelAgentReservedHistoryView =
+    scope === "travel-agent" ||
+    (authState.userPermissions.includes("submit_reservations" as Permission) &&
+      authState.userPermissions.includes("view_assigned_requests_readonly" as Permission) &&
+      !authState.userPermissions.includes("create_request" as Permission) &&
+      !isApproverHistoryView);
+  const pageTitle = isSoiTripsToRegisterView
+    ? "Viajes por registrar"
+    : isApproverHistoryView
+      ? "Historial"
+      : isTravelAgentReservedHistoryView
+        ? "Historial"
+        : "Historial de viajes";
 
-  const fetchTravelRecords = useCallback(async () => {
-    try {
-      const endpoint =
-        authState.userPermissions.includes("create_request" as Permission)
-          ? "/requests/user"
-          : authState.userPermissions.includes("check_budgets" as Permission)
-          ? "/requests/to-approve-SOI"
-          : "/requests/all"
-      let response = await getRequest(endpoint);
-      if(authState.userPermissions.includes("approve_request" as Permission)) {
-        response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled"].includes(record.status) && record.id_admin === authState.userId);
-      }
-      if(authState.userPermissions.includes("submit_reservations" as Permission)) {
-        const travelAgentsIds = response.map((request: any) => request.travel_agency.users.map((user: any) => user.id)).flat();
-        response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled", "Changes Needed", "Pending Accounting Approval"].includes(record.status) && travelAgentsIds.includes(authState.userId));
-      }
-      if(authState.userPermissions.includes("check_budgets" as Permission)) {
-        response = response.filter((record: any) => ["Pending Accounting Approval"].includes(record.status) && record.id_SOI === authState.userId);
+  // Fetch travel records data from API
+  useEffect(() => {
+    const fetchTravelRecords = async () => {
+      try {
+        const endpoint = 
+          authState.userPermissions.includes("create_request" as Permission)
+            ? "/requests/user"
+            : authState.userPermissions.includes("check_budgets" as Permission)
+            ? "/requests/to-approve-SOI"
+            : "/requests/all"
+        let response = await getRequest(endpoint);
+        if(authState.userPermissions.includes("approve_request" as Permission)) {
+          response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled"].includes(record.status) && record.id_admin === authState.userId);
+        }
+        if(authState.userPermissions.includes("submit_reservations" as Permission)) {
+          const travelAgentsIds = response.map((request: any) => request.travel_agency.users.map((user: any) => user.id)).flat();
+          response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled", "Changes Needed", "Pending Accounting Approval"].includes(record.status) && travelAgentsIds.includes(authState.userId));
+        }
+        if(authState.userPermissions.includes("check_budgets" as Permission)) {
+          response = response.filter((record: any) => ["Pending Accounting Approval"].includes(record.status) && record.id_SOI === authState.userId);
+        }
+        // Data with actions (edit buttons)
+        setDataWithActions(response?.map((record: any, index: number) => ({
+          ...record,
+          status: renderStatus(record.status),
+          createdAt: formatDate(record.createdAt),
+          country: record.destination.city,
+          departureDate: formatDate(record.requests_destinations.sort((a: any, b: any) => a.destination_order - b.destination_order)[0].departure_date),
+          index,
+          action: (
+            <Button
+              className="bg-[var(--white)] text-[var(--blue)] px-2 py-1 text-xs sm:text-sm rounded-sm hover:bg-gray-100 transition-colors"
+              label="Ver detalles"
+              id={`details-${index}`}
+              driver-id="details"
+              onClickFunction={() => {
+                navigate(`/requests/${record.id}`);
+              }}
+            />
+          ),
+        })));
+      } catch (error) {
+        console.error("Error fetching travel records:", error);
+        toast.error("Error al obtener el historial de viajes.");
       }
       setDataWithActions(response?.map((record: any, index: number) => ({
         ...record,
@@ -169,7 +223,7 @@ export const Historial = () => {
         <div className="p-4 sm:p-6 bg-[#eaeced] rounded-lg shadow-xl overflow-hidden">
           <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl sm:text-2xl font-bold text-[#0a2c6d]">
-                Historial de viajes
+                {pageTitle}
               </h2>
               <RefreshButton onClick={fetchTravelRecords} />
           </div>

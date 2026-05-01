@@ -50,6 +50,45 @@ const renderStatus = (status: string) => {
   }
 };
 
+type ToastKind = "success" | "info" | "error";
+
+/**
+ * Shows a warning toast when the API response includes email delivery warnings.
+ * Otherwise, shows the normal operation toast using the provided toast kind.
+ *
+ * @param response API response that may include emailWarnings.
+ * @param successMessage Message shown when no email warning exists.
+ * @param warningMessage Message shown when email delivery failed.
+ * @param successKind Toast type used when the operation finishes without email warnings.
+ */
+const showEmailAwareToast = (
+  response: unknown,
+  successMessage: string,
+  warningMessage: string,
+  successKind: ToastKind = "success",
+) => {
+  const responseData = response as { emailWarnings?: unknown };
+  const emailWarnings = Array.isArray(responseData.emailWarnings)
+    ? responseData.emailWarnings
+    : [];
+
+  if (emailWarnings.length > 0) {
+    toast.warning(warningMessage, {
+      position: "top-right",
+      autoClose: 6000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+    });
+    return;
+  }
+
+  toast[successKind](successMessage, {
+    position: "top-right",
+    autoClose: 3000,
+  });
+};
+
 const RequestInfo: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -185,14 +224,19 @@ const RequestInfo: React.FC = () => {
       return;
     }
     try {
-      await patchRequest(`/requests/approve/${id}`, {
+      const response = await patchRequest(`/requests/approve/${id}`, {
         id_travel_agency: selectedAgency,
       });
-      toast.success(`Solicitud aprobada con ${selectedAgency}`, {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      navigate("/approvals");
+
+      showEmailAwareToast(
+        response,
+        `Solicitud aprobada con ${selectedAgency}`,
+        "Solicitud aprobada. Falló el envío de una o más notificaciones.",
+      );
+
+      setTimeout(() => {
+        navigate("/approvals");
+      }, 800);
     } catch (error) {
       console.error("Error approving request:", error);
       toast.error("Error al aprobar la solicitud", {
@@ -212,15 +256,21 @@ const RequestInfo: React.FC = () => {
       return;
     }
     try {
-      await postRequest(`/revisions`, {
+      const response = await postRequest(`/revisions`, {
         id_request: id,
         comment: comment,
       });
-      toast.info("Se han solicitado cambios", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      navigate("/approvals");
+
+      showEmailAwareToast(
+        response,
+        "Se han solicitado cambios",
+        "Cambios solicitados. No se pudo enviar la notificación por correo.",
+        "info",
+      );
+
+      setTimeout(() => {
+        navigate("/approvals");
+      }, 800);
     } catch (error) {
       console.error("Error requesting changes:", error);
       toast.error("Error al solicitar cambios", {
@@ -233,12 +283,18 @@ const RequestInfo: React.FC = () => {
 
   const deny = async () => {
     try {
-      await patchRequest(`/requests/deny/${id}`, {});
-      toast.error("Solicitud denegada", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      navigate("/approvals");
+      const response = await patchRequest(`/requests/deny/${id}`, {});
+
+      showEmailAwareToast(
+        response,
+        "Solicitud denegada",
+        "Solicitud denegada. No se pudo enviar la notificación por correo.",
+        "error",
+      );
+
+      setTimeout(() => {
+        navigate("/approvals");
+      }, 800);
     } catch (error) {
       console.error("Error denying request:", error);
       toast.error("Error al denegar la solicitud", {
@@ -251,12 +307,18 @@ const RequestInfo: React.FC = () => {
 
   const cancel = async () => {
     try {
-      await patchRequest(`/requests/cancel/${id}`, {});
-      toast.error("Solicitud cancelada", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      navigate("/history");
+      const response = await patchRequest(`/requests/cancel/${id}`, {});
+
+      showEmailAwareToast(
+        response,
+        "Solicitud cancelada",
+        "La solicitud fue cancelada, pero no se pudo enviar el correo de notificación. Puedes continuar con el proceso.",
+        "error",
+      );
+
+      setTimeout(() => {
+        navigate("/history");
+      }, 800);
     } catch (error) {
       console.error("Error cancelling request:", error);
       toast.error("Error al cancelar la solicitud", {
@@ -269,12 +331,17 @@ const RequestInfo: React.FC = () => {
 
   const register = async () => {
     try {
-      await patchRequest(`/requests/SOI-approve/${id}`, {});
-      toast.success("Contabilidad aprobada; la agencia puede reservar", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      navigate("/history");
+      const response = await patchRequest(`/requests/SOI-approve/${id}`, {});
+
+      showEmailAwareToast(
+        response,
+        "Contabilidad aprobada; la agencia puede reservar",
+        "Contabilidad aprobada. Falló el envío de una o más notificaciones.",
+      );
+
+      setTimeout(() => {
+        navigate("/history");
+      }, 800);
     } catch (error) {
       console.error("Error registering request:", error);
       toast.error("Error al marcar la solicitud como registrada", {
@@ -287,12 +354,20 @@ const RequestInfo: React.FC = () => {
 
   const complete = async () => {
     try {
-      await patchRequest(`/requests/complete-request/${id}`, {});
-      toast.success("Solicitud marcada como completada", {
-        position: "top-right",
-        autoClose: 3000,
-      });
-      navigate("/check-refunds");
+      const response = await patchRequest(
+        `/requests/complete-request/${id}`,
+        {},
+      );
+
+      showEmailAwareToast(
+        response,
+        "Solicitud marcada como completada",
+        "Solicitud completada. No se pudo enviar la notificación por correo.",
+      );
+
+      setTimeout(() => {
+        navigate("/check-refunds");
+      }, 800);
     } catch (error) {
       console.error("Error completing request:", error);
       toast.error("Error al marcar la solicitud como completada", {
@@ -863,7 +938,6 @@ const RequestInfo: React.FC = () => {
                   </section>
                 )}
                 <footer className="flex flex-col sm:flex-row gap-4">
-                  
                   <button
                     onClick={() =>
                       openConfirm({
@@ -1071,4 +1145,6 @@ Modification History:
 - 2026-04-11 | Fabrizio | Added policy violations audit section to provide transparency for the approver role.
 - 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for all irreversible actions (approve, deny, cancel, register, complete).
 - 2026-04-23 | Juan de Dios Gastélum | Fixed destination sort order and added return leg row for round trips.
+- 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling for request status actions.
+
 */
