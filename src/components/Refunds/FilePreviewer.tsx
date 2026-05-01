@@ -7,6 +7,7 @@
 
 import formatDate from "../../utils/formatDate";
 import formatMoney from "../../utils/formatMoney";
+import { resolveFileUrl } from "../../utils/fileUrl";
 
 
 interface FilePreviewerProps {
@@ -28,11 +29,14 @@ interface FilePreviewerProps {
  * @returns File previewer component with download options
  */
 const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
+    const pdfUrl = resolveFileUrl(file.file_url_pdf);
+    const xmlUrl = resolveFileUrl(file.file_url_xml);
+
     return (
         <>
             <div className="grid grid-cols-3 w-full h-96 mb-4">
                 <iframe
-                  src={`${file.file_url_pdf}#navpanes=0&view=FitH`}
+                  src={pdfUrl ? `${pdfUrl}#navpanes=0&view=FitH` : ""}
                   width="100%"
                   height="100%"
                   title={`Comprobante de Solicitud ${fileIndex + 1}`}
@@ -51,7 +55,7 @@ const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
                 <div className="flex space-x-4">
                   <a
                     id={`download-file-xml-${fileIndex}`}
-                    href={file.file_url_xml}
+                    href={xmlUrl}
                     download={`comprobante${fileIndex + 1}.xml`}
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 hover:cursor-pointer"
                   >
@@ -59,7 +63,7 @@ const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
                   </a>
                   <a
                     id={`download-file-pdf-${fileIndex}`}
-                    href={file.file_url_pdf}
+                    href={pdfUrl}
                     download={`comprobante${fileIndex + 1}.pdf`}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hover:cursor-pointer"
                   >

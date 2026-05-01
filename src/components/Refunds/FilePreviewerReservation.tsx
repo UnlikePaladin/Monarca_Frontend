@@ -6,6 +6,7 @@
  */
 
 import formatMoney from "../../utils/formatMoney";
+import { resolveFileUrl } from "../../utils/fileUrl";
 
 
 interface FilePreviewerProps {
@@ -24,11 +25,13 @@ interface FilePreviewerProps {
  * @returns Reservation file previewer component with download option
  */
 const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
+    const fileUrl = resolveFileUrl(file.link);
+
     return (
         <>
             <div className="grid grid-cols-3 w-full h-96 mb-4">
                 <iframe
-                  src={`${file.link}#navpanes=0&view=FitH`}
+                  src={fileUrl ? `${fileUrl}#navpanes=0&view=FitH` : ""}
                   width="100%"
                   height="100%"
                   title={`Comprobante de Solicitud ${fileIndex + 1}`}
@@ -44,7 +47,7 @@ const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
                 <div className="flex space-x-4">
                   <a
                     id={`download-file-pdf-${fileIndex}`}
-                    href={file.link}
+                    href={fileUrl}
                     download={`comprobante${fileIndex + 1}.pdf`}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 hover:cursor-pointer"
                   >

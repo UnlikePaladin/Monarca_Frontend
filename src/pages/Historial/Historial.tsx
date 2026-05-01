@@ -82,8 +82,13 @@ const renderStatus = (status: string) => {
  * renders status, dates, and action buttons for each record.
  * @returns {JSX.Element} The travel history page layout.
  */
+const TRAVEL_AGENT_HISTORY_PAGE_SIZE = 5;
+
 export const Historial = () => {
   const [dataWithActions, setDataWithActions] = useState([]);
+  const [travelAgentTotal, setTravelAgentTotal] = useState(0);
+  const [travelAgentPage, setTravelAgentPage] = useState(1);
+  const [travelAgentLoading, setTravelAgentLoading] = useState(false);
   const { authState } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -116,47 +121,133 @@ export const Historial = () => {
         ? "Historial"
         : "Historial de viajes";
 
-  // Fetch travel records data from API
   useEffect(() => {
+    setTravelAgentPage(1);
+  }, [scope]);
+
+  const mapRecordToRow = useCallback(
+    (record: any, index: number) => ({
+      ...record,
+      status: renderStatus(record.status),
+      createdAt: formatDate(record.createdAt),
+      country: record.destination.city,
+      departureDate: formatDate(
+        record.requests_destinations.sort(
+          (a: any, b: any) => a.destination_order - b.destination_order
+        )[0].departure_date
+      ),
+      index,
+      action: (
+        <Button
+          className="bg-[var(--white)] text-[var(--blue)] px-2 py-1 text-xs sm:text-sm rounded-sm hover:bg-gray-100 transition-colors"
+          label="Ver detalles"
+          id={`details-${record.id}`}
+          driver-id="details"
+          onClickFunction={() => {
+            navigate(`/requests/${record.id}`);
+          }}
+        />
+      ),
+    }),
+    [navigate]
+  );
+
+  useEffect(() => {
+    if (!isTravelAgentReservedHistoryView) return;
+
+    const fetchTravelAgentHistoryPage = async () => {
+      setTravelAgentLoading(true);
+      try {
+        const res = await getRequest("/requests/travel-agent/history", {
+          page: travelAgentPage,
+          limit: TRAVEL_AGENT_HISTORY_PAGE_SIZE,
+        });
+        const list = res?.data ?? [];
+        const total = typeof res?.total === "number" ? res.total : 0;
+        setTravelAgentTotal(total);
+        setDataWithActions(
+          list.map((record: any, index: number) =>
+            mapRecordToRow(record, index)
+          )
+        );
+      } catch (error) {
+        console.error("Error fetching travel agent history:", error);
+        toast.error("Error al obtener el historial de viajes.");
+        setDataWithActions([]);
+        setTravelAgentTotal(0);
+      } finally {
+        setTravelAgentLoading(false);
+      }
+    };
+
+    fetchTravelAgentHistoryPage();
+  }, [
+    isTravelAgentReservedHistoryView,
+    travelAgentPage,
+    authState.userId,
+    mapRecordToRow,
+  ]);
+
+  useEffect(() => {
+    if (isTravelAgentReservedHistoryView) return;
+
     const fetchTravelRecords = async () => {
       try {
-        const endpoint = 
-          authState.userPermissions.includes("create_request" as Permission)
-            ? "/requests/user"
-            : authState.userPermissions.includes("check_budgets" as Permission)
+        const endpoint = authState.userPermissions.includes(
+          "create_request" as Permission
+        )
+          ? "/requests/user"
+          : authState.userPermissions.includes("check_budgets" as Permission)
             ? "/requests/to-approve-SOI"
-            : "/requests/all"
+            : "/requests/all";
         let response = await getRequest(endpoint);
-        if(authState.userPermissions.includes("approve_request" as Permission)) {
-          response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled"].includes(record.status) && record.id_admin === authState.userId);
+        if (
+          authState.userPermissions.includes("approve_request" as Permission)
+        ) {
+          response = response.filter(
+            (record: any) =>
+              !["Pending Review", "Denied", "Cancelled"].includes(
+                record.status
+              ) && record.id_admin === authState.userId
+          );
         }
-        if(authState.userPermissions.includes("submit_reservations" as Permission)) {
-          const travelAgentsIds = response.map((request: any) => request.travel_agency.users.map((user: any) => user.id)).flat();
-          response = response.filter((record: any) => !["Pending Review", "Denied", "Cancelled", "Changes Needed", "Pending Accounting Approval"].includes(record.status) && travelAgentsIds.includes(authState.userId));
+        if (
+          authState.userPermissions.includes(
+            "submit_reservations" as Permission
+          )
+        ) {
+          const travelAgentsIds = response
+            .map((request: any) =>
+              request.travel_agency.users.map((user: any) => user.id)
+            )
+            .flat();
+          response = response.filter(
+            (record: any) =>
+              ![
+                "Pending Review",
+                "Denied",
+                "Cancelled",
+                "Changes Needed",
+                "Pending Accounting Approval",
+                "Pending Reservations",
+              ].includes(record.status) &&
+              travelAgentsIds.includes(authState.userId)
+          );
         }
-        if(authState.userPermissions.includes("check_budgets" as Permission)) {
-          response = response.filter((record: any) => ["Pending Accounting Approval"].includes(record.status) && record.id_SOI === authState.userId);
+        if (
+          authState.userPermissions.includes("check_budgets" as Permission)
+        ) {
+          response = response.filter(
+            (record: any) =>
+              ["Pending Accounting Approval"].includes(record.status) &&
+              record.id_SOI === authState.userId
+          );
         }
-        // Data with actions (edit buttons)
-        setDataWithActions(response?.map((record: any, index: number) => ({
-          ...record,
-          status: renderStatus(record.status),
-          createdAt: formatDate(record.createdAt),
-          country: record.destination.city,
-          departureDate: formatDate(record.requests_destinations.sort((a: any, b: any) => a.destination_order - b.destination_order)[0].departure_date),
-          index,
-          action: (
-            <Button
-              className="bg-[var(--white)] text-[var(--blue)] px-2 py-1 text-xs sm:text-sm rounded-sm hover:bg-gray-100 transition-colors"
-              label="Ver detalles"
-              id={`details-${index}`}
-              driver-id="details"
-              onClickFunction={() => {
-                navigate(`/requests/${record.id}`);
-              }}
-            />
-          ),
-        })));
+        setDataWithActions(
+          response?.map((record: any, index: number) =>
+            mapRecordToRow(record, index)
+          )
+        );
       } catch (error) {
         console.error("Error fetching travel records:", error);
         toast.error("Error al obtener el historial de viajes.");
@@ -188,7 +279,7 @@ export const Historial = () => {
 
   useEffect(() => {
     fetchTravelRecords();
-  }, [fetchTravelRecords]);
+  }, [isTravelAgentReservedHistoryView, authState.userId, mapRecordToRow]);
 
   useEffect(() => {
       // Get the visited pages from localStorage
@@ -230,7 +321,30 @@ export const Historial = () => {
 
           {/* Travel history table component */}
           <div id="list_requests">
-            <Table columns={COLUMNS_SCHEMA} data={dataWithActions} itemsPerPage={5} />
+            {isTravelAgentReservedHistoryView && travelAgentLoading && (
+              <p className="text-sm text-[#0a2c6d] mb-2" aria-live="polite">
+                Cargando historial…
+              </p>
+            )}
+            <Table
+              columns={COLUMNS_SCHEMA}
+              data={dataWithActions}
+              itemsPerPage={
+                isTravelAgentReservedHistoryView
+                  ? TRAVEL_AGENT_HISTORY_PAGE_SIZE
+                  : 5
+              }
+              serverPagination={
+                isTravelAgentReservedHistoryView
+                  ? {
+                      totalItems: travelAgentTotal,
+                      currentPage: travelAgentPage,
+                      onPageChange: setTravelAgentPage,
+                      isLoading: travelAgentLoading,
+                    }
+                  : undefined
+              }
+            />
           </div>
           <p className="block sm:hidden text-center text-gray-500 text-[10px] mt-2 italic">
             Desliza hacia los lados para ver toda la información
