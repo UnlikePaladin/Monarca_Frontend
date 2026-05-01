@@ -23,6 +23,7 @@ export type CreateRequest = {
   motive: string;
   requirements?: string;
   priority: "alta" | "media" | "baja";
+  advance_money: number;
   requests_destinations: RequestDestination[];
 };
 
