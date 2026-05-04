@@ -252,32 +252,8 @@ export const Historial = () => {
         console.error("Error fetching travel records:", error);
         toast.error("Error al obtener el historial de viajes.");
       }
-      setDataWithActions(response?.map((record: any, index: number) => ({
-        ...record,
-        status: renderStatus(record.status),
-        createdAt: formatDate(record.createdAt),
-        country: record.destination.city,
-        departureDate: formatDate(record.requests_destinations.sort((a: any, b: any) => a.destination_order - b.destination_order)[0].departure_date),
-        index,
-        action: (
-          <Button
-            className="bg-[var(--white)] text-[var(--blue)] px-2 py-1 text-xs sm:text-sm rounded-sm hover:bg-gray-100 transition-colors"
-            label="Ver detalles"
-            id={`details-${index}`}
-            driver-id="details"
-            onClickFunction={() => {
-              navigate(`/requests/${record.id}`);
-            }}
-          />
-        ),
-      })));
-    } catch (error) {
-      console.error("Error fetching travel records:", error);
-      toast.error("Error al obtener el historial de viajes.");
-    }
-  }, [authState.userPermissions, authState.userId, navigate]);
+    };
 
-  useEffect(() => {
     fetchTravelRecords();
   }, [isTravelAgentReservedHistoryView, authState.userId, mapRecordToRow]);
 
@@ -316,7 +292,7 @@ export const Historial = () => {
               <h2 className="text-xl sm:text-2xl font-bold text-[#0a2c6d]">
                 {pageTitle}
               </h2>
-              <RefreshButton onClick={fetchTravelRecords} />
+              <RefreshButton />
           </div>
 
           {/* Travel history table component */}
