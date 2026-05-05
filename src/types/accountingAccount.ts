@@ -3,6 +3,7 @@ export type AccountingAccount = {
   key: string;
   description: string;
   requiresCostCenter: boolean;
+  bankAccountId?: string;
   id_company?: string;
   updatedAt?: string;
 };
@@ -11,4 +12,5 @@ export type CreateAccountingAccountPayload = {
   key: string;
   description: string;
   requiresCostCenter?: boolean;
+  bankAccountId?: string;
 };
