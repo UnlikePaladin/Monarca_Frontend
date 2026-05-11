@@ -45,6 +45,7 @@ import CreateAccountingAccount from "./pages/Admin/CreateAccountingAccount.tsx";
 import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
 import CostCenterList from "./components/Admin/CostCenterList.tsx";
 import AccountingAccountsList from "./components/Admin/AccountingAccountList.tsx";
+import { VoucherHistory } from "./pages/Historial/VoucherHistory.tsx";
 
 
 export const router = createBrowserRouter([
@@ -94,6 +95,10 @@ export const router = createBrowserRouter([
       {
         path: "/history",
         element: <Historial />,
+      },
+      {
+        path: "/vouchers-history",
+        element: <VoucherHistory />,
       },
       {
         path: "/refunds",

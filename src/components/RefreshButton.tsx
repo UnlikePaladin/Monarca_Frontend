@@ -11,10 +11,11 @@ import { MdRefresh } from "react-icons/md";
  * Renders a refresh button with icon.
  * @returns Button component with refresh icon
  */
-const RefreshButton = () => {
+const RefreshButton = ({ onClick }: { onClick?: () => void }) => {
 
     return (
         <button
+            onClick={onClick}
             className="p-2 bg-white rounded-md shadow hover:bg-gray-100"
         >
             <MdRefresh className="h-6 w-6 text-[#0a2c6d]" />
