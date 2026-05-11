@@ -76,6 +76,38 @@ interface PolicyPreviewResponse {
   policy_summary?: PolicySummary;
 }
 
+/**
+ * Shows a warning toast when the API response includes email delivery warnings.
+ * Otherwise, shows the normal success toast for the completed operation.
+ *
+ * @param response API response that may include emailWarnings.
+ * @param successMessage Message shown when no email warning exists.
+ * @param warningMessage Message shown when email delivery failed.
+ */
+const showEmailAwareToast = (
+  response: unknown,
+  successMessage: string,
+  warningMessage: string,
+) => {
+  const responseData = response as { emailWarnings?: unknown };
+  const emailWarnings = Array.isArray(responseData.emailWarnings)
+    ? responseData.emailWarnings
+    : [];
+
+  if (emailWarnings.length > 0) {
+    toast.warning(warningMessage, {
+      position: "top-right",
+      autoClose: 6000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+    });
+    return;
+  }
+
+  toast.success(successMessage);
+};
+
 const getUploadErrorMessage = (errorData?: UploadVoucherErrorResponse) => {
   if (!errorData) {
     return "Error al subir el comprobante. Verifica los datos e inténtalo de nuevo.";
@@ -144,10 +176,13 @@ export const Vouchers = () => {
     },
   });
   const [commentValue, setCommentValue] = useState<string>("");
-  const [policyViolations, setPolicyViolations] = useState<PolicyViolation[]>([]);
+  const [policyViolations, setPolicyViolations] = useState<PolicyViolation[]>(
+    [],
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreviewingPolicy, setIsPreviewingPolicy] = useState(false);
-  const [needsWarningConfirmation, setNeedsWarningConfirmation] = useState(false);
+  const [needsWarningConfirmation, setNeedsWarningConfirmation] =
+    useState(false);
   const [hasPreviewedPolicy, setHasPreviewedPolicy] = useState(false);
   // Controls the confirmation modal shown before submitting all vouchers.
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -248,10 +283,8 @@ export const Vouchers = () => {
       };
 
       violations.forEach((violation) => {
-        const outOfWindowIds =
-          violation.evaluated_value?.out_of_window_voucher_ids as
-                | string[]
-                | undefined;
+        const outOfWindowIds = violation.evaluated_value
+          ?.out_of_window_voucher_ids as string[] | undefined;
 
         if (outOfWindowIds && outOfWindowIds.length > 0) {
           outOfWindowIds.forEach((voucherId) => {
@@ -489,11 +522,22 @@ export const Vouchers = () => {
       }
 
       currentStep = "finish";
-      await patchRequest(`/requests/finished-uploading-vouchers/${id}`, {});
+      const response = await patchRequest(
+        `/requests/finished-uploading-vouchers/${id}`,
+        {},
+      );
 
-      toast.success("Solicitud de reembolso enviada con éxito.");
+      showEmailAwareToast(
+        response,
+        "Solicitud de reembolso enviada con éxito.",
+        "Reembolso enviado. No se pudo enviar la notificación por correo.",
+      );
+
       setFormData([]);
-      navigate("/refunds");
+
+      setTimeout(() => {
+        navigate("/refunds");
+      }, 800);
     } catch (err) {
       console.error(
         "Error al enviar la solicitud de reembolso: ",
@@ -579,13 +623,20 @@ export const Vouchers = () => {
         _rowIndex?: number,
         _cellIndex?: number,
       ) => (
-        <InputField
-          id={`amount-${_rowIndex}-${_cellIndex}`}
-          type="number"
-          value={value as string}
-          onChange={(e) => onChangeComponentFunction(Number(e.target.value))}
-          placeholder="Ingrese"
-        />
+        <div className="relative inline-block group">
+          <InputField
+            id={`amount-${_rowIndex}-${_cellIndex}`}
+            type="number"
+            value={value as string}
+            onChange={(e) => onChangeComponentFunction(Number(e.target.value))}
+            placeholder="Ingrese"
+            className="w-full"
+          />
+          <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-max -translate-x-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-gray-100 opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+            Solo MXN por el formato del XML.
+            <div className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gray-900"></div>
+          </div>
+        </div>
       ),
     },
     {
@@ -676,7 +727,7 @@ export const Vouchers = () => {
             } catch (err) {
               console.error("CFDI preview:", err);
               toast.error(
-                "No se pudieron leer el total, la fecha o el indicador de impuesto del XML."
+                "No se pudieron leer el total, la fecha o el indicador de impuesto del XML.",
               );
             }
           }}
@@ -819,8 +870,8 @@ export const Vouchers = () => {
               id="submit-refund"
               disabled={isSubmitting || isPreviewingPolicy}
               className={`px-4 py-2 text-white rounded-md transition-colors ${
-                isSubmitting || isPreviewingPolicy 
-                  ? "bg-gray-400 cursor-not-allowed" 
+                isSubmitting || isPreviewingPolicy
+                  ? "bg-gray-400 cursor-not-allowed"
                   : "bg-[#0a2c6d] hover:bg-[#0d3d94] hover:cursor-pointer"
               }`}
               onClick={handleSubmitClick}
@@ -828,8 +879,8 @@ export const Vouchers = () => {
               {isSubmitting
                 ? "Procesando..."
                 : needsWarningConfirmation
-                ? "Enviar de todos modos"
-                : "Enviar Solicitud"}
+                  ? "Enviar de todos modos"
+                  : "Enviar Solicitud"}
             </button>
           </div>
         </div>
@@ -853,6 +904,8 @@ export const Vouchers = () => {
 
 /*
 Modification History:
-2026-04-11 | Fabrizio | Integrated policy engine validation (422 error handling) and trip window date synchronization.
-2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modal before voucher submission to prevent accidental sends.
+- 2026-04-11 | Fabrizio | Integrated policy engine validation (422 error handling) and trip window date synchronization.
+- 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modal before voucher submission to prevent accidental sends.
+- 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling after submitting vouchers.
+- 2026-04-29 | Fabrizio Barrios Blanco | Added floating helper text for MXN amount input.
 */

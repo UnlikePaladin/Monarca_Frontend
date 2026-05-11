@@ -7,14 +7,20 @@
 
 import { MdRefresh } from "react-icons/md";
 
+interface RefreshButtonProps {
+    onClick?: () => void;
+}
+
 /**
  * Renders a refresh button with icon.
+ * @param onClick - Optional handler invoked when the button is clicked.
  * @returns Button component with refresh icon
  */
-const RefreshButton = ({ onClick }: { onClick?: () => void }) => {
+const RefreshButton = ({ onClick }: RefreshButtonProps) => {
 
     return (
         <button
+            type="button"
             onClick={onClick}
             className="p-2 bg-white rounded-md shadow hover:bg-gray-100"
         >

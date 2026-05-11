@@ -60,7 +60,7 @@ describe("Aprovador Role - Full End-to-End Flow", () => {
     cy.contains("Historial de viajes aprobados").first().click();
 
     cy.url().should("include", "/history");
-    cy.contains("Historial de viajes").should("be.visible");
+    cy.get("h2.font-bold").contains(/^Historial$/).should("be.visible");
     cy.get('button[id="details-0"]').click();
     cy.url().should("include", "/requests");
     cy.contains("Solicitante").should("be.visible");
@@ -72,7 +72,7 @@ describe("Aprovador Role - Full End-to-End Flow", () => {
 
     cy.contains("Comprobantes de gastos por aprobar").first().click();
     cy.url().should("include", "/refunds-review");
-    cy.contains("Solicitudes de Reembolso por Aprobar").should("be.visible");
+    cy.contains("Comprobantes por aprobar").should("be.visible");
 
     cy.contains("Ver comprobantes").should("be.visible").click();
     cy.url().should("include", "/refunds-review");

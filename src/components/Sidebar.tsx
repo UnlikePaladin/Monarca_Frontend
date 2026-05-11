@@ -1,6 +1,6 @@
 /**
  * Sidebar.tsx
- * 
+ *
  * Main sidebar navigation component with user info and menu options.
  * Displays user profile information and dynamically renders menu items based on permissions.
  */
@@ -18,7 +18,7 @@ import { AuthState, Permission } from "../hooks/auth/authContext";
  */
 interface SidebarProps {
   user: AuthState;
-  isOpen: boolean; 
+  isOpen: boolean;
 }
 /**
  * Renders a responsive sidebar with user info and permission-based navigation.
@@ -27,7 +27,9 @@ interface SidebarProps {
  * @param isOpen Boolean state to control mobile visibility toggle.
  */
 function Sidebar({ user, isOpen }: SidebarProps) {
-  const normalizedRole = (user.userRole || "").toLowerCase().replace(/[_\s-]/g, "");
+  const normalizedRole = (user.userRole || "")
+    .toLowerCase()
+    .replace(/[_\s-]/g, "");
   const isSuperAdmin = normalizedRole === "superadmin";
   const isCompanyAdmin = normalizedRole === "companyadmin";
 
@@ -41,110 +43,169 @@ function Sidebar({ user, isOpen }: SidebarProps) {
     >
       <div className="h-full px-3 pb-4 overflow-y-auto bg-[var(--gray)]">
         <div className="flex items-center bg-[var(--dark-blue)] mb-6 w-[100px] mx-auto p-3 rounded-xl">
-            <img src={logo} className="invert mx-auto" alt="Monarca Logo" />
+          <img src={logo} className="invert mx-auto" alt="Monarca Logo" />
         </div>
         <div className="flex flex-col items-center justify-center mb-6 text-center px-2">
-          <p className="text-[var(--blue)] font-bold truncate w-full">{user.userName ?? ""} {user.userLastName ?? ""} </p>
-          <p className="text-[var(--ultra-light-blue)] text-xs font-medium uppercase tracking-wider">{user.userRole ?? ""}</p>
+          <p className="text-[var(--blue)] font-bold truncate w-full">
+            {user.userName ?? ""} {user.userLastName ?? ""}{" "}
+          </p>
+          <p className="text-[var(--ultra-light-blue)] text-xs font-medium uppercase tracking-wider">
+            {user.userRole ?? ""}
+          </p>
         </div>
         <ul className="space-y-2 font-medium">
-            <SidebarOption 
-              label="Inicio"
-              pathIcon="/assets/dashboard.png"
-              link="/dashboard"
+          <SidebarOption
+            label="Inicio"
+            pathIcon="/assets/dashboard.png"
+            link="/dashboard"
+            invertIcon
+          />
+          {user.userPermissions.includes("create_request" as Permission) && (
+            <SidebarOption
+              label="Crear solicitud de viaje"
+              pathIcon="/assets/crear_solicitud_de_viaje.png"
+              link="/requests/create"
             />
-            {user.userPermissions.includes("create_request" as Permission) && (
-              <SidebarOption label="Crear solicitud de viaje" pathIcon="/assets/crear_solicitud_de_viaje.png" link="/requests/create"/>
-            )}
-            {user.userPermissions.includes("view_assigned_requests_readonly" as Permission) && user.userPermissions.includes("create_request" as Permission) && (
-              <SidebarOption label="Historial de viajes" pathIcon="/assets/historial_de_viajes.png" link="/history"/>
-            )}
-            {user.userPermissions.includes("upload_vouchers" as Permission) && (
-              <SidebarOption label="Comprobar Gastos" pathIcon="/assets/solicitud_de_reembolso.png" link="/refunds"/>
-            )}
-            {user.userPermissions.includes("upload_vouchers" as Permission) && (
-              <SidebarOption label="Historial de comprobantes" pathIcon="/assets/historial_de_reembolsos_aprobados.png" link="/vouchers-history"/>
-            )}
-            {user.userPermissions.includes("approve_request" as Permission) && (
-              <SidebarOption label="Viajes por aprobar" pathIcon="/assets/viajes_por_aprobar.png" link="/approvals"/>
-            )}
-            {user.userPermissions.includes("view_assigned_requests_readonly" as Permission) && user.userPermissions.includes("approve_request" as Permission) && (
-              <SidebarOption label="Historial de viajes aprobados" pathIcon="/assets/historial_de_viajes_aprobados.png" link="/history"/>
-            )}
-            {user.userPermissions.includes("approve_vouchers" as Permission) && (
-              <SidebarOption label="Comprobantes de gastos por aprobar" pathIcon="/assets/comprobantes_de_gastos_por_aprobar.png" link="/refunds-review"/>
-            )}
-            {user.userPermissions.includes("request_history" as Permission) && (
-              <SidebarOption label="Viajes por registrar" pathIcon="/assets/historial_de_reembolsos_aprobados.png" link="/history"/>
-            )}
-            {user.userPermissions.includes("check_budgets" as Permission) && (
-              <SidebarOption label="Reembolsos por registrar" pathIcon="/assets/reembolsos_por_aprobar.png" link="/check-refunds"/>
-            )}
-            {user.userPermissions.includes("submit_reservations" as Permission) && (
-              <SidebarOption label="Viajes por reservar" pathIcon="/assets/viajes_por_reservar.png" link="/bookings"/>
-            )}
-            {/* {user.userPermissions.includes("submit_reservations" as Permission) && (
-              <SidebarOption label="Formulario de ingreso de reservación" pathIcon="/assets/formulario_de_ingreso_de_reservacion.png" link=""/>
-            )} */}
-            {user.userPermissions.includes("view_assigned_requests_readonly" as Permission) && user.userPermissions.includes("submit_reservations" as Permission) && (
-              <SidebarOption label="Historial de viajes reservados" pathIcon="/assets/historial_de_viajes_reservados.png" link="/history"/>
-            )}
-            {user.userPermissions.includes("manage_users" as Permission) && (
+          )}
+          {user.userPermissions.includes(
+            "view_assigned_requests_readonly" as Permission,
+          ) &&
+            user.userPermissions.includes("create_request" as Permission) && (
               <SidebarOption
-                label="Administración de roles"
-                pathIcon="/assets/roles.png"
-                link="/roles"
+                label="Historial de viajes"
+                pathIcon="/assets/historial_de_viajes.png"
+                link="/history"
               />
             )}
-            {user.userPermissions.includes("manage_users" as Permission) && (
+          {user.userPermissions.includes("upload_vouchers" as Permission) && (
+            <SidebarOption
+              label="Comprobar Gastos"
+              pathIcon="/assets/solicitud_de_reembolso.png"
+              link="/refunds"
+            />
+          )}
+          {user.userPermissions.includes("upload_vouchers" as Permission) && (
+             <SidebarOption
+              label="Historial de comprobantes"
+              pathIcon="/assets/historial_de_reembolsos_aprobados.png"
+              link="/vouchers-history"
+            />
+          )}
+          {user.userPermissions.includes("approve_request" as Permission) && (
+            <SidebarOption
+              label="Viajes por aprobar"
+              pathIcon="/assets/viajes_por_aprobar.png"
+              link="/approvals"
+            />
+          )}
+          {user.userPermissions.includes(
+            "view_assigned_requests_readonly" as Permission,
+          ) &&
+            user.userPermissions.includes("approve_request" as Permission) && (
               <SidebarOption
-                label="Matriz de autorización"
-                pathIcon="/assets/matrix.png"
-                link="/approval-rules"
+                label="Historial de viajes aprobados"
+                pathIcon="/assets/historial_de_viajes_aprobados.png"
+                link="/history?scope=approver"
               />
             )}
-            {user.userPermissions.includes("check_budgets" as Permission) && (
-              <SidebarOption 
-                label="Póliza" 
-                pathIcon="/assets/policies.png" 
-                link="/policies"
-              />
-            )}
-            {isSuperAdmin && (
+          {user.userPermissions.includes("approve_vouchers" as Permission) && (
+            <SidebarOption
+              label="Comprobantes de gastos por aprobar"
+              pathIcon="/assets/comprobantes_de_gastos_por_aprobar.png"
+              link="/refunds-review"
+            />
+          )}
+          {user.userPermissions.includes("request_history" as Permission) && (
+            <SidebarOption
+              label="Viajes por registrar"
+              pathIcon="/assets/historial_de_reembolsos_aprobados.png"
+              link="/history?scope=soi-trips"
+            />
+          )}
+          {user.userPermissions.includes("check_budgets" as Permission) && (
+            <SidebarOption
+              label="Reembolsos por registrar"
+              pathIcon="/assets/reembolsos_por_aprobar.png"
+              link="/check-refunds"
+            />
+          )}
+          {user.userPermissions.includes(
+            "submit_reservations" as Permission,
+          ) && (
+            <SidebarOption
+              label="Viajes por reservar"
+              pathIcon="/assets/viajes_por_reservar.png"
+              link="/bookings"
+            />
+          )}
+          {user.userPermissions.includes(
+            "view_assigned_requests_readonly" as Permission,
+          ) &&
+            user.userPermissions.includes(
+              "submit_reservations" as Permission,
+            ) && (
               <SidebarOption
-                label="Empresas"
-                pathIcon="/assets/roles.png"
-                link="/admin/companies"
+                label="Historial de viajes reservados"
+                pathIcon="/assets/historial_de_viajes_reservados.png"
+                link="/history?scope=travel-agent"
               />
             )}
-            {isCompanyAdmin && (
-              <SidebarOption
-                label="Departamentos"
-                pathIcon="/assets/roles.png"
-                link="/admin/departments"
-              />
-            )}
-            {isCompanyAdmin && (
-              <SidebarOption
-                label="Centros de costos"
-                pathIcon="/assets/roles.png"
-                link="/admin/cost-centers"
-              />
-            )}
-            {isCompanyAdmin && (
-              <SidebarOption
-                label="Cuentas contables"
-                pathIcon="/assets/roles.png"
-                link="/admin/accounting-accounts"
-              />
-            )}
-            {isCompanyAdmin && (
-              <SidebarOption
-                label="Políticas de reembolso"
-                pathIcon="/assets/matrix.png"
-                link="/admin/refund-policies"
-              />
-            )}
+          {user.userPermissions.includes("check_budgets" as Permission) && (
+            <SidebarOption
+              label="Póliza"
+              pathIcon="/assets/policies.png"
+              link="/policies"
+            />
+          )}
+          {isSuperAdmin && (
+            <SidebarOption
+              label="Empresas"
+              pathIcon="/assets/roles.png"
+              link="/admin/companies"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Departamentos"
+              pathIcon="/assets/building.png"
+              link="/admin/departments"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Centro de costos"
+              pathIcon="/assets/circle-dollar-sign.png"
+              link="/admin/cost-centers"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Cuentas contables"
+              pathIcon="/assets/sheet.png"
+              link="/admin/accounting-accounts"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Delegaciones de sustitutos"
+              pathIcon="/assets/roles.png"
+              link="/roles"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Matriz de autorización"
+              pathIcon="/assets/matrix.png"
+              link="/approval-rules"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Políticas de reembolso"
+              pathIcon="/assets/refresh-cw.png"
+              link="/admin/refund-policies"
+            />
+          )}
         </ul>
       </div>
     </aside>
@@ -159,4 +220,5 @@ Modification History:
 - 2026-02-26 | Santiago Arista | Added file description, JSDoc documentation, and fixed import path.
 - 2026-04-09 | Fabrizio | Converted to a responsive drawer with transition effects.
 - 2026-04-14 | Fabrizio | Integrated the 'Policy' option, visible only to users with 'check_budgets' permission.
+- 2026-04-27 | Juan de Dios Gastélum | Added CompanyAdmin sidebar items with correct icons and isCompanyAdmin guard. Renamed roles item to Delegaciones de sustitutos.
 */
