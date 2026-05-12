@@ -79,7 +79,7 @@ describe("Bookings", () => {
   it("renders the Bookings page with initial structure", async () => {
     renderWithRouter(<Bookings />);
 
-    expect(screen.getByText("Viajes por Reservar")).toBeInTheDocument();
+    expect(screen.getByText("Viajes por reservar")).toBeInTheDocument();
     expect(screen.getByTitle("Refrescar")).toBeInTheDocument();
     expect(screen.getByTestId("table")).toBeInTheDocument();
   });

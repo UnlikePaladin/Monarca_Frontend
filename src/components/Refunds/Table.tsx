@@ -17,11 +17,19 @@ interface Column {
   header: string;
 }
 
+export type ServerPaginationConfig = {
+  totalItems: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  isLoading?: boolean;
+};
+
 /**
  * TableProps interface to define the structure of the props for the Table component.
  * @property columns - Array of Column objects defining the table's columns
  * @property data - Array of objects representing the rows of the table
  * @property itemsPerPage - Number of items to display per page (default: 5)
+ * @property serverPagination - When set, `data` is the current server page only; totals and page changes come from the parent.
  */
 interface TableProps {
   columns: Array<Column>;
@@ -29,6 +37,7 @@ interface TableProps {
     [key: string]: string | number | boolean | null | undefined | ReactNode;
   }>;
   itemsPerPage?: number;
+  serverPagination?: ServerPaginationConfig;
 }
 
 /*
@@ -40,42 +49,43 @@ interface TableProps {
 /*
  * Table component that renders a table based on the provided columns and data with pagination controls.
  */
-const Table: React.FC<TableProps> = ({ columns, data, itemsPerPage = 5, }) => {
-  /*
-   * State to manage the current page of the table.
-   */
-  const [currentPage, setCurrentPage] = useState(1);
+const Table: React.FC<TableProps> = ({
+  columns,
+  data,
+  itemsPerPage = 5,
+  serverPagination,
+}) => {
+  const [clientPage, setClientPage] = useState(1);
 
-  /*
-   * Calculate the total number of pages based on the data length and items per page.
-   * Ex. If there are 10 items and itemsPerPage is 3, the division will be 3.33,
-   * which is rounded up to 4 pages, the distriution will be: 3, 3, 3, 1.
-   */
-  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const isServer = Boolean(serverPagination);
+  const currentPage = isServer
+    ? serverPagination!.currentPage
+    : clientPage;
 
-  /*
-   * Calculate the indeces to display the current items based on the current page.
-   */
+  const totalItems = isServer
+    ? serverPagination!.totalItems
+    : data.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
-  /*
-   * Slice the data array to get the items for the current page.
-   * Remeber that the slice method does not modify the original array,
-   * and the first parameter is inclusive and the second is exclusive.
-   */
-  const currentItems = data.slice(indexOfFirstItem, indexOfLastItem);
+  const currentItems = isServer
+    ? data
+    : data.slice(indexOfFirstItem, indexOfLastItem);
 
-  /*
-   * Function to update the current page using the UseState hook.
-   * We ensure that the page number is within the valid range to avoid
-   * out of bounds errors.
-   */
   const changePage = (page: number) => {
-    if (page < 1) page = 1;
-    if (page > totalPages) page = totalPages;
-    setCurrentPage(page);
+    let next = page;
+    if (next < 1) next = 1;
+    if (next > totalPages) next = totalPages;
+    if (isServer) {
+      serverPagination!.onPageChange(next);
+    } else {
+      setClientPage(next);
+    }
   };
+
+  const pagingDisabled = Boolean(serverPagination?.isLoading);
 
   return (
     <div className="relative">
@@ -123,7 +133,11 @@ const Table: React.FC<TableProps> = ({ columns, data, itemsPerPage = 5, }) => {
               </tr>
             ) : currentItems.map((row, rowIndex) => (
               <tr
-                key={rowIndex}
+                key={
+                  row.id !== undefined && row.id !== null
+                    ? String(row.id)
+                    : rowIndex
+                }
                 className="bg-[#4C6997] text-white text-center"
               >
                 {/*
@@ -172,7 +186,7 @@ const Table: React.FC<TableProps> = ({ columns, data, itemsPerPage = 5, }) => {
           {/* Disable the button if we are in the first or final page */}
           <button
             onClick={() => changePage(currentPage - 1)}
-            disabled={currentPage === 1}
+            disabled={currentPage === 1 || pagingDisabled}
             className="px-3 py-1 rounded-lg bg-[#0a2c6d] text-white disabled:opacity-50 hover:cursor-pointer"
             aria-label="Previous page"
           >
@@ -185,7 +199,7 @@ const Table: React.FC<TableProps> = ({ columns, data, itemsPerPage = 5, }) => {
 
           <button
             onClick={() => changePage(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            disabled={currentPage === totalPages || pagingDisabled}
             className="px-3 py-1 rounded-lg bg-[#0a2c6d] text-white disabled:opacity-50 hover:cursor-pointer"
             aria-label="Next page"
           >

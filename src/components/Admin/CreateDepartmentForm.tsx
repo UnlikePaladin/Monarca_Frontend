@@ -16,6 +16,7 @@ import { useGetCompany } from "../../hooks/companies/useGetCompany";
 import { useGetCostCenters } from "../../hooks/companies/useGetCostCenters";
 import { useGetCompanyDepartments } from "../../hooks/companies/useGetCompanyDepartments";
 import { CreateCompanyDepartmentPayload } from "../../types/company";
+import { useNavigate } from "react-router-dom";
 
 type CostCenterOption = { id: number; name: string };
 
@@ -50,6 +51,7 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
 
 function CreateDepartmentForm() {
   const { authState } = useAuth();
+  const navigate = useNavigate();
 
   const profileCompanyId = authState.userCompanyId ?? "";
   const companyIdForDepartment = profileCompanyId;
@@ -173,11 +175,12 @@ function CreateDepartmentForm() {
         pauseOnHover: true,
       });
     }
+    navigate("/admin/departments")
   };
 
   if (!companyIdForDepartment) {
     return (
-      <section className="rounded-md bg-gray-200">
+      <section className="rounded-md">
         <div className="mx-auto max-w-3xl px-4 py-8 lg:py-16">
           <h2 className="text-xl font-bold text-gray-900">Crear departamento</h2>
           <p className="mt-2 text-sm text-red-600">
@@ -189,7 +192,7 @@ function CreateDepartmentForm() {
   }
 
   return (
-    <section className="rounded-md bg-gray-200">
+    <section className="rounded-md">
       <div className="mx-auto max-w-3xl px-4 py-8 lg:py-16">
         <div className="mb-6 space-y-2">
           <h2 className="text-xl font-bold text-gray-900">Crear departamento</h2>
@@ -276,7 +279,7 @@ function CreateDepartmentForm() {
               />
             </div>
 
-            <div className="rounded-md bg-white p-4 shadow-sm">
+            <div className="rounded-md bg-white p-4 shadow-lg">
               <p className="text-sm font-medium text-gray-900">Departamentos registrados</p>
               {isLoadingDepartments ? (
                 <p className="mt-2 text-sm text-gray-600">Cargando departamentos...</p>
@@ -293,31 +296,41 @@ function CreateDepartmentForm() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              id="create_department"
-              type="submit"
-              disabled={
-                isCreatingDepartment ||
-                isSubmitting ||
-                isLoadingCompany ||
-                isLoadingCostCenters ||
-                costCenterSelectOptions.length === 0 ||
-                !selectedCompany
-              }
-            >
-              {isCreatingDepartment || isSubmitting ? "Guardando..." : "Crear departamento"}
-            </Button>
+          <div className="flex justify-between">            
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                id="create_department"
+                type="submit"
+                disabled={
+                  isCreatingDepartment ||
+                  isSubmitting ||
+                  isLoadingCompany ||
+                  isLoadingCostCenters ||
+                  costCenterSelectOptions.length === 0 ||
+                  !selectedCompany
+                }
+              >
+                {isCreatingDepartment || isSubmitting ? "Guardando..." : "Crear departamento"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() =>
+                  reset({
+                    name: "",
+                    cost_center_id: costCenterSelectOptions[0]?.id,
+                  })
+                }
+              >
+                Limpiar formulario
+              </Button>
+            </div>
             <Button
               type="button"
               onClick={() =>
-                reset({
-                  name: "",
-                  cost_center_id: costCenterSelectOptions[0]?.id,
-                })
+                navigate("/admin/departments")
               }
-            >
-              Limpiar formulario
+              >
+                Cancelar
             </Button>
           </div>
         </form>
