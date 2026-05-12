@@ -187,6 +187,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
           )}
           {isCompanyAdmin && (
             <SidebarOption
+              label="Cuentas bancarias"
+              pathIcon="/assets/sheet.png"
+              link="/admin/bank-accounts"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
               label="Delegaciones de sustitutos"
               pathIcon="/assets/roles.png"
               link="/roles"

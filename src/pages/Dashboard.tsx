@@ -208,6 +208,14 @@ export const Dashboard = ({ title }: DashboardProps) => {
         )}
         {isCompanyAdmin && (
           <Mosaic
+            title="Cuentas bancarias"
+            iconPath="/assets/sheet.png"
+            link="/admin/bank-accounts"
+            id="tenant_bank_accounts"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
             title="Delegaciones de sustitutos"
             iconPath="/assets/roles.png"
             link="/roles"

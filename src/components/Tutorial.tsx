@@ -253,6 +253,57 @@ const createAccountingAccountsSteps = [
   },
 ]
 
+const createBankAccountsSteps = [
+  {
+    element: "#bank-accounts-company",
+    popover: {
+      title: "Empresa Seleccionada",
+      description: "Un Administrador de Empresa gestiona cuentas bancarias sobre la empresa activa.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#bank-account-name",
+    popover: {
+      title: "Nombre de la Cuenta",
+      description: "Ingresa el nombre descriptivo de la cuenta bancaria.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#bank-account-country",
+    popover: {
+      title: "País",
+      description: "Especifica el país donde se encuentra la cuenta bancaria.",
+      position: "bottom",
+    },
+  },
+  {
+    element: "#bank-account-region",
+    popover: {
+      title: "Región",
+      description: "Ingresa la región o estado de la cuenta bancaria.",
+      position: "bottom",
+    },
+  },
+    {
+      element: "#bank-account-iban",
+      popover: {
+        title: "IBAN",
+        description: "Ingresa el IBAN (alfanumérico, 15-34 caracteres) de la cuenta bancaria.",
+        position: "bottom",
+      },
+  },
+  {
+    element: "#create_bank_account",
+    popover: {
+      title: "Crear Cuenta Bancaria",
+      description: "Guarda la cuenta bancaria en la empresa seleccionada.",
+      position: "bottom",
+    },
+  },
+]
+
 const historySteps = [
   {
     element: "#list_requests",
@@ -588,6 +639,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
   createDepartment: createDepartmentSteps,
   createCostCenter: createCostCenterSteps,
   createAccountingAccounts: createAccountingAccountsSteps,
+  createBankAccounts: createBankAccountsSteps,
   createTenant: createCompanySteps,
   history: historySteps,
   refunds: refundsSteps,
@@ -604,7 +656,7 @@ const stepsMap: Record<string, typeof dashboardSteps> = {
 
 interface TutorialProps {
    children: React.ReactNode;
-  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createCostCenter" | "createAccountingAccounts" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundPolicies" | "refundReview" | "requestInfo";
+  page: "dashboard" | "createRequest" | "createCompany" | "createDepartment" | "createCostCenter" | "createAccountingAccounts" | "createBankAccounts" | "createTenant" | "history" | "refunds" | "vouchers" | "approvals" | "refundsReview" | "bookings" | "assignReservation" | "reservations" | "checkRefunds" | "refundPolicies" | "refundReview" | "requestInfo";
    run?: boolean;
   }
 

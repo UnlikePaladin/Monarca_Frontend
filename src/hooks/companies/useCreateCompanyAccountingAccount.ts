@@ -48,7 +48,15 @@ const createCompanyAccountingAccount = async (
   companyId: string,
   payload: CreateAccountingAccountPayload
 ): Promise<AccountingAccount> => {
-  const response = await postRequest(`/companies/${companyId}/accounting-accounts`, payload);
+  // API expects idBankAccount; include it if provided
+  const requestPayload = {
+    key: payload.key,
+    description: payload.description,
+    requiresCostCenter: payload.requiresCostCenter,
+    ...(payload.bankAccountId ? { idBankAccount: payload.bankAccountId } : {}),
+  };
+
+  const response = await postRequest(`/companies/${companyId}/accounting-accounts`, requestPayload);
   const raw =
     (response as Record<string, unknown>)?.accountingAccount ??
     (response as Record<string, unknown>)?.accounting_account ??
@@ -63,6 +71,7 @@ const createCompanyAccountingAccount = async (
     key: payload.key,
     description: payload.description,
     requiresCostCenter: Boolean(payload.requiresCostCenter),
+    bankAccountId: payload.bankAccountId,
   };
 };
 
