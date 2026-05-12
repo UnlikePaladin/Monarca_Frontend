@@ -43,10 +43,14 @@ import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 import Departments from "./pages/Admin/Departments.tsx";
 import CreateAccountingAccount from "./pages/Admin/CreateAccountingAccount.tsx";
+import CreateBankAccount from "./pages/Admin/CreateBankAccount.tsx";
+import EditAccountingAccount from "./pages/Admin/EditAccountingAccount.tsx";
 import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
 import CostCenterList from "./components/Admin/CostCenterList.tsx";
 import AccountingAccountsList from "./components/Admin/AccountingAccountList.tsx";
 import ImportEmployees from "./pages/CompanyAdmin/ImportEmployees.tsx";
+import { VoucherHistory } from "./pages/Historial/VoucherHistory.tsx";
+import BankAccountsList from "./components/Admin/BankAccountList.tsx";
 
 export const router = createBrowserRouter([
   // Public routes (no authentication required)
@@ -95,6 +99,10 @@ export const router = createBrowserRouter([
       {
         path: "/history",
         element: <Historial />,
+      },
+      {
+        path: "/vouchers-history",
+        element: <VoucherHistory />,
       },
       {
         path: "/refunds",
@@ -216,6 +224,35 @@ export const router = createBrowserRouter([
           {
             path: "create",
             element: <CreateAccountingAccount />,
+          },
+          {
+            path: ":id/edit",
+            element: <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} requireCompanyId={true} />,
+            children: [
+              {
+                path: "",
+                element: <EditAccountingAccount />,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        path: "/admin/bank-accounts",
+        element: (
+          <RoleProtectedRoute
+            requiredRoles={["CompanyAdmin"]}
+            requireCompanyId={true}
+          />
+        ),
+        children: [
+          {
+            path: "",
+            element: <BankAccountsList />,
+          },
+          {
+            path: "create",
+            element: <CreateBankAccount />,
           },
         ],
       },

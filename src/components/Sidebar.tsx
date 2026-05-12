@@ -84,6 +84,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
               link="/refunds"
             />
           )}
+          {user.userPermissions.includes("upload_vouchers" as Permission) && (
+             <SidebarOption
+              label="Historial de comprobantes"
+              pathIcon="/assets/historial_de_reembolsos_aprobados.png"
+              link="/vouchers-history"
+            />
+          )}
           {user.userPermissions.includes("approve_request" as Permission) && (
             <SidebarOption
               label="Viajes por aprobar"
@@ -183,6 +190,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
               label="Cuentas contables"
               pathIcon="/assets/sheet.png"
               link="/admin/accounting-accounts"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Cuentas bancarias"
+              pathIcon="/assets/sheet.png"
+              link="/admin/bank-accounts"
             />
           )}
           {isCompanyAdmin && (

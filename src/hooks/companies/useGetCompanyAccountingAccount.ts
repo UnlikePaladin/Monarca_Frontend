@@ -16,14 +16,6 @@ const toBoolean = (value: unknown): boolean => {
   return false;
 };
 
-const pickFirstArray = (source: Record<string, unknown>, keys: string[]): unknown[] => {
-  for (const key of keys) {
-    const candidate = source[key];
-    if (Array.isArray(candidate)) return candidate;
-  }
-  return [];
-};
-
 const parseAccountingAccount = (value: unknown): AccountingAccount | null => {
   const raw = toRecord(value);
 
@@ -53,26 +45,24 @@ const parseAccountingAccount = (value: unknown): AccountingAccount | null => {
   };
 };
 
-const listCompanyAccountingAccounts = async (
-  companyId: string
-): Promise<AccountingAccount[]> => {
-  const response = await getRequest(`/companies/${companyId}/accounting-accounts`);
-  const payload = toRecord(response);
+const getCompanyAccountingAccount = async (
+  companyId: string,
+  accountingAccountId: string
+): Promise<AccountingAccount | null> => {
+  const response = await getRequest(`/companies/${companyId}/accounting-accounts/${accountingAccountId}`);
+  const raw = toRecord(response);
 
-  const rawAccountingAccounts = Array.isArray(response)
-    ? response
-    : pickFirstArray(payload, ["accountingAccounts", "accounting_accounts", "data"]);
+  const candidate =
+    (raw.accountingAccount ?? raw.accounting_account ?? raw.data) as unknown;
 
-  return rawAccountingAccounts
-    .map((item) => parseAccountingAccount(item))
-    .filter((item): item is AccountingAccount => item !== null);
+  return parseAccountingAccount(candidate ?? raw) ?? null;
 };
 
-export const useGetCompanyAccountingAccounts = (companyId?: string) =>
-  useQuery<AccountingAccount[]>({
-    queryKey: ["companyAccountingAccounts", companyId],
-    queryFn: () => listCompanyAccountingAccounts(companyId as string),
-    enabled: Boolean(companyId),
+export const useGetCompanyAccountingAccount = (companyId?: string, accountingAccountId?: string) =>
+  useQuery<AccountingAccount | null>({
+    queryKey: ["companyAccountingAccount", companyId, accountingAccountId],
+    queryFn: () => getCompanyAccountingAccount(companyId as string, accountingAccountId as string),
+    enabled: Boolean(companyId && accountingAccountId),
   });
 
-export { listCompanyAccountingAccounts };
+export { getCompanyAccountingAccount };

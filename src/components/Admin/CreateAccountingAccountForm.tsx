@@ -1,4 +1,4 @@
-import { useState } from "react";
+// no top-level state required
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
@@ -9,10 +9,12 @@ import { toast } from "react-toastify";
 import { Button } from "../ui/Button";
 import FieldError from "../ui/FieldError";
 import { Input } from "../ui/Input";
+import Select from "../ui/Select";
 import Switch from "../ui/Switch";
 import { useAuth } from "../../hooks/auth/authContext";
 import { useGetCompany } from "../../hooks/companies/useGetCompany";
 import { useCreateCompanyAccountingAccount } from "../../hooks/companies/useCreateCompanyAccountingAccount";
+import { useGetCompanyBankAccounts } from "../../hooks/companies/useGetCompanyBankAccounts";
 import { CreateAccountingAccountPayload } from "../../types/accountingAccount";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +26,7 @@ const accountingAccountSchema = z.object({
     message: "Escriba la descripcion de la cuenta contable",
   }),
   requiresCostCenter: z.boolean(),
+  bankAccountId: z.string().optional(),
 });
 
 type AccountingAccountFormValues = z.infer<typeof accountingAccountSchema>;
@@ -67,10 +70,17 @@ function CreateAccountingAccountForm() {
   } = useCreateCompanyAccountingAccount(profileCompanyId);
 
   const {
+    data: companyBankAccounts = [],
+    isLoading: isLoadingBankAccounts,
+    error: bankAccountsError,
+  } = useGetCompanyBankAccounts(profileCompanyId);
+
+  const {
     control,
     register,
     handleSubmit,
     reset,
+    setError,
     formState: {
       errors,
       isSubmitting,
@@ -81,6 +91,7 @@ function CreateAccountingAccountForm() {
       key: "",
       description: "",
       requiresCostCenter: false,
+      bankAccountId: "",
     },
   });
 
@@ -97,6 +108,7 @@ function CreateAccountingAccountForm() {
       key: data.key.trim(),
       description: data.description.trim(),
       requiresCostCenter: data.requiresCostCenter,
+      bankAccountId: data.bankAccountId?.trim() || undefined,
     };
 
     try {
@@ -115,13 +127,31 @@ function CreateAccountingAccountForm() {
         requiresCostCenter: false,
       });
     } catch (error) {
-      toast.error(getErrorMessage(error, "Error al crear la cuenta contable"), {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-      });
+        // Map backend validation errors to form fields when possible
+        if (error instanceof AxiosError && error.response?.data) {
+          const data = error.response.data as Record<string, any>;
+          const errorsObj = data.errors ?? data;
+          if (typeof errorsObj === "object") {
+            for (const [key, val] of Object.entries(errorsObj)) {
+              const fieldName = key === "bank_account_id" ? "bankAccountId" : key;
+              const message = Array.isArray(val) ? String(val[0]) : String((val as any).message ?? val);
+              try {
+                setError(fieldName as any, { type: "server", message });
+              } catch (e) {
+                // ignore setError failures
+              }
+            }
+            return;
+          }
+        }
+
+        toast.error(getErrorMessage(error, "Error al crear la cuenta contable"), {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+        });
     }
     navigate("/admin/accounting-accounts")
   };
@@ -198,6 +228,35 @@ function CreateAccountingAccountForm() {
               </label>
               <Input id="accounting-account-description" {...register("description")} />
               <FieldError msg={errors.description?.message} />
+            </div>
+
+            <div>
+              <label
+                htmlFor="accounting-account-bank"
+                className="mb-2 block text-sm font-medium text-gray-900"
+              >
+                Cuenta bancaria vinculada
+              </label>
+              <Controller
+                control={control}
+                name="bankAccountId"
+                render={({ field }) => {
+                  const selected = companyBankAccounts.find((b) => b.id === field.value) || null;
+                  return (
+                    <>
+                      <Select
+                        id="accounting-account-bank"
+                        options={companyBankAccounts.map((b) => ({ id: b.id, name: `${b.name} · ${b.iban}` }))}
+                        value={selected ? { id: selected.id, name: `${selected.name} · ${selected.iban}` } : null}
+                        onChange={(opt) => field.onChange(opt ? opt.id : "")}
+                        placeholder={isLoadingBankAccounts ? "Cargando cuentas..." : "Selecciona una cuenta bancaria (opcional)"}
+                        isDisabled={!profileCompanyId || isLoadingBankAccounts}
+                      />
+                      <FieldError msg={bankAccountsError instanceof Error ? bankAccountsError.message : undefined} />
+                    </>
+                  );
+                }}
+              />
             </div>
 
             <div>

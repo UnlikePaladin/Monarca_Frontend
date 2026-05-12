@@ -79,6 +79,16 @@ export const Dashboard = ({ title }: DashboardProps) => {
           />
         )}
         {authState.userPermissions.includes(
+          "upload_vouchers" as Permission
+        ) && (
+          <Mosaic
+            title="Historial de comprobantes"
+            iconPath="/assets/historial_de_reembolsos_aprobados.png"
+            link="/vouchers-history"
+            id="vouchers_history"
+          />
+        )}
+        {authState.userPermissions.includes(
           "approve_request" as Permission,
         ) && (
           <Mosaic
@@ -194,6 +204,14 @@ export const Dashboard = ({ title }: DashboardProps) => {
             iconPath="/assets/sheet.png"
             link="/admin/accounting-accounts"
             id="tenant_accounting_accounts"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Cuentas bancarias"
+            iconPath="/assets/sheet.png"
+            link="/admin/bank-accounts"
+            id="tenant_bank_accounts"
           />
         )}
         {isCompanyAdmin && (

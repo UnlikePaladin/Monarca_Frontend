@@ -10,6 +10,7 @@ import { useAuth } from "../../hooks/auth/authContext";
 import { useGetCompany } from "../../hooks/companies/useGetCompany";
 import { useGetCompanyAccountingAccounts } from "../../hooks/companies/useGetCompanyAccountingAccounts";
 import { useDeleteCompanyAccountingAccount } from "../../hooks/companies/useDeleteCompanyAccountingAccount";
+import { useGetCompanyBankAccounts } from "../../hooks/companies/useGetCompanyBankAccounts";
 
 
 const getErrorMessage = (error: unknown, fallback: string): string => {
@@ -53,6 +54,8 @@ function AccountingAccountsList() {
     isLoading: isLoadingAccountingAccounts,
     error: accountingAccountsError,
   } = useGetCompanyAccountingAccounts(profileCompanyId);
+
+  const { data: companyBankAccounts = [] } = useGetCompanyBankAccounts(profileCompanyId);
 
   const {
     mutateAsync: deleteCompanyAccountingAccountMutation,
@@ -158,6 +161,7 @@ function AccountingAccountsList() {
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Clave</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Descripcion</th>
+                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Cuenta bancaria</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Requiere centro de costos</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Acciones</th>
                     </tr>
@@ -168,28 +172,44 @@ function AccountingAccountsList() {
                         <td className="py-3 px-4 text-sm text-gray-900">{accountingAccount.key}</td>
                         <td className="py-3 px-4 text-sm text-gray-700">{accountingAccount.description}</td>
                         <td className="py-3 px-4 text-sm text-gray-700">
+                          {accountingAccount.bankAccountId
+                            ? (companyBankAccounts.find((b) => b.id === accountingAccount.bankAccountId)
+                                ? `${companyBankAccounts.find((b) => b.id === accountingAccount.bankAccountId)?.name} · ${companyBankAccounts.find((b) => b.id === accountingAccount.bankAccountId)?.iban}`
+                                : accountingAccount.bankAccountId)
+                            : "-"}
+                        </td>
+                        <td className="py-3 px-4 text-sm text-gray-700">
                           {accountingAccount.requiresCostCenter ? "Si" : "No"}
                         </td>
                         <td className="py-3 px-4 text-sm text-gray-700">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDeleteAccountingAccount(
-                                accountingAccount.id,
-                                accountingAccount.key
-                              )
-                            }
-                            disabled={
-                              isDeletingAccountingAccount &&
+                          <div className="flex items-center gap-4">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/admin/accounting-accounts/${accountingAccount.id}/edit`)}
+                              className="font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDeleteAccountingAccount(
+                                  accountingAccount.id,
+                                  accountingAccount.key
+                                )
+                              }
+                              disabled={
+                                isDeletingAccountingAccount &&
+                                deletingAccountingAccountId === accountingAccount.id
+                              }
+                              className="font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+                            >
+                              {isDeletingAccountingAccount &&
                               deletingAccountingAccountId === accountingAccount.id
-                            }
-                            className="font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
-                          >
-                            {isDeletingAccountingAccount &&
-                            deletingAccountingAccountId === accountingAccount.id
-                              ? "Eliminando..."
-                              : "Eliminar"}
-                          </button>
+                                ? "Eliminando..."
+                                : "Eliminar"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
