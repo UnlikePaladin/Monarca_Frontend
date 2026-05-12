@@ -150,6 +150,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/history?scope=travel-agent"
               />
             )}
+            {user.userPermissions.includes("import_employees" as Permission) && (
+              <SidebarOption
+                label="Importar empleados"
+                pathIcon="/assets/roles.png"
+                link="/company-admin/import-employees"
+              />
+            )}
           {user.userPermissions.includes("check_budgets" as Permission) && (
             <SidebarOption
               label="Póliza"

@@ -33,6 +33,9 @@ vi.mock("../hooks/auth/authContext", () => ({
   PermissionProtectedRoute: ({ children }: { children?: React.ReactNode }) => (
     <div data-testid="permission-route">{children}</div>
   ),
+  RoleProtectedRoute: ({ children }: { children?: React.ReactNode }) => (
+    <div data-testid="role-route">{children}</div>
+  ),
 }));
 
 describe("Router Configuration", () => {

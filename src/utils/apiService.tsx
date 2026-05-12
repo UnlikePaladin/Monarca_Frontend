@@ -17,21 +17,21 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // console.error("Error en la respuesta de la API:", error.response);
       console.log("STATUS:", error?.response?.status);
-      console.log("DATA:", error?.response?.data); // <- CLAVE
+      console.log("DATA:", error?.response?.data);
       console.log("MESSAGE:", error?.response?.data?.message);
-      throw error;
       if (error.response.status === 401) {
         // Lógica de refresco de token o redirección al login
       }
-    } else if (error.request) {
+      return Promise.reject(error);
+    }
+    if (error.request) {
       console.error("No se recibió respuesta de la API:", error.request);
     } else {
       console.error("Error al configurar la petición:", error.message);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // Función para peticiones GET

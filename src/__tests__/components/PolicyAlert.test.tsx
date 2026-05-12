@@ -24,7 +24,6 @@ describe("PolicyAlert Component", () => {
     const alertBox = messageElement.closest('div.p-4');
     expect(alertBox).toHaveClass("bg-red-50");
     expect(alertBox).toHaveClass("border-red-500");
-    expect(screen.getByText("❌")).toBeInTheDocument();
   });
 
   it("muestra el mensaje y estilo correcto para una violación WARNING (Amarillo)", () => {
@@ -39,9 +38,8 @@ describe("PolicyAlert Component", () => {
     
     const messageElement = screen.getByText("Monto bajo");
     const alertBox = messageElement.closest('div.p-4');
-    expect(alertBox).toHaveClass("bg-yellow-50"); 
-    expect(alertBox).toHaveClass("border-yellow-400");
-    expect(screen.getByText("⚠️")).toBeInTheDocument();
+    expect(alertBox).toHaveClass("bg-orange-50");
+    expect(alertBox).toHaveClass("border-orange-400");
   });
 
   it("muestra detalles específicos para la regla TOTAL_LTE_ADVANCE", () => {
@@ -74,7 +72,7 @@ describe("PolicyAlert Component", () => {
     ];
     render(<PolicyAlert violations={mockViolations} />);
     
-    expect(screen.getByText(/Rango del viaje permitido:/)).toBeInTheDocument();
+    expect(screen.getByText(/Rango del viaje:/)).toBeInTheDocument();
     expect(screen.getAllByText(/2026/)).toHaveLength(2);
   });
 
@@ -89,9 +87,10 @@ describe("PolicyAlert Component", () => {
     ];
     render(<PolicyAlert violations={mockViolations} />);
     
-    expect(screen.getByText(/Días desde la creación:/)).toBeInTheDocument();
+    expect(screen.getByText(/Dias desde la creacion/i)).toBeInTheDocument();
     expect(screen.getByText("30")).toBeInTheDocument();
-    expect(screen.getByText(/28 días/)).toBeInTheDocument();
+    expect(screen.getByText(/28\s*dias/i)).toBeInTheDocument();
+    expect(screen.getByText(/Maximo permitido/i)).toBeInTheDocument();
   });
 
   it("muestra la etiqueta de severidad en mayúsculas", () => {

@@ -136,7 +136,7 @@ describe('Historial page', () => {
     expect(data).toHaveLength(0);
   });
 
-  it('submit_reservations mantiene solo Approved', async () => {
+  it('submit_reservations muestra solicitudes asignadas a la agencia del agente', async () => {
     getRequestMock.mockResolvedValueOnce([
       {
         id: 3,
@@ -165,6 +165,6 @@ describe('Historial page', () => {
     await waitFor(() => expect(tableSpy).toHaveBeenCalled());
 
     const { data } = tableSpy.mock.calls.at(-1)![0];
-    expect(data.map((r: any) => r.id)).toEqual([3]);
+    expect(data.map((r: any) => r.id)).toEqual([3, 4]);
   });
 });

@@ -49,6 +49,15 @@ vi.mock('../../components/ui/FieldError', () => ({
 /* ───── mocks de hooks ───── */
 vi.mock('../../hooks/destinations/useDestinations', () => ({
   useDestinations: () => ({
+    destinations: [
+      {
+        id: 'MEX',
+        city: 'Ciudad de México',
+        country: 'MX',
+        airports: [{ id: 'ap1', name: 'AICM', iata_code: 'MEX' }],
+      },
+      { id: 'CUN', city: 'Cancún', country: 'MX', airports: [] },
+    ],
     destinationOptions: [
       { id: 'MEX', name: 'Ciudad de México' },
       { id: 'CUN', name: 'Cancún' },

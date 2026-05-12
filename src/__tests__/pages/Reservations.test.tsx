@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { BrowserRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import Reservations from "./../../pages/Reservations/Reservations.tsx";
 
@@ -49,9 +50,17 @@ const mockData = {
   ],
 };
 
-const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>{children}</BrowserRouter>
-);
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{children}</BrowserRouter>
+    </QueryClientProvider>
+  );
+  return Wrapper;
+};
 
 describe("Reservations Component", () => {
   beforeEach(() => {
@@ -60,6 +69,7 @@ describe("Reservations Component", () => {
   });
 
   it("renders form and fetches data", async () => {
+    const Wrapper = createWrapper();
     render(
       <Wrapper>
         <Reservations />
@@ -74,6 +84,7 @@ describe("Reservations Component", () => {
   });
 
   it("handles form input changes", async () => {
+    const Wrapper = createWrapper();
     render(
       <Wrapper>
         <Reservations />
@@ -94,6 +105,7 @@ describe("Reservations Component", () => {
   });
 
   it("shows error when submitting empty form", async () => {
+    const Wrapper = createWrapper();
     render(
       <Wrapper>
         <Reservations />
@@ -112,6 +124,7 @@ describe("Reservations Component", () => {
   it("handles API error", async () => {
     vi.mocked(getRequest).mockRejectedValue(new Error("API Error"));
 
+    const Wrapper = createWrapper();
     render(
       <Wrapper>
         <Reservations />
