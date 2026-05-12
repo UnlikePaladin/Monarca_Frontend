@@ -84,6 +84,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
               link="/refunds"
             />
           )}
+          {user.userPermissions.includes("upload_vouchers" as Permission) && (
+             <SidebarOption
+              label="Historial de comprobantes"
+              pathIcon="/assets/historial_de_reembolsos_aprobados.png"
+              link="/vouchers-history"
+            />
+          )}
           {user.userPermissions.includes("approve_request" as Permission) && (
             <SidebarOption
               label="Viajes por aprobar"
