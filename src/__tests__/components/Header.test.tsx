@@ -9,20 +9,15 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Header from "../../components/Header";
 import { useAuth } from "../../hooks/auth/authContext";
-import { useApp } from "../../hooks/app/appContext";
 import { vi, Mock } from "vitest";
 
 // Mocks
 vi.mock("../../hooks/auth/authContext", () => ({
   useAuth: vi.fn(),
 }));
-vi.mock("../../hooks/app/appContext", () => ({
-  useApp: vi.fn(),
-}));
 
 describe("Header", () => {
   const mockedUseAuth = useAuth as unknown as Mock;
-  const mockedUseApp  = useApp  as unknown as Mock;
   const fakeAuth = {
     authState: {
       userName: "Leon",
@@ -45,25 +40,28 @@ describe("Header", () => {
 
   beforeEach(() => {
     mockedUseAuth.mockReturnValue(fakeAuth);
-    mockedUseApp.mockReturnValue({ pageTitle: "Dashboard" });
   });
 
   it("muestra el título de la página y las iniciales del usuario", () => {
-    render(<Header />);
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    // L y B
+    render(<Header onMenuClick={vi.fn()} />);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "Monarca",
+    );
     expect(screen.getByRole("button", { name: "LB" })).toBeInTheDocument();
   });
 
   it("no falla si faltan los nombres (error previo de undefined)", () => {
     mockedUseAuth.mockReturnValue(fakeAuthEmpty);
-    render(<Header />);
-    // should render without throwing and show empty avatar
-    expect(screen.getByRole("button")).toBeInTheDocument();
+    render(<Header onMenuClick={vi.fn()} />);
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "Monarca",
+    );
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.length).toBeGreaterThanOrEqual(1);
   });
 
   it("al hacer clic muestra el menú con datos y botón de logout", async () => {
-    render(<Header />);
+    render(<Header onMenuClick={vi.fn()} />);
     const btn = screen.getByRole("button", { name: "LB" });
     await userEvent.click(btn);
 

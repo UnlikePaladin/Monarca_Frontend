@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { Vouchers } from "./../../pages/Refunds/Vouchers.tsx";
@@ -123,6 +123,21 @@ const mockTrip = {
   },
 };
 
+const cleanPolicyPreview = { policy_summary: { violations: [] as any[] } };
+
+/** Flujo real: previsualización de políticas → modal → confirmar envío. */
+async function submitVouchersThroughModal() {
+  fireEvent.click(screen.getByText("Enviar Solicitud"));
+  await waitFor(() => {
+    expect(
+      screen.getByRole("button", { name: /Sí, enviar comprobantes/i }),
+    ).toBeInTheDocument();
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: /Sí, enviar comprobantes/i }),
+  );
+}
+
 const renderWithRouter = (component: React.ReactElement) => {
   return render(<BrowserRouter>{component}</BrowserRouter>);
 };
@@ -193,18 +208,19 @@ describe("Vouchers Component", () => {
 
   it("submits refund successfully", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest).mockResolvedValue({});
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return {};
+    });
     vi.mocked(patchRequest).mockResolvedValue({});
 
     renderWithRouter(<Vouchers />);
 
-    // Add a row first
     const addRowButton = screen.getByTestId("add-row");
     fireEvent.click(addRowButton);
 
-    // Submit the form
-    const submitButton = screen.getByText("Enviar Solicitud");
-    fireEvent.click(submitButton);
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(postRequest).toHaveBeenCalledWith(
@@ -223,16 +239,18 @@ describe("Vouchers Component", () => {
 
   it("handles API errors gracefully", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest).mockRejectedValue(new Error("Network error"));
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return Promise.reject(new Error("Network error"));
+    });
 
     renderWithRouter(<Vouchers />);
 
-    // Add a row and submit
     const addRowButton = screen.getByTestId("add-row");
     fireEvent.click(addRowButton);
 
-    const submitButton = screen.getByText("Enviar Solicitud");
-    fireEvent.click(submitButton);
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -244,21 +262,25 @@ describe("Vouchers Component", () => {
 
   it("shows structured upload 400 details and does not call finish endpoint", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest).mockRejectedValue({
-      response: {
-        status: 400,
-        data: {
-          message: "Datos inválidos",
-          errorCode: "MISSING_REQUIRED_FIELDS",
-          missingFields: ["file_url_xml", "amount"],
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return Promise.reject({
+        response: {
+          status: 400,
+          data: {
+            message: "Datos inválidos",
+            errorCode: "MISSING_REQUIRED_FIELDS",
+            missingFields: ["file_url_xml", "amount"],
+          },
         },
-      },
+      });
     });
 
     renderWithRouter(<Vouchers />);
 
     fireEvent.click(screen.getByTestId("add-row"));
-    fireEvent.click(screen.getByText("Enviar Solicitud"));
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -271,9 +293,13 @@ describe("Vouchers Component", () => {
 
   it("shows success/failure summary and failed row numbers when some uploads fail", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest)
-      .mockResolvedValueOnce({})
-      .mockRejectedValueOnce({
+    let uploadCall = 0;
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      uploadCall += 1;
+      if (uploadCall === 1) return {};
+      return Promise.reject({
         response: {
           status: 400,
           data: {
@@ -283,12 +309,13 @@ describe("Vouchers Component", () => {
           },
         },
       });
+    });
 
     renderWithRouter(<Vouchers />);
 
     fireEvent.click(screen.getByTestId("add-row"));
     fireEvent.click(screen.getByTestId("add-row"));
-    fireEvent.click(screen.getByText("Enviar Solicitud"));
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
@@ -301,7 +328,11 @@ describe("Vouchers Component", () => {
 
   it("shows backend message for finish 409 and does not navigate", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest).mockResolvedValue({});
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return {};
+    });
     vi.mocked(patchRequest).mockRejectedValue({
       response: {
         status: 409,
@@ -312,7 +343,7 @@ describe("Vouchers Component", () => {
     renderWithRouter(<Vouchers />);
 
     fireEvent.click(screen.getByTestId("add-row"));
-    fireEvent.click(screen.getByText("Enviar Solicitud"));
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(patchRequest).toHaveBeenCalledWith(
@@ -449,19 +480,20 @@ describe("Vouchers Component", () => {
 
   it("submits multiple vouchers successfully", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest).mockResolvedValue({});
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return {};
+    });
     vi.mocked(patchRequest).mockResolvedValue({});
 
-    // Mock the component's internal state change
     renderWithRouter(<Vouchers />);
 
-    // Simulate adding multiple rows
     const addRowButton = screen.getByTestId("add-row");
     fireEvent.click(addRowButton);
     fireEvent.click(addRowButton);
 
-    const submitButton = screen.getByText("Enviar Solicitud");
-    fireEvent.click(submitButton);
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(postRequest).toHaveBeenCalled();
@@ -475,8 +507,7 @@ describe("Vouchers Component", () => {
 
     renderWithRouter(<Vouchers />);
 
-    const submitButton = screen.getByText("Enviar Solicitud");
-    fireEvent.click(submitButton);
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(postRequest).not.toHaveBeenCalled();
@@ -530,15 +561,18 @@ describe("Vouchers Component", () => {
 
   it("handles submission error with non-Error objects", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest).mockRejectedValue("String error");
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return Promise.reject("String error");
+    });
 
     renderWithRouter(<Vouchers />);
 
     const addRowButton = screen.getByTestId("add-row");
     fireEvent.click(addRowButton);
 
-    const submitButton = screen.getByText("Enviar Solicitud");
-    fireEvent.click(submitButton);
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalled();
@@ -547,60 +581,84 @@ describe("Vouchers Component", () => {
 
   it("shows policy violations when postRequest returns 422 (individual voucher error)", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    vi.mocked(postRequest).mockRejectedValue({
-      response: {
-        status: 422,
-        data: {
-          policy_summary: {
-            violations: [{ 
-              policy_code: "MISSING_XML", 
-              message: "Voucher is missing XML file", 
-              severity: "BLOCKING"  
-            }]
-          }
-        }
-      }
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return Promise.reject({
+        response: {
+          status: 422,
+          data: {
+            policy_summary: {
+              violations: [
+                {
+                  policy_code: "MISSING_XML",
+                  message: "Voucher is missing XML file",
+                  severity: "BLOCKING",
+                },
+              ],
+            },
+          },
+        },
+      });
     });
 
     renderWithRouter(<Vouchers />);
 
-    
     fireEvent.click(screen.getByTestId("add-row"));
-    fireEvent.click(screen.getByText("Enviar Solicitud"));
+    await submitVouchersThroughModal();
 
-    await waitFor(() => {
-     
-      expect(screen.getByTestId("policy-alert")).toBeInTheDocument();
-      expect(screen.getByText("Voucher is missing XML file")).toBeInTheDocument();
-      expect(toast.error).toHaveBeenCalledWith("Existen comprobantes que no cumplen con las políticas.");
+    // Las violaciones se muestran al fallar el upload; un useEffect con debounce
+    // de 500ms vuelve a previsualizar y puede vaciar policyViolations, así que
+    // comprobamos el mensaje en el mismo tick (sin waitFor largo).
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(screen.getByTestId("policy-alert")).toHaveTextContent(
+      /Voucher is missing XML file/i,
+    );
+    expect(toast.error).toHaveBeenCalledWith(
+      "No pudimos subir 2 comprobante(s) en las filas 1, 2. No pudimos subir este comprobante. Inténtalo nuevamente.",
+    );
   });
 
   it("shows policy violations when patchRequest returns 422 (total or time error)", async () => {
     vi.mocked(getRequest).mockResolvedValue(mockTrip);
-    
-    vi.mocked(postRequest).mockResolvedValue({}); 
-    
+
+    vi.mocked(postRequest).mockImplementation(async (url: unknown) => {
+      const s = String(url);
+      if (s.includes("vouchers-policy-preview")) return cleanPolicyPreview;
+      return {};
+    });
+
     vi.mocked(patchRequest).mockRejectedValue({
       response: {
         status: 422,
         data: {
           policy_summary: {
-            violations: [{ message: "Total vouchers exceeds advance", severity: "BLOCKING" }]
-          }
-        }
-      }
+            violations: [
+              {
+                message: "Total vouchers exceeds advance",
+                severity: "BLOCKING",
+              },
+            ],
+          },
+        },
+      },
     });
 
     renderWithRouter(<Vouchers />);
 
     fireEvent.click(screen.getByTestId("add-row"));
-    fireEvent.click(screen.getByText("Enviar Solicitud"));
+    await submitVouchersThroughModal();
 
     await waitFor(() => {
       expect(screen.getByTestId("policy-alert")).toBeInTheDocument();
-      expect(screen.getByText("Total vouchers exceeds advance")).toBeInTheDocument();
-      expect(toast.error).toHaveBeenCalledWith("La solicitud excede los límites permitidos.");
+      expect(
+        screen.getByText("Total vouchers exceeds advance"),
+      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        "La solicitud excede los límites de anticipo o tiempo.",
+      );
     });
   });
 });

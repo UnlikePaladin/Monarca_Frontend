@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import SidebarOption from "../../components/SiderbarOption.tsx";
+import SidebarOption from "../../components/SidebarOption.tsx";
 
 /**
  * Mock react-router-dom Link component to simplify testing

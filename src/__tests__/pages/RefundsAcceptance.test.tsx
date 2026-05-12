@@ -140,7 +140,7 @@ describe("RefundsAcceptance", () => {
       { timeout: 3000 },
     );
 
-    expect(screen.getByText(/Empleado:/)).toBeInTheDocument();
+    expect(screen.getByText(/Comprobante de Solicitud/i)).toBeInTheDocument();
   });
 
   it("renders form fields with correct labels", async () => {

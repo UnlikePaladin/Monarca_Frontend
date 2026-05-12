@@ -42,11 +42,27 @@ const mockDestinationOptions = [
   { id: "2", name: "Destination 2" },
 ];
 
+const mockDestinations = [
+  {
+    id: "1",
+    city: "City One",
+    country: "C1",
+    airports: [{ id: "a1", name: "AP1", iata_code: "X1" }],
+  },
+  {
+    id: "2",
+    city: "City Two",
+    country: "C2",
+    airports: [{ id: "a2", name: "AP2", iata_code: "X2" }],
+  },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
 
   (useNavigate as any).mockReturnValue(mockNavigate);
   (useDestinations as any).mockReturnValue({
+    destinations: mockDestinations,
     destinationOptions: mockDestinationOptions,
     isLoading: false,
   });
@@ -97,17 +113,20 @@ describe("TravelRequestForm", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /\+ añadir destino/i })
     );
-    expect(screen.getByText(/destino #2/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tramo #2:/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /quitar/i }));
-    expect(screen.queryByText(/destino #2/i)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Quitar$/i }));
+    expect(screen.queryByText(/Tramo #2:/i)).not.toBeInTheDocument();
   });
 
   it("calculates stay days based on arrival and departure dates", async () => {
     render(<TravelRequestForm />);
 
-    await userEvent.type(screen.getByLabelText(/fecha salida/i), "2024-03-01");
-    await userEvent.type(screen.getByLabelText(/fecha llegada/i), "2024-03-05");
+    await userEvent.type(
+      screen.getByLabelText(/Salida de Origen/i),
+      "2024-03-01",
+    );
+    await userEvent.type(screen.getByLabelText(/Llegada a/i), "2024-03-05");
 
     await waitFor(() => {
       expect(screen.getByLabelText(/no\. días estancia/i)).toHaveValue(4);
@@ -139,31 +158,43 @@ describe("TravelRequestForm", () => {
     await user.click(screen.getByLabelText(/prioridad/i));
     await user.click(await screen.findByRole("option", { name: "Alta" }));
 
-    /* --- destination dropdown inside Destino #1 --- */
-    await user.click(screen.getByLabelText(/destino/i));
+    /* --- destination (distinta al origen) + aeropuerto --- */
+    await user.click(screen.getAllByLabelText(/^Destino$/i)[0]);
     await user.click(
-      await screen.findByRole("option", { name: "Destination 1" })
+      await screen.findByRole("option", { name: "Destination 2" })
+    );
+    await user.click(screen.getAllByLabelText(/^Aeropuerto$/i)[0]);
+    await user.click(
+      await screen.findByRole("option", { name: /X2 - AP2/i })
     );
 
-    /* --- remaining fields inside Destino #1 --- */
+    /* --- fechas y detalles del tramo --- */
     await user.type(screen.getByLabelText(/detalles/i), "Hotel details");
-    await user.type(screen.getByLabelText(/fecha salida/i), "2024-03-01");
-    await user.type(screen.getByLabelText(/fecha llegada/i), "2024-03-05");
+    await user.type(screen.getByLabelText(/Salida de City One/i), "2024-03-01");
+    await user.type(
+      screen.getByLabelText(/Llegada a City Two/i),
+      "2024-03-05",
+    );
 
-    /* --- submit --- */
+    /* --- submit + confirmación --- */
     await user.click(screen.getByRole("button", { name: /crear viaje/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /Sí, enviar solicitud/i })
+    );
 
     await waitFor(() => {
       expect(mockCreateMutation).toHaveBeenCalledWith({
         id_origin_city: "1",
-        title: "Business Meeting", // motive is used as title in payload
+        title: "Business Meeting",
         motive: "Business Meeting",
         priority: "alta",
         advance_money: 1000,
-        requirements: undefined,
+        requirements: "",
+        is_round_trip: false,
         requests_destinations: [
           {
-            id_destination: "1",
+            id_destination: "2",
+            id_airport: "a2",
             destination_order: 1,
             stay_days: 4,
             arrival_date: expect.any(String),
@@ -203,16 +234,26 @@ describe("TravelRequestForm", () => {
     await user.click(screen.getByLabelText(/prioridad/i));
     await user.click(await screen.findByRole("option", { name: "Alta" }));
 
-    await user.click(screen.getByLabelText(/destino/i));
+    await user.click(screen.getAllByLabelText(/^Destino$/i)[0]);
     await user.click(
-      await screen.findByRole("option", { name: "Destination 1" })
+      await screen.findByRole("option", { name: "Destination 2" })
+    );
+    await user.click(screen.getAllByLabelText(/^Aeropuerto$/i)[0]);
+    await user.click(
+      await screen.findByRole("option", { name: /X2 - AP2/i })
     );
 
     await user.type(screen.getByLabelText(/detalles/i), "Hotel details");
-    await user.type(screen.getByLabelText(/fecha salida/i), "2024-03-01");
-    await user.type(screen.getByLabelText(/fecha llegada/i), "2024-03-05");
+    await user.type(screen.getByLabelText(/Salida de City One/i), "2024-03-01");
+    await user.type(
+      screen.getByLabelText(/Llegada a City Two/i),
+      "2024-03-05",
+    );
 
     await user.click(screen.getByRole("button", { name: /crear viaje/i }));
+    await user.click(
+      await screen.findByRole("button", { name: /Sí, enviar solicitud/i })
+    );
 
     await waitFor(() => expect(mockCreateMutation).toHaveBeenCalled());
   });

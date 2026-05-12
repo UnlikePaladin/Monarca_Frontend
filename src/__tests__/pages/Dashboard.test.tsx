@@ -23,6 +23,9 @@ vi.mock("../../hooks/app/appContext", () => ({
   useApp: () => ({
     setPageTitle: mockSetPageTitle,
     pageTitle: "Mock Title",
+    handleVisitPage: vi.fn(),
+    tutorial: false,
+    setTutorial: vi.fn(),
   }),
 }));
 

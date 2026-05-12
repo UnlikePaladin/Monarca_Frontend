@@ -25,6 +25,8 @@ export type PreviewEmployee = {
   lastchangeDate: string | null;
   isUpdate: boolean;
   validationErrors: string[];
+  /** Auto-suggested role UUID from backend: Aprobador if manager in batch, else Solicitante. */
+  suggestedRoleId: string | null;
 };
 
 export type PreviewResponse = {

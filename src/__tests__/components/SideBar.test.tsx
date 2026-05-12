@@ -51,14 +51,13 @@ describe('Sidebar', () => {
       userRole: ''
     };
 
-    render(
+    const { container } = render(
       <RouterWrapper>
         <Sidebar user={emptyUser} />
       </RouterWrapper>
     );
 
-    // component should render with blanks but not throw
-    expect(screen.getByText('')).toBeInTheDocument();
+    expect(container.querySelector('aside[aria-label="Sidebar"]')).toBeInTheDocument();
   })
 
   it('always renders Inicio option', () => {

@@ -90,7 +90,20 @@ const ImportEmployees = () => {
     try {
       const response = await runPreview(file);
       setPreview(response);
-      setRoleByEmpNo({});
+
+      // Pre-fill roles from backend suggestion; admin can still change them per row.
+      const initialRoles: Record<string, string> = {};
+      for (const employee of response.employees) {
+        if (
+          employee.validationErrors.length === 0 &&
+          employee.employeeNumber &&
+          employee.suggestedRoleId
+        ) {
+          initialRoles[employee.employeeNumber] = employee.suggestedRoleId;
+        }
+      }
+      setRoleByEmpNo(initialRoles);
+
       setStep('preview');
       setView('table');
       toast.success(

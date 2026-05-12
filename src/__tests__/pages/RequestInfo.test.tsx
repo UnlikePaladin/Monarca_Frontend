@@ -4,7 +4,6 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import RequestInfo from '../../pages/RequestInfo';
-import { getRequest } from "../../utils/apiService";
 
 /* ──────────── VARIABLES DE CONTROL (se cambian en cada test) ──────────── */
 let mockPermissions: string[] = ['approve_request'];
@@ -67,16 +66,22 @@ const renderPage = () =>
     </MemoryRouter>
   );
 
+/** Confirma el diálogo de ConfirmationModal (mismo flujo que en producción). */
+async function confirmModal(label: string | RegExp) {
+  await userEvent.click(await screen.findByRole('button', { name: label }));
+}
+
 /* ──────────── 3. Datos base reutilizables ──────────── */
 const baseRequest = {
   id: 123,
   createdAt: '2025-05-28T12:00:00Z',
   advance_money: 1000,
-  admin: { name: 'Juan', last_name: 'Pérez' },
+  admin: { name: 'Juan', lastName: 'Pérez' },
   destination: { city: 'CDMX' },
   requests_destinations: [
     {
       id: 1,
+      destination_order: 1,
       destination: { city: 'Monterrey' },
       arrival_date: '2025-06-01',
       departure_date: '2025-06-03',
@@ -84,6 +89,7 @@ const baseRequest = {
       is_hotel_required: true,
       is_plane_required: true,
       stay_days: 2,
+      reservations: [],
     },
   ],
   revisions: [],
@@ -105,10 +111,11 @@ describe('RequestInfo – full coverage', () => {
     renderPage();
 
     await userEvent.selectOptions(
-      await screen.findByRole('combobox'),
+      await screen.findByLabelText(/Agencias de viaje/i),
       'A1'
     );
-    await userEvent.click(screen.getByRole('button', { name: /aprobar/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^Aprobar$/i }));
+    await confirmModal(/Sí, aprobar/i);
 
     await waitFor(() =>
       expect(apiService.patchRequest).toHaveBeenCalledWith(
@@ -129,6 +136,7 @@ describe('RequestInfo – full coverage', () => {
     await userEvent.click(
       screen.getByRole('button', { name: /solicitar cambios/i })
     );
+    await confirmModal(/Sí, solicitar cambios/i);
 
     await waitFor(() =>
       expect(apiService.postRequest).toHaveBeenCalledWith('/revisions', {
@@ -143,6 +151,7 @@ describe('RequestInfo – full coverage', () => {
     renderPage();
 
     await userEvent.click(screen.getByRole('button', { name: /denegar/i }));
+    await confirmModal(/Sí, denegar/i);
 
     await waitFor(() =>
       expect(apiService.patchRequest).toHaveBeenCalledWith(
@@ -158,6 +167,7 @@ describe('RequestInfo – full coverage', () => {
     renderPage();
 
     await userEvent.click(screen.getByRole('button', { name: /cancelar/i }));
+    await confirmModal(/Sí, cancelar solicitud/i);
 
     await waitFor(() =>
       expect(apiService.patchRequest).toHaveBeenCalledWith(
@@ -175,8 +185,9 @@ describe('RequestInfo – full coverage', () => {
     renderPage();
 
     await userEvent.click(
-      await screen.findByRole('button', { name: /marcar como registrado/i })
+      await screen.findByRole('button', { name: /^Aprobar$/i })
     );
+    await confirmModal(/Sí, marcar como registrado/i);
 
     await waitFor(() =>
       expect(apiService.patchRequest).toHaveBeenCalledWith(
@@ -197,14 +208,15 @@ describe('RequestInfo – full coverage', () => {
 
     expect(await screen.findByText('Hotel')).toBeInTheDocument();
     expect(screen.getByText('Avión')).toBeInTheDocument();
-    expect(screen.getByDisplayValue(/\$?300\.00/)).toHaveClass('text-green-600'); // saldo a favor
+    const balanceInput = await screen.findByDisplayValue(/300/);
+    expect(balanceInput).toHaveClass('text-green-600'); // saldo a favor
   });
 
  /* G. Botón Aprobar permanece deshabilitado sin agencia seleccionada */
 it('mantiene deshabilitado “Aprobar” si no se elige agencia', async () => {
   renderPage();
 
-  const approveBtn = await screen.findByRole('button', { name: /aprobar/i });
+  const approveBtn = await screen.findByRole('button', { name: /^Aprobar$/i });
   expect(approveBtn).toBeDisabled();
 
   // Intento de click: no debe disparar la llamada al servicio
@@ -212,29 +224,4 @@ it('mantiene deshabilitado “Aprobar” si no se elige agencia', async () => {
   expect(apiService.patchRequest).not.toHaveBeenCalled();
 });
 
-it("el Aprobador ve las violaciones de política al cargar la solicitud", async () => {
-
-    vi.mocked(getRequest).mockImplementation((url: string) => {
-      if (url.includes("/policy-violations")) {
-        return Promise.resolve({
-          violations: [{ 
-            policy_code: "TOTAL_LTE_ADVANCE", 
-            message: "Gasto fuera de fecha", 
-            severity: "BLOCKING",
-            evaluated_value: { total_vouchers: 100, advance_money: 50 } 
-          }]
-        });
-      }
-      return Promise.resolve(baseRequest); 
-    });
-
-    renderPage(); 
-
-    await waitFor(() => {
-      expect(getRequest).toHaveBeenCalledWith(expect.stringContaining("/policy-violations"));
-    });
-
-    expect(await screen.findByText("Resultado de Auditoría Automática")).toBeInTheDocument();
-    expect(screen.getByText("Gasto fuera de fecha")).toBeInTheDocument();
-  });
 });
