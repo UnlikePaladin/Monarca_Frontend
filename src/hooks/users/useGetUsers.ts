@@ -18,7 +18,7 @@ const toRecord = (value: unknown): Record<string, unknown> =>
 const toString = (value: unknown): string =>
   typeof value === "string" ? value : "";
 
-const normalizeUser = (value: unknown): UserSummary | null => {
+export const normalizeUser = (value: unknown): UserSummary | null => {
   const raw = toRecord(value);
   const id = toString(raw.id);
   if (!id) return null;

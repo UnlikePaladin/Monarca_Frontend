@@ -2,7 +2,7 @@
  * Description: Type definitions for authorization, roles, and substitute delegations.
  */
 
-export type ActionType = 'create' | 'read' | 'update' | 'delete' | 'approve';
+export type ActionType = "create" | "read" | "update" | "delete" | "approve";
 
 export interface ModulePermission {
   moduleId: string;
@@ -20,8 +20,9 @@ export interface Role {
 
 export interface SubstituteDelegation {
   id: string;
-  roleId: string;
-  targetUserId: string; 
+  originalUserId: string;
+  roleId: string | null;
+  targetUserId: string;
   startDate: string;
   endDate: string;
   notes?: string;
@@ -30,4 +31,5 @@ export interface SubstituteDelegation {
 /**
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-05-13 | Juan de Dios Gastélum | Added originalUserId, made roleId nullable to match backend schema.
  */

@@ -32,6 +32,8 @@ function Sidebar({ user, isOpen }: SidebarProps) {
     .replace(/[_\s-]/g, "");
   const isSuperAdmin = normalizedRole === "superadmin";
   const isCompanyAdmin = normalizedRole === "companyadmin";
+  const isApprover =
+    normalizedRole === "approver" || normalizedRole === "aprobador";
 
   return (
     <aside
@@ -85,7 +87,7 @@ function Sidebar({ user, isOpen }: SidebarProps) {
             />
           )}
           {user.userPermissions.includes("upload_vouchers" as Permission) && (
-             <SidebarOption
+            <SidebarOption
               label="Historial de comprobantes"
               pathIcon="/assets/historial_de_reembolsos_aprobados.png"
               link="/vouchers-history"
@@ -150,16 +152,16 @@ function Sidebar({ user, isOpen }: SidebarProps) {
                 link="/history?scope=travel-agent"
               />
             )}
-            {user.userPermissions.includes("import_employees" as Permission) && (
-              <SidebarOption
-                label="Importar empleados"
-                pathIcon="/assets/roles.png"
-                link="/company-admin/import-employees"
-              />
-            )}
+          {user.userPermissions.includes("import_employees" as Permission) && (
+            <SidebarOption
+              label="Importar empleados"
+              pathIcon="/assets/roles.png"
+              link="/company-admin/import-employees"
+            />
+          )}
           {user.userPermissions.includes("check_budgets" as Permission) && (
             <SidebarOption
-              label="Póliza"
+              label="Gestión de Polizas"
               pathIcon="/assets/policies.png"
               link="/policies"
             />
@@ -195,11 +197,11 @@ function Sidebar({ user, isOpen }: SidebarProps) {
           {isCompanyAdmin && (
             <SidebarOption
               label="Cuentas bancarias"
-              pathIcon="/assets/sheet.png"
+              pathIcon="/assets/landmark.png"
               link="/admin/bank-accounts"
             />
           )}
-          {isCompanyAdmin && (
+          {isApprover && (
             <SidebarOption
               label="Delegaciones de sustitutos"
               pathIcon="/assets/roles.png"

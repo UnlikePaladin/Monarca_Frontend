@@ -138,7 +138,9 @@ export const router = createBrowserRouter([
       },
       {
         path: "/roles",
-        element: <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} />,
+        element: (
+          <RoleProtectedRoute requiredRoles={["Aprobador"]} />
+        ),
         children: [
           {
             path: "",
@@ -227,7 +229,12 @@ export const router = createBrowserRouter([
           },
           {
             path: ":id/edit",
-            element: <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} requireCompanyId={true} />,
+            element: (
+              <RoleProtectedRoute
+                requiredRoles={["CompanyAdmin"]}
+                requireCompanyId={true}
+              />
+            ),
             children: [
               {
                 path: "",
@@ -269,7 +276,9 @@ export const router = createBrowserRouter([
       {
         path: "/company-admin/import-employees",
         element: (
-          <PermissionProtectedRoute requiredPermissions={["import_employees"]} />
+          <PermissionProtectedRoute
+            requiredPermissions={["import_employees"]}
+          />
         ),
         children: [
           {

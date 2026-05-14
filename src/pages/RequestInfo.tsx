@@ -153,6 +153,7 @@ const RequestInfo: React.FC = () => {
         console.log(response);
         setData({
           ...response,
+          idTravelAgency: response.id_travel_agency,
           reservations: reservations,
           formatted_status: renderStatus(response.status),
           createdAt: formatDate(response.createdAt),
@@ -164,7 +165,7 @@ const RequestInfo: React.FC = () => {
             .map((dest: any) => dest.destination.city)
             .join(", "),
         });
-        setSelectedAgency(response.idTravelAgency || "");
+        setSelectedAgency(response.id_travel_agency || "");
       } catch (error) {
         console.error("Error fetching request data:", error);
       }
@@ -223,6 +224,7 @@ const RequestInfo: React.FC = () => {
       });
       return;
     }
+
     try {
       const response = await patchRequest(`/requests/approve/${id}`, {
         id_travel_agency: selectedAgency,
@@ -954,9 +956,11 @@ const RequestInfo: React.FC = () => {
                     disabled={
                       !selectedAgency || data.status !== "Pending Review"
                     }
-                    className={`flex-1 py-3 rounded-lg font-semibold transition
-                    bg-green-600 hover:bg-green-700 text-white
-                     ${!selectedAgency && "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
+                    className={`flex-1 py-3 rounded-lg font-semibold transition ${
+                      !selectedAgency || data.status !== "Pending Review"
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700 text-white"
+                    }`}
                     id="approve-request-button"
                   >
                     Aprobar
@@ -1015,49 +1019,50 @@ const RequestInfo: React.FC = () => {
 
             {authState.userPermissions.includes(
               "create_request" as Permission,
-            ) && (
-              <footer className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => navigate(`/requests/${id}/edit`)}
-                  disabled={data.status !== "Changes Needed"}
-                  className={`flex-1 py-3 rounded-lg font-semibold transition ${
-                    data.status === "Changes Needed"
-                      ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                  id="edit-request-button"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() =>
-                    openConfirm({
-                      title: "Cancelar solicitud de viaje",
-                      description:
-                        "Estás a punto de cancelar tu solicitud de viaje. Se notificará al aprobador y se detendrá el proceso.",
-                      warningNote:
-                        "Esta acción es irreversible. No podrás reactivar esta solicitud.",
-                      confirmText: "Sí, cancelar solicitud",
-                      isDestructive: true,
-                      onConfirm: cancel,
-                    })
-                  }
-                  disabled={
-                    data.status !== "Pending Review" &&
-                    data.status !== "Changes Needed"
-                  }
-                  className={`flex-1 py-3 rounded-lg font-semibold transition ${
-                    data.status !== "Pending Review" &&
-                    data.status !== "Changes Needed"
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-red-600 hover:bg-red-700 text-white"
-                  }`}
-                  id="cancel-request-button"
-                >
-                  Cancelar
-                </button>
-              </footer>
-            )}
+            ) &&
+              authState.userId === (data.id_user ?? data.user?.id) && (
+                <footer className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => navigate(`/requests/${id}/edit`)}
+                    disabled={data.status !== "Changes Needed"}
+                    className={`flex-1 py-3 rounded-lg font-semibold transition ${
+                      data.status === "Changes Needed"
+                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                    id="edit-request-button"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() =>
+                      openConfirm({
+                        title: "Cancelar solicitud de viaje",
+                        description:
+                          "Estás a punto de cancelar tu solicitud de viaje. Se notificará al aprobador y se detendrá el proceso.",
+                        warningNote:
+                          "Esta acción es irreversible. No podrás reactivar esta solicitud.",
+                        confirmText: "Sí, cancelar solicitud",
+                        isDestructive: true,
+                        onConfirm: cancel,
+                      })
+                    }
+                    disabled={
+                      data.status !== "Pending Review" &&
+                      data.status !== "Changes Needed"
+                    }
+                    className={`flex-1 py-3 rounded-lg font-semibold transition ${
+                      data.status !== "Pending Review" &&
+                      data.status !== "Changes Needed"
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-700 text-white"
+                    }`}
+                    id="cancel-request-button"
+                  >
+                    Cancelar
+                  </button>
+                </footer>
+              )}
 
             {authState.userPermissions.includes(
               "check_budgets" as Permission,
@@ -1146,5 +1151,4 @@ Modification History:
 - 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for all irreversible actions (approve, deny, cancel, register, complete).
 - 2026-04-23 | Juan de Dios Gastélum | Fixed destination sort order and added return leg row for round trips.
 - 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling for request status actions.
-
 */
