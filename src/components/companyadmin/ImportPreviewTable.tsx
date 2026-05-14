@@ -1,8 +1,7 @@
 /**
  * File: ImportPreviewTable.tsx
- * Description: Tabular view of the parsed employees. Each row shows key Excel fields,
- *              validation status and a per-row role Select that feeds roleByEmpNo
- *              in the parent orchestrator component.
+ * Description: Tabular view of the parsed employees. Each row shows key Excel fields
+ *              and a per-row role Select that feeds roleByEmpNo in the parent.
  */
 
 import { useMemo } from 'react';
@@ -17,34 +16,6 @@ type ImportPreviewTableProps = {
   availableRoles: AvailableRole[];
   roleByEmpNo: Record<string, string>;
   onRoleChange: (employeeNumber: string, roleId: string) => void;
-};
-
-/**
- * Renders a single row status chip depending on validation results and update flag.
- */
-const StatusChip = ({ employee }: { employee: PreviewEmployee }) => {
-  if (employee.validationErrors.length > 0) {
-    return (
-      <span
-        className="inline-block px-2 py-0.5 text-xs font-medium text-red-700 bg-red-100 rounded-full"
-        title={employee.validationErrors.join('\n')}
-      >
-        {employee.validationErrors.length} error(es)
-      </span>
-    );
-  }
-  if (employee.isUpdate) {
-    return (
-      <span className="inline-block px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded-full">
-        Actualización
-      </span>
-    );
-  }
-  return (
-    <span className="inline-block px-2 py-0.5 text-xs font-medium text-emerald-700 bg-emerald-100 rounded-full">
-      Nuevo
-    </span>
-  );
 };
 
 /**
@@ -73,11 +44,10 @@ const ImportPreviewTable = ({
             <th className="px-3 py-3 text-left">No. Empleado</th>
             <th className="px-3 py-3 text-left">Nombre</th>
             <th className="px-3 py-3 text-left">Usuario</th>
-            <th className="px-3 py-3 text-left">Email</th>
+            <th className="px-3 py-3 text-left">Correo (login)</th>
             <th className="px-3 py-3 text-left">CeCo / Depto.</th>
             <th className="px-3 py-3 text-left">Jefe inmediato</th>
             <th className="px-3 py-3 text-left">Status</th>
-            <th className="px-3 py-3 text-left">Estado</th>
             <th className="px-3 py-3 text-left min-w-[220px]">Rol asignado</th>
           </tr>
         </thead>
@@ -85,7 +55,7 @@ const ImportPreviewTable = ({
           {employees.length === 0 && (
             <tr>
               <td
-                colSpan={10}
+                colSpan={9}
                 className="px-3 py-6 text-center text-gray-400 text-sm"
               >
                 No hay empleados en el archivo.
@@ -124,9 +94,6 @@ const ImportPreviewTable = ({
                 </td>
                 <td className="px-3 py-2 text-gray-600 capitalize">
                   {employee.availabilityStatus}
-                </td>
-                <td className="px-3 py-2">
-                  <StatusChip employee={employee} />
                 </td>
                 <td className="px-3 py-2">
                   <Select
