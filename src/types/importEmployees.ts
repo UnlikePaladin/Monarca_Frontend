@@ -27,6 +27,10 @@ export type PreviewEmployee = {
   validationErrors: string[];
   /** Auto-suggested role UUID from backend: Aprobador if manager in batch, else Solicitante. */
   suggestedRoleId: string | null;
+  /** ID of the assigned role (for view-only displays) */
+  idRole?: string | null;
+  /** Name of the assigned role (for view-only displays) */
+  roleName?: string;
 };
 
 export type PreviewResponse = {

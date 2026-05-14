@@ -24,16 +24,41 @@ type OrgChartProps = {
 const OrgChart = ({ tree, availableRoles, roleByEmpNo }: OrgChartProps) => {
   const rolesById = useMemo(() => {
     const map = new Map<string, AvailableRole>();
-    for (const role of availableRoles) {
+    for (const role of availableRoles || []) {
       map.set(role.id, role);
     }
     return map;
   }, [availableRoles]);
 
-  if (tree.roots.length === 0 && tree.unidentified.length === 0) {
+  // Check if there's actual hierarchy (any node with children)
+  const hasHierarchy = (tree?.roots || []).some(root => root.children.length > 0);
+
+  if (!tree || tree.roots.length === 0 && tree.unidentified.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-sm text-gray-500">
         No hay datos para construir el organigrama.
+      </div>
+    );
+  }
+
+  // If no hierarchy exists and all are roots, show a different message
+  if (!hasHierarchy && tree.roots.length > 0) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-900 font-medium mb-2">
+            ℹ️ Organigrama sin jerarquía
+          </p>
+          <p className="text-xs text-blue-700">
+            No se puede construir un organigrama porque los empleados no tienen definidos sus jefes inmediatos (bossEmployeeNumber). 
+            Asegúrate de incluir la columna "Jefe Inmediato" en tu archivo Excel con el número de empleado del jefe directo.
+          </p>
+        </div>
+        <FlatEmployeesList 
+          roots={tree.roots} 
+          roleByEmpNo={roleByEmpNo} 
+          rolesById={rolesById}
+        />
       </div>
     );
   }
@@ -42,7 +67,7 @@ const OrgChart = ({ tree, availableRoles, roleByEmpNo }: OrgChartProps) => {
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded-xl p-6 overflow-x-auto">
         <ul className="flex items-start gap-10 min-w-max">
-          {tree.roots.map((root) => (
+          {(tree?.roots || []).map((root) => (
             <OrgChartNode
               key={root.employeeNumber}
               node={root}
@@ -53,12 +78,73 @@ const OrgChart = ({ tree, availableRoles, roleByEmpNo }: OrgChartProps) => {
         </ul>
       </div>
 
-      {tree.unidentified.length > 0 && (
-        <UnidentifiedList rows={tree.unidentified} />
+      {(tree?.unidentified || []).length > 0 && (
+        <UnidentifiedList rows={tree?.unidentified || []} />
       )}
     </div>
   );
 };
+
+/**
+ * Displays a flat list of employees when there's no hierarchy.
+ */
+const FlatEmployeesList = ({
+  roots,
+  roleByEmpNo,
+  rolesById,
+}: {
+  roots: any[];
+  roleByEmpNo: Record<string, string>;
+  rolesById: Map<string, any>;
+}) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {roots.map((node) => {
+      const { data, employeeNumber } = node;
+      const fullName = `${data.name}${data.lastName ? ` ${data.lastName}` : ''}`.trim();
+      const assignedRoleId = roleByEmpNo[employeeNumber];
+      const assignedRole = assignedRoleId ? rolesById.get(assignedRoleId) : undefined;
+      const hasErrors = data.validationErrors.length > 0;
+
+      return (
+        <div
+          key={employeeNumber}
+          className={`rounded-lg border px-4 py-3 shadow-sm bg-white ${
+            hasErrors
+              ? 'border-red-300'
+              : node.orphanReason
+                ? 'border-amber-300'
+                : 'border-gray-200'
+          }`}
+        >
+          <p className="text-sm font-semibold text-gray-900 truncate" title={fullName}>
+            {fullName || 'Sin nombre'}
+          </p>
+          <p className="text-xs text-gray-500 mb-2">No. {employeeNumber}</p>
+
+          <div className="flex flex-wrap gap-1">
+            {assignedRole ? (
+              <span className="inline-block px-2 py-0.5 text-[11px] font-medium text-indigo-700 bg-indigo-100 rounded-full">
+                {assignedRole.name}
+              </span>
+            ) : (
+              <span className="inline-block px-2 py-0.5 text-[11px] font-medium text-gray-500 bg-gray-100 rounded-full">
+                Sin rol asignado
+              </span>
+            )}
+            {hasErrors && (
+              <span
+                className="inline-block px-2 py-0.5 text-[11px] font-medium text-red-700 bg-red-100 rounded-full"
+                title={data.validationErrors.join('\n')}
+              >
+                {data.validationErrors.length} error(es)
+              </span>
+            )}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
 
 /**
  * Sidebar list for rows whose employee number was missing and therefore could not

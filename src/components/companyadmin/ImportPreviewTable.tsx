@@ -28,7 +28,7 @@ const ImportPreviewTable = ({
   onRoleChange,
 }: ImportPreviewTableProps) => {
   const roleOptions = useMemo(
-    () => availableRoles.map((role) => ({ id: role.id, name: role.name })),
+    () => (availableRoles || []).map((role) => ({ id: role.id, name: role.name })),
     [availableRoles],
   );
 
@@ -52,7 +52,7 @@ const ImportPreviewTable = ({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {employees.length === 0 && (
+          {(employees || []).length === 0 && (
             <tr>
               <td
                 colSpan={9}
@@ -62,7 +62,7 @@ const ImportPreviewTable = ({
               </td>
             </tr>
           )}
-          {employees.map((employee) => {
+          {(employees || []).map((employee) => {
             const hasErrors = employee.validationErrors.length > 0;
             const fullName = `${employee.name}${
               employee.lastName ? ` ${employee.lastName}` : ''
