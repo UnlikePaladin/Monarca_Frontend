@@ -10,7 +10,7 @@ import { deleteRequest } from "../../utils/apiService";
  * @param ruleId The unique identifier of the rule to delete.
  */
 const deleteApprovalRule = async (ruleId: string): Promise<void> => {
-  return deleteRequest(`/api/v1/approval-rules/${ruleId}`);
+  return deleteRequest(`/approval-rules/${ruleId}`);
 };
 
 /**

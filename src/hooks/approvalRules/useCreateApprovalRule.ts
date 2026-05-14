@@ -17,7 +17,7 @@ const createApprovalRule = async (
   payload: CreateApprovalRulePayload,
 ): Promise<ApprovalRule> => {
   return postRequest(
-    "/api/v1/approval-rules",
+    "/approval-rules",
     payload as Record<string, unknown>,
   );
 };

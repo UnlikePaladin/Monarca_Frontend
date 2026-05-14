@@ -21,7 +21,7 @@ const updateApprovalRule = async ({
   data,
 }: UpdateApprovalRulePayload): Promise<ApprovalRule> => {
   return patchRequest(
-    `/api/v1/approval-rules/${ruleId}`,
+    `/approval-rules/${ruleId}`,
     data as Record<string, unknown>,
   );
 };

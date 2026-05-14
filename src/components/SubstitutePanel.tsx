@@ -88,6 +88,7 @@ export const SubstitutePanel = () => {
     createSubstitute(
       {
         originalUserId: authState.userId,
+        roleId: null,
         targetUserId: formData.targetUserId,
         startDate: formData.startDate,
         endDate: formData.endDate,
@@ -134,8 +135,8 @@ export const SubstitutePanel = () => {
               isLoadingUsers ? "Cargando usuarios..." : "Seleccionar usuario..."
             }
             onChange={(option) => {
-              setSelectedUser(option);
-              setFormData({ ...formData, targetUserId: option.id as string });
+              setSelectedUser({ id: String(option.id), name: option.name });
+              setFormData({ ...formData, targetUserId: String(option.id) });
             }}
           />
         </div>

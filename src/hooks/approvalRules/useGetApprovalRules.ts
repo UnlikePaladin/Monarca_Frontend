@@ -11,7 +11,7 @@ import { ApprovalRule } from "../../types/approvalRules";
  * @returns Promise resolving to an array of ApprovalRule objects.
  */
 const fetchApprovalRules = async (): Promise<ApprovalRule[]> => {
-  return getRequest("/api/v1/approval-rules");
+  return getRequest("/approval-rules");
 };
 
 /**
