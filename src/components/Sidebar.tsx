@@ -12,6 +12,7 @@ import logo from "../assets/logo.png";
 import SidebarOption from "./SidebarOption";
 
 import { AuthState, Permission } from "../hooks/auth/authContext";
+import Mosaic from "./Mosaic";
 
 /**
  * Interface for Sidebar component properties.
@@ -218,6 +219,13 @@ function Sidebar({ user, isOpen }: SidebarProps) {
               label="Políticas de reembolso"
               pathIcon="/assets/refresh-cw.png"
               link="/admin/refund-policies"
+            />
+          )}
+          {isCompanyAdmin && (
+            <SidebarOption
+              label="Ver empleados"
+              pathIcon="/assets/employeeWatch.png"
+              link="/company-admin/view-employees"
             />
           )}
         </ul>
