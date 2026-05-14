@@ -49,6 +49,7 @@ import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
 import CostCenterList from "./components/Admin/CostCenterList.tsx";
 import AccountingAccountsList from "./components/Admin/AccountingAccountList.tsx";
 import ImportEmployees from "./pages/CompanyAdmin/ImportEmployees.tsx";
+import ViewEmployees from "./pages/CompanyAdmin/ViewEmployees.tsx";
 import { VoucherHistory } from "./pages/Historial/VoucherHistory.tsx";
 import BankAccountsList from "./components/Admin/BankAccountList.tsx";
 
@@ -284,6 +285,18 @@ export const router = createBrowserRouter([
           {
             path: "",
             element: <ImportEmployees />,
+          },
+        ],
+      },
+      {
+        path: "/company-admin/view-employees",
+        element: (
+          <RoleProtectedRoute requiredRoles={["CompanyAdmin"]} />
+        ),
+        children: [
+          {
+            path: "",
+            element: <ViewEmployees />,
           },
         ],
       },

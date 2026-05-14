@@ -250,6 +250,22 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="refund_policies_admin"
           />
         )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Importar empleados"
+            iconPath="/assets/roles.png"
+            link="/company-admin/import-employees"
+            id="import_employees_admin"
+          />
+        )}
+        {isCompanyAdmin && (
+          <Mosaic
+            title="Ver empleados"
+            iconPath="/assets/employeeWatch.png"
+            link="/company-admin/view-employees"
+            id="view_employees_admin"
+          />
+        )}
       </div>
     </Tutorial>
   );

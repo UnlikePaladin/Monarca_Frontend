@@ -66,6 +66,18 @@ const ImportEmployees = () => {
     [preview],
   );
 
+  // Filter out admin roles that shouldn't be assignable to employees
+  const assignableRoles = useMemo(
+    () =>
+      (preview?.availableRoles ?? []).filter(
+        (role) =>
+          role.name !== 'Administrador' &&
+          role.name !== 'SuperAdmin' &&
+          role.name !== 'Super Admin',
+      ),
+    [preview],
+  );
+
   const validEmployees = useMemo(
     () =>
       (preview?.employees ?? []).filter(
@@ -83,8 +95,16 @@ const ImportEmployees = () => {
     [validEmployees, roleByEmpNo],
   );
 
+  const missingStatusCount = useMemo(
+    () =>
+      validEmployees.filter(
+        (employee) => !employee.availabilityStatus,
+      ).length,
+    [validEmployees],
+  );
+
   const isReadyToConfirm =
-    validEmployees.length > 0 && unassignedCount === 0 && !isConfirming;
+    validEmployees.length > 0 && unassignedCount === 0 && missingStatusCount === 0 && !isConfirming;
 
   const handleUpload = async (file: File) => {
     try {
@@ -129,6 +149,13 @@ const ImportEmployees = () => {
     if (unassignedCount > 0) {
       toast.warn(
         `Faltan ${unassignedCount} empleado(s) por asignar rol antes de continuar.`,
+      );
+      return;
+    }
+
+    if (missingStatusCount > 0) {
+      toast.warn(
+        `Faltan ${missingStatusCount} empleado(s) con estado de disponibilidad antes de continuar.`,
       );
       return;
     }
@@ -202,7 +229,12 @@ const ImportEmployees = () => {
               validRows={preview.validRows}
               errorRows={preview.errorRows}
               unassignedCount={unassignedCount}
+              missingStatusCount={missingStatusCount}
             />
+
+            {preview.errorRows > 0 && (
+              <ErrorsPanel employees={preview.employees} />
+            )}
 
             <div className="flex items-center gap-2">
               <ViewToggleButton
@@ -220,14 +252,14 @@ const ImportEmployees = () => {
             {view === 'table' ? (
               <ImportPreviewTable
                 employees={preview.employees}
-                availableRoles={preview.availableRoles}
+                availableRoles={assignableRoles}
                 roleByEmpNo={roleByEmpNo}
                 onRoleChange={handleRoleChange}
               />
             ) : (
               <OrgChart
                 tree={tree}
-                availableRoles={preview.availableRoles}
+                availableRoles={assignableRoles}
                 roleByEmpNo={roleByEmpNo}
               />
             )}
@@ -304,13 +336,15 @@ const PreviewSummary = ({
   validRows,
   errorRows,
   unassignedCount,
+  missingStatusCount,
 }: {
   totalRows: number;
   validRows: number;
   errorRows: number;
   unassignedCount: number;
+  missingStatusCount: number;
 }) => (
-  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
     <SummaryTag label="Total filas" value={totalRows} tone="gray" />
     <SummaryTag label="Válidas" value={validRows} tone="emerald" />
     <SummaryTag label="Con errores" value={errorRows} tone="red" />
@@ -318,6 +352,11 @@ const PreviewSummary = ({
       label="Sin rol asignado"
       value={unassignedCount}
       tone={unassignedCount === 0 ? 'emerald' : 'amber'}
+    />
+    <SummaryTag
+      label="Sin estado"
+      value={missingStatusCount}
+      tone={missingStatusCount === 0 ? 'emerald' : 'amber'}
     />
   </div>
 );
@@ -368,5 +407,49 @@ const ViewToggleButton = ({
     {label}
   </button>
 );
+
+const ErrorsPanel = ({ employees }: { employees: any[] }) => {
+  const employeesWithErrors = employees.filter(
+    (emp) => emp.validationErrors && emp.validationErrors.length > 0,
+  );
+
+  if (employeesWithErrors.length === 0) return null;
+
+  return (
+    <div className="border border-red-200 bg-red-50 rounded-lg p-4">
+      <h3 className="font-semibold text-red-900 mb-3">
+        Errores de validación ({employeesWithErrors.length})
+      </h3>
+      <div className="space-y-3 max-h-64 overflow-y-auto">
+        {employeesWithErrors.map((employee, idx) => (
+          <div
+            key={idx}
+            className="border-l-4 border-red-500 bg-white p-3 rounded text-sm"
+          >
+            <p className="font-medium text-gray-900">
+              {employee.name} {employee.lastName}
+              {employee.employeeNumber && (
+                <span className="text-gray-500 ml-2">
+                  (Emp. {employee.employeeNumber})
+                </span>
+              )}
+            </p>
+            <ul className="mt-2 space-y-1 text-red-700 text-xs">
+              {employee.validationErrors.map((error: string, errorIdx: number) => (
+                <li key={errorIdx} className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span>{error}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-red-600 mt-3 italic">
+        Corrige estos errores en tu archivo Excel y sube nuevamente.
+      </p>
+    </div>
+  );
+};
 
 export default ImportEmployees;
