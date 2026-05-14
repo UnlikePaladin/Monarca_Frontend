@@ -22,6 +22,8 @@ export const Dashboard = ({ title }: DashboardProps) => {
     .replace(/[_\s-]/g, "");
   const isSuperAdmin = normalizedRole === "superadmin";
   const isCompanyAdmin = normalizedRole === "companyadmin";
+  const isApprover =
+    normalizedRole === "approver" || normalizedRole === "aprobador";
 
   // Set the page title when the component mounts
   useEffect(() => {
@@ -79,7 +81,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
           />
         )}
         {authState.userPermissions.includes(
-          "upload_vouchers" as Permission
+          "upload_vouchers" as Permission,
         ) && (
           <Mosaic
             title="Historial de comprobantes"
@@ -182,6 +184,16 @@ export const Dashboard = ({ title }: DashboardProps) => {
             id="tenant_management"
           />
         )}
+        {authState.userPermissions.includes(
+          "import_employees" as Permission,
+        ) && (
+          <Mosaic
+            title="Importar empleados"
+            iconPath="/assets/roles.png"
+            link="/company-admin/import-employees"
+            id="import_employees"
+          />
+        )}
         {isCompanyAdmin && (
           <Mosaic
             title="Departamentos"
@@ -209,12 +221,12 @@ export const Dashboard = ({ title }: DashboardProps) => {
         {isCompanyAdmin && (
           <Mosaic
             title="Cuentas bancarias"
-            iconPath="/assets/sheet.png"
+            iconPath="/assets/landmark.png"
             link="/admin/bank-accounts"
             id="tenant_bank_accounts"
           />
         )}
-        {isCompanyAdmin && (
+        {isApprover && (
           <Mosaic
             title="Delegaciones de sustitutos"
             iconPath="/assets/roles.png"
@@ -240,14 +252,6 @@ export const Dashboard = ({ title }: DashboardProps) => {
         )}
         {isCompanyAdmin && (
           <Mosaic
-            title="Importar empleados"
-            iconPath="/assets/roles.png"
-            link="/company-admin/import-employees"
-            id="import_employees_admin"
-          />
-        )}
-        {isCompanyAdmin && (
-          <Mosaic
             title="Ver empleados"
             iconPath="/assets/employeeWatch.png"
             link="/company-admin/view-employees"
@@ -264,4 +268,5 @@ Modification History:
 - 2026-04-09 | Fabrizio | Refactored grid system to support 1, 2, and 4 columns depending on device width.
 - 2026-04-14 | Fabrizio | Added the Policies Management mosaic for the SOI workflow.
 - 2026-04-27 | Juan de Dios Gastélum | Added Delegaciones de sustitutos and Matriz de autorización mosaics for CompanyAdmin. Updated asset paths for Departamentos, Centros de costos, and Cuentas contables.
+- 2026-05-13 | Juan de Dios Gastélum | Added Importar empleados mosaic for users with import_employees permission.
 */

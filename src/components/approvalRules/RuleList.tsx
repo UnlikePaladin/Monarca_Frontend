@@ -128,7 +128,7 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
                 Condiciones
               </th>
               <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">
-                Niveles
+                Niveles jerárquicos
               </th>
               <th className="py-3 px-6 text-sm font-medium text-gray-600 text-center">
                 Estado
@@ -165,7 +165,8 @@ export const RuleList = ({ onEdit, onCreate }: RuleListProps) => {
                   </div>
                 </td>
                 <td className="py-4 px-6 text-center text-sm text-gray-600">
-                  {rule.approvalChain.length}
+                  {rule.steps?.find((s) => s.stepType === "hierarchy")
+                    ?.hierarchyLevel ?? "—"}
                 </td>
                 <td className="py-4 px-6 text-center">
                   <span

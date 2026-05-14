@@ -110,7 +110,7 @@ export default function LoginPage() {
           />
           <a
             href="/register"
-            className="text-[18px] text-left mb-[150px] underline-offset-2 hover:!underline"
+            className="text-[18px] text-left mb-3 underline-offset-2 hover:!underline"
           >
             ¿Olvidaste tu contraseña?
           </a>

@@ -2,35 +2,40 @@
  * Description: Component to build dynamic conditions for an approval rule.
  */
 
-import React from 'react';
-import { RuleCondition, ConditionField, ConditionOperator } from '../../types/approvalRules';
+import React from "react";
+import {
+  RuleCondition,
+  ConditionField,
+  ConditionOperator,
+} from "../../types/approvalRules";
 
 const FIELD_OPTIONS: { value: ConditionField; label: string }[] = [
-  { value: 'trip_type', label: 'Tipo de viaje' },
-  { value: 'cost',      label: 'Costo' },
-  { value: 'priority',  label: 'Prioridad' },
+  { value: "trip_type", label: "Tipo de viaje" },
+  { value: "cost", label: "Costo" },
+  { value: "priority", label: "Prioridad" },
 ];
 
 const OPERATOR_OPTIONS: { value: ConditionOperator; label: string }[] = [
-  { value: 'gt',  label: 'Mayor que (>)' },
-  { value: 'gte', label: 'Mayor o igual (≥)' },
-  { value: 'lt',  label: 'Menor que (<)' },
-  { value: 'lte', label: 'Menor o igual (≤)' },
-  { value: 'eq',  label: 'Igual a (=)' },
+  { value: "gt", label: "Mayor que (>)" },
+  { value: "gte", label: "Mayor o igual (≥)" },
+  { value: "lt", label: "Menor que (<)" },
+  { value: "lte", label: "Menor o igual (≤)" },
+  { value: "eq", label: "Igual a (=)" },
 ];
 
 const TRIP_TYPE_OPTIONS = [
-  { value: 'nacional',       label: 'Nacional' },
-  { value: 'internacional',  label: 'Internacional' },
+  { value: "nacional", label: "Nacional" },
+  { value: "internacional", label: "Internacional" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: 'alta',  label: 'Alta' },
-  { value: 'media', label: 'Media' },
-  { value: 'baja',  label: 'Baja' },
+  { value: "alta", label: "Alta" },
+  { value: "media", label: "Media" },
+  { value: "baja", label: "Baja" },
 ];
 
-const SELECT_CLASS = 'w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer';
+const SELECT_CLASS =
+  "w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer";
 
 interface ConditionBuilderProps {
   conditions: RuleCondition[];
@@ -43,13 +48,15 @@ interface ConditionBuilderProps {
  * @param onChange Callback triggered when conditions are added, removed, or updated.
  * @returns React component with the condition builder.
  */
-export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps) => {
-
+export const ConditionBuilder = ({
+  conditions,
+  onChange,
+}: ConditionBuilderProps) => {
   /**
    * Adds a new default condition to the list.
    */
   const handleAdd = () => {
-    onChange([...conditions, { field: 'trip_type', value: 'nacional' }]);
+    onChange([...conditions, { field: "trip_type", value: "nacional" }]);
   };
 
   /**
@@ -70,8 +77,13 @@ export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps
       if (i !== index) return condition;
       const merged = { ...condition, ...updates };
       if (updates.field && updates.field !== condition.field) {
-        merged.value    = updates.field === 'cost' ? 0 : updates.field === 'trip_type' ? 'nacional' : 'alta';
-        merged.operator = updates.field === 'cost' ? 'gt' : undefined;
+        merged.value =
+          updates.field === "cost"
+            ? ""
+            : updates.field === "trip_type"
+              ? "nacional"
+              : "alta";
+        merged.operator = updates.field === "cost" ? "gt" : undefined;
       }
       return merged;
     });
@@ -80,18 +92,27 @@ export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps
 
   return (
     <div className="space-y-4">
-
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Condiciones</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Condiciones
+        </label>
         <p className="text-xs text-gray-500">
-          Define cuándo aplica esta regla. Puedes combinar varias condiciones - todas deben cumplirse para que la regla se active.
+          Define cuándo aplica esta regla. Puedes combinar varias condiciones -
+          todas deben cumplirse para que la regla se active.
         </p>
       </div>
 
       <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-xs text-blue-700 space-y-1">
-        <p><strong>Tipo de viaje:</strong> si el destino es dentro o fuera del país.</p>
-        <p><strong>Costo:</strong> monto estimado del viaje en pesos.</p>
-        <p><strong>Prioridad:</strong> nivel de urgencia asignado a la solicitud.</p>
+        <p>
+          <strong>Tipo de viaje:</strong> si el destino es dentro o fuera del
+          país.
+        </p>
+        <p>
+          <strong>Costo:</strong> monto estimado del viaje en pesos.
+        </p>
+        <p>
+          <strong>Prioridad:</strong> nivel de urgencia asignado a la solicitud.
+        </p>
       </div>
 
       {conditions.length === 0 && (
@@ -101,8 +122,10 @@ export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps
       )}
 
       {conditions.map((condition, index) => (
-        <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-
+        <div
+          key={index}
+          className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Condición {index + 1}
@@ -120,36 +143,52 @@ export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps
             <label className="block text-xs text-gray-500 mb-1">Variable</label>
             <select
               value={condition.field}
-              onChange={(e) => handleChange(index, { field: e.target.value as ConditionField })}
+              onChange={(e) =>
+                handleChange(index, { field: e.target.value as ConditionField })
+              }
               className={SELECT_CLASS}
             >
               {FIELD_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>
 
-          {condition.field === 'cost' && (
+          {condition.field === "cost" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Comparación</label>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Comparación
+                </label>
                 <select
-                  value={condition.operator ?? 'gt'}
-                  onChange={(e) => handleChange(index, { operator: e.target.value as ConditionOperator })}
+                  value={condition.operator ?? "gt"}
+                  onChange={(e) =>
+                    handleChange(index, {
+                      operator: e.target.value as ConditionOperator,
+                    })
+                  }
                   className={SELECT_CLASS}
                 >
                   {OPERATOR_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Monto ($)</label>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Monto ($)
+                </label>
                 <input
                   type="number"
                   min={0}
-                  value={condition.value as number}
-                  onChange={(e) => handleChange(index, { value: Number(e.target.value) })}
+                  value={condition.value}
+                  onChange={(e) =>
+                    handleChange(index, { value: e.target.value })
+                  }
                   placeholder="0"
                   className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -157,7 +196,7 @@ export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps
             </div>
           )}
 
-          {condition.field === 'trip_type' && (
+          {condition.field === "trip_type" && (
             <div>
               <label className="block text-xs text-gray-500 mb-1">Tipo</label>
               <select
@@ -166,13 +205,15 @@ export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps
                 className={SELECT_CLASS}
               >
                 {TRIP_TYPE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
           )}
 
-          {condition.field === 'priority' && (
+          {condition.field === "priority" && (
             <div>
               <label className="block text-xs text-gray-500 mb-1">Nivel</label>
               <select
@@ -181,12 +222,13 @@ export const ConditionBuilder = ({ conditions, onChange }: ConditionBuilderProps
                 className={SELECT_CLASS}
               >
                 {PRIORITY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
           )}
-
         </div>
       ))}
 

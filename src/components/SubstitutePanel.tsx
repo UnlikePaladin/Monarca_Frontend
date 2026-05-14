@@ -8,7 +8,7 @@ import { Input } from "./ui/Input";
 import Select from "./ui/Select";
 import FieldError from "./ui/FieldError";
 import { useAuth } from "../hooks/auth/authContext";
-import { useGetUsers } from "../hooks/users/useGetUsers";
+import { useGetApprovers } from "../hooks/users/useGetApprovers";
 import { useCreateSubstitute } from "../hooks/substitutes/useCreateSubstitute";
 import { toast } from "react-toastify";
 
@@ -19,13 +19,28 @@ interface FormData {
   notes: string;
 }
 
+const addBusinessDays = (from: Date, days: number): Date => {
+  const result = new Date(from);
+  let added = 0;
+  while (added < days) {
+    result.setDate(result.getDate() + 1);
+    const day = result.getDay();
+    if (day !== 0 && day !== 6) added++;
+  }
+  return result;
+};
+
+const MIN_START_DATE = addBusinessDays(new Date(), 2)
+  .toISOString()
+  .split("T")[0];
+
 /**
  * Renders a form to select a substitute user and date range for delegations.
  * @returns React component containing the delegation form.
  */
 export const SubstitutePanel = () => {
   const { authState } = useAuth();
-  const { data: users = [], isLoading: isLoadingUsers } = useGetUsers();
+  const { data: users = [], isLoading: isLoadingUsers } = useGetApprovers();
   const { mutate: createSubstitute, isPending } = useCreateSubstitute();
 
   const [formData, setFormData] = useState<FormData>({
@@ -40,10 +55,12 @@ export const SubstitutePanel = () => {
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const userOptions = users.map((user) => ({
-    id: user.id,
-    name: `${user.name} ${user.lastName}`,
-  }));
+  const userOptions = users
+    .filter((user) => user.id !== authState.userId)
+    .map((user) => ({
+      id: user.id,
+      name: `${user.name} ${user.lastName}`,
+    }));
 
   /**
    * Validates form dates and submits the delegation request.
@@ -55,11 +72,6 @@ export const SubstitutePanel = () => {
 
     if (!formData.targetUserId) {
       setErrorMessage("Selecciona un usuario sustituto.");
-      return;
-    }
-
-    if (!authState.userRoleId) {
-      setErrorMessage("No se pudo obtener tu rol actual. Recarga la página.");
       return;
     }
 
@@ -75,7 +87,8 @@ export const SubstitutePanel = () => {
 
     createSubstitute(
       {
-        roleId: authState.userRoleId,
+        originalUserId: authState.userId,
+        roleId: null,
         targetUserId: formData.targetUserId,
         startDate: formData.startDate,
         endDate: formData.endDate,
@@ -122,8 +135,8 @@ export const SubstitutePanel = () => {
               isLoadingUsers ? "Cargando usuarios..." : "Seleccionar usuario..."
             }
             onChange={(option) => {
-              setSelectedUser(option);
-              setFormData({ ...formData, targetUserId: option.id as string });
+              setSelectedUser({ id: String(option.id), name: option.name });
+              setFormData({ ...formData, targetUserId: String(option.id) });
             }}
           />
         </div>
@@ -136,7 +149,7 @@ export const SubstitutePanel = () => {
             <Input
               type="date"
               value={formData.startDate}
-              min={new Date().toISOString().split("T")[0]}
+              min={MIN_START_DATE}
               onChange={(event) =>
                 setFormData({ ...formData, startDate: event.target.value })
               }
@@ -193,4 +206,5 @@ export const SubstitutePanel = () => {
  * Modification History:
  * - 2026-03-25 | Juan de Dios Gastélum Flores | Initial file creation.
  * - 2026-04-16 | Juan de Dios Gastélum Flores | Connected to real API. Replaced mock users with useGetUsers. Connected useCreateSubstitute. Reads userRoleId from authContext.
+ * - 2026-05-13 | Juan de Dios Gastélum | Replaced useGetUsers with useGetApprovers; excluded current user from options.
  */

@@ -2,19 +2,24 @@
  * Description: Hook to create a new approval rule via the API.
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ApprovalRule } from '../../types/approvalRules';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { postRequest } from "../../utils/apiService";
+import { ApprovalRule } from "../../types/approvalRules";
 
-type CreateApprovalRulePayload = Omit<ApprovalRule, 'id'>;
+type CreateApprovalRulePayload = Omit<ApprovalRule, "id">;
 
 /**
  * Sends a POST request to create a new approval rule.
  * @param payload Rule data excluding the id field.
- * @returns Promise resolving to the created ApprovalRule object.
+ * @returns Promise resolving to the created ApprovalRule.
  */
-const createApprovalRule = async (payload: CreateApprovalRulePayload): Promise<ApprovalRule> => {
-  // TODO: Reemplazar con llamada del API.
-  return { id: `rule_${Date.now()}`, ...payload };
+const createApprovalRule = async (
+  payload: CreateApprovalRulePayload,
+): Promise<ApprovalRule> => {
+  return postRequest(
+    "/approval-rules",
+    payload as Record<string, unknown>,
+  );
 };
 
 /**
@@ -27,12 +32,13 @@ export const useCreateApprovalRule = () => {
   return useMutation<ApprovalRule, Error, CreateApprovalRulePayload>({
     mutationFn: createApprovalRule,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['approvalRules'] });
+      queryClient.invalidateQueries({ queryKey: ["approvalRules"] });
     },
   });
 };
 
 /*
  * Modification History:
- * - 2026-04-08 | Juan de Dios Gastélum Flores | Initial file creation.
+ * - 2026-04-08 | Juan de Dios Gastélum | Initial file creation.
+ * - 2026-05-12 | Juan de Dios Gastélum | Replaced TODO with real API call.
  */
