@@ -1,7 +1,7 @@
 /*This RequestInfo component shows a detailed view of a specific travel request (based on the id in the URL) and provides different actions depending on the logged-in user’s permissions and the request’s current status. When it mounts, it fetches the request with GET /requests/{id}, flattens all destination reservations into a single list, and builds a UI-friendly data object with formatted fields (Spanish status label via renderStatus, formatted dates and money, approver full name, origin city, and a comma-separated list of destination cities). It also fetches available travel agencies from GET /travel-agencies to allow approvers to assign one to the request. The page renders read-only request metadata, a detailed per-destination section (city, arrival/departure, details, and chips for hotel/plane/stay days), optional previous revision comments, and carousel previews (Swiper) for uploaded reservations and vouchers using FilePreviewerReservation and FilePreviewer, including computed totals and balance against the advance. Actions are permission-gated: approvers can select an agency, add a comment, and then approve (PATCH /requests/approve/{id}), request changes (POST /revisions), or deny (PATCH /requests/deny/{id}); request creators can edit (only when status is “Changes Needed”) or cancel (PATCH /requests/cancel/{id}); accounting users can mark spending as registered (PATCH /requests/SOI-approve/{id}) or mark the trip completed for refunds (PATCH /requests/complete-request/{id}). The component also integrates the tutorial/page-visit tracking via useApp and wraps the whole view in the Tutorial flow.*/
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 import { patchRequest, postRequest } from "../utils/apiService";
 import GoBack from "../components/GoBack";
 import formatMoney from "../utils/formatMoney";
@@ -91,6 +91,7 @@ const showEmailAwareToast = (
 
 const RequestInfo: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const { authState } = useAuth();
   const [data, setData] = useState<any>({});
@@ -107,6 +108,9 @@ const RequestInfo: React.FC = () => {
   const nextRefRes = React.useRef(null);
 
   const { handleVisitPage, tutorial } = useApp();
+  const navigationSource = (location.state as { from?: string } | null)?.from;
+  const isApprovalsEntry = navigationSource === "approvals";
+  const isHistoryEntry = navigationSource === "history";
 
   // Single modal state drives all confirmation dialogs on this page.
   const [confirmModal, setConfirmModal] = useState<{
@@ -917,7 +921,7 @@ const RequestInfo: React.FC = () => {
             {/* Botones de acción */}
             {authState.userPermissions.includes(
               "approve_request" as Permission,
-            ) && (
+            ) && !isHistoryEntry && (
               <>
                 {data.status === "Pending Review" && (
                   <section className="mb-10">
@@ -1019,7 +1023,7 @@ const RequestInfo: React.FC = () => {
 
             {authState.userPermissions.includes(
               "create_request" as Permission,
-            ) &&
+            ) && !isApprovalsEntry &&
               authState.userId === (data.id_user ?? data.user?.id) && (
                 <footer className="flex flex-col sm:flex-row gap-4">
                   <button

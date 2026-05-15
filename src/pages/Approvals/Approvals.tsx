@@ -156,6 +156,7 @@ export const Approvals: React.FC = () => {
               data={dataWithActions}
               itemsPerPage={5}
               link={"/requests"}
+              linkState={{ from: "approvals" }}
             />
           </div>
         </div>
