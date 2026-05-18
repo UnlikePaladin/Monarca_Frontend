@@ -24,6 +24,7 @@ interface FormDataRow extends DynamicTableRow {
   amount: number;
   taxIndicator: string;
   date: string;
+  isForeign?: boolean;
   XMLFile?: File;
   PDFFile?: File;
 }
@@ -362,8 +363,19 @@ export const Vouchers = () => {
           continue;
         }
 
+        const isForeign =
+          rowData.isForeign === true || rowData.isForeign === "true";
+
         if (!rowData.date) {
           toast.error(`La fila ${index + 1} no tiene una fecha seleccionada.`);
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (!isForeign && !rowData.XMLFile) {
+          toast.error(
+            `La fila ${index + 1} requiere XML cuando el comprobante no es extranjero.`,
+          );
           setIsSubmitting(false);
           return;
         }
@@ -380,6 +392,7 @@ export const Vouchers = () => {
         formDataToSend.append("status", "comprobante_pendiente");
         formDataToSend.append("currency", "MXN");
         formDataToSend.append("id_approver", "");
+        formDataToSend.append("is_foreign", isForeign ? "true" : "false");
         if (rowData.XMLFile) {
           formDataToSend.append("file_url_xml", rowData.XMLFile);
         }
@@ -677,6 +690,34 @@ export const Vouchers = () => {
       ),
     },
     {
+      key: "isForeign",
+      header: "Comprobante extranjero",
+      defaultValue: false,
+      renderCell: (
+        value: CellValueType,
+        onChangeComponentFunction: (newValue: CellValueType) => void,
+        rowIndex?: number,
+        _cellIndex?: number,
+      ) => {
+        const isChecked =
+          value === true ||
+          value === "true" ||
+          value === 1 ||
+          value === "1";
+
+        return (
+          <div className="flex items-center justify-center">
+            <InputField
+              id={`is_foreign-${rowIndex}-${_cellIndex}`}
+              type="checkbox"
+              value={isChecked ? "true" : "false"}
+              onChange={(e) => onChangeComponentFunction(e.target.checked)}
+            />
+          </div>
+        );
+      },
+    },
+    {
       key: "XMLFile",
       header: "Archivo XML",
       defaultValue: "",
@@ -698,6 +739,14 @@ export const Vouchers = () => {
               return;
             }
             onChangeComponentFunction(file);
+
+            const isForeign =
+              formData[rowIndex]?.isForeign === true ||
+              formData[rowIndex]?.isForeign === "true";
+
+            if (isForeign) {
+              return;
+            }
 
             if (!patchRow) {
               return;
