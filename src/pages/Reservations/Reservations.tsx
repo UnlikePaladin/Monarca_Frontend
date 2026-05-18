@@ -484,8 +484,10 @@ export const Reservations = () => {
     const outbound = offer.slices?.[0];
     const firstSegment = outbound?.segments?.[0];
     const lastSegment = outbound?.segments?.[outbound.segments.length - 1];
-    const originCode = firstSegment?.origin?.iata_code || "---";
-    const destinationCode = lastSegment?.destination?.iata_code || "---";
+    const fallbackOrigin = (outbound as any)?.origin?.iata_code || "---";
+    const fallbackDestination = (outbound as any)?.destination?.iata_code || "---";
+    const originCode = firstSegment?.origin?.iata_code || fallbackOrigin;
+    const destinationCode = lastSegment?.destination?.iata_code || fallbackDestination;
     const departureTime = firstSegment?.departing_at
       ? dayjs(firstSegment.departing_at).format("HH:mm")
       : "";

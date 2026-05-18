@@ -52,6 +52,18 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
   const getCarrierLabel = (carrier?: DuffelCarrier | null) =>
     carrier?.name || carrier?.iata_code || "Aerolínea";
 
+  const formatCabinClass = (cabin?: DuffelOffer["cabin_class"]) => {
+    if (!cabin) return "";
+    const labels: Record<string, string> = {
+      economy: "Economy",
+      premium_economy: "Premium Economy",
+      business: "Business",
+      first: "First",
+    };
+
+    return labels[cabin] || cabin.replace(/_/g, " ");
+  };
+
   const outboundSlice = offer.slices?.[0];
   const returnSlice = offer.slices?.[1];
   const isRoundTrip = Boolean(returnSlice);
@@ -128,6 +140,7 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
   const segmentCarrier =
     outbound?.firstSegment?.marketing_carrier ||
     outbound?.firstSegment?.operating_carrier;
+  const cabinLabel = formatCabinClass(offer.cabin_class);
 
   // DETALLE: Ajuste de precio según el log de tu consola
   const amount = offer.total_amount || offer.price?.total_amount || "0";
@@ -162,9 +175,16 @@ export const DuffelOfferItem: React.FC<Props> = ({ offer, onSelect }) => {
           </div>
         )}
         <div className="flex-1">
-          <p className="text-sm font-bold text-[var(--blue)]">
-            {offer.owner?.name || "Aerolínea"}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-bold text-[var(--blue)]">
+              {offer.owner?.name || "Aerolínea"}
+            </p>
+            {cabinLabel && (
+              <span className="text-[10px] font-semibold uppercase px-2 py-[2px] rounded-full bg-[var(--gray)] text-[var(--blue)] border border-[var(--light-blue)]">
+                {cabinLabel}
+              </span>
+            )}
+          </div>
           <p className="text-[10px] text-gray-500 uppercase">
             {isRoundTrip
               ? "Ida y vuelta"
