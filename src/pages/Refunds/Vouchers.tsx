@@ -91,41 +91,40 @@ const AmountMxnNote = ({
   date?: string;
 }) => {
   const normalizedAmount = Number.isFinite(amount) ? amount : 0;
+  if (normalizedAmount <= 0) {
+    return null;
+  }
   const today = new Date().toISOString().split("T")[0] ?? "";
   const effectiveDate = date || today;
   const shouldFetchRate = currency !== "MXN" && Boolean(effectiveDate);
   const rateQuery = useExchangeRate(effectiveDate, currency, shouldFetchRate);
 
   if (currency === "MXN") {
-    return (
-      <p className="text-xs text-gray-100 mt-2">
-        Se guardara en MXN: {formatMoney(normalizedAmount)}.
-      </p>
-    );
+    return null;
   }
 
   if (rateQuery.isLoading) {
     return (
-      <p className="text-xs text-gray-100 mt-2">
-        Consultando tipo de cambio a MXN...
-      </p>
+      <div className="pointer-events-none absolute left-1/2 bottom-full z-20 mb-2 w-max -translate-x-1/2 rounded-md bg-[#0a2c6d] px-2 py-1 text-[11px] text-white shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        Consultando tipo de cambio...
+      </div>
     );
   }
 
   const rateValue = Number(rateQuery.data?.rate);
   if (rateQuery.isError || !Number.isFinite(rateValue)) {
     return (
-      <p className="text-xs text-gray-100 mt-2">
-        No se pudo obtener el tipo de cambio a MXN.
-      </p>
+      <div className="pointer-events-none absolute left-1/2 bottom-full z-20 mb-2 w-max -translate-x-1/2 rounded-md bg-[#0a2c6d] px-2 py-1 text-[11px] text-white shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        No se pudo obtener el tipo de cambio.
+      </div>
     );
   }
 
   const mxnValue = Number((normalizedAmount * rateValue).toFixed(2));
   return (
-    <p className="text-xs text-gray-100 mt-2">
+    <div className="pointer-events-none absolute left-1/2 bottom-full z-20 mb-2 w-max -translate-x-1/2 rounded-md bg-[#0a2c6d] px-2 py-1 text-[11px] text-white shadow-lg opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
       Equivalente en MXN: {formatMoney(mxnValue)}.
-    </p>
+    </div>
   );
 };
 
@@ -772,6 +771,7 @@ export const Vouchers = () => {
           value={value as string}
           onChange={(e) => onChangeComponentFunction(e.target.value)}
           placeholder="Seleccione"
+          wrapperClassName="relative flex flex-col mb-1"
         />
       ),
     },
@@ -785,14 +785,15 @@ export const Vouchers = () => {
         _rowIndex?: number,
         _cellIndex?: number,
       ) => (
-        <div className="flex flex-col items-center gap-1">
+        <div className="group relative flex flex-col items-center gap-1">
           <InputField
             id={`amount-${_rowIndex}-${_cellIndex}`}
             type="number"
             value={value as string}
             onChange={(e) => onChangeComponentFunction(Number(e.target.value))}
             placeholder="Ingrese"
-            className="w-28 text-center"
+            className="w-28 text-center py-1.5"
+            wrapperClassName="flex flex-col mb-1"
           />
           <AmountMxnNote
             amount={Number(value)}
@@ -822,7 +823,7 @@ export const Vouchers = () => {
           onChange={(e) => onChangeComponentFunction(e.target.value)}
           placeholder="Seleccione"
           className="p-2 border border-gray-300 rounded-md w-24 text-center focus:outline-none focus:ring-2 text-[#0a2c6d] focus:ring-blue-500 bg-white hover:cursor-pointer"
-          wrapperClassName="relative"
+          wrapperClassName="relative flex flex-col mb-1"
         />
       ),
     },
@@ -842,6 +843,7 @@ export const Vouchers = () => {
           value={value as string}
           onChange={(e) => onChangeComponentFunction(e.target.value)}
           placeholder="Seleccione"
+          wrapperClassName="relative flex flex-col mb-1"
         />
       ),
     },
@@ -860,6 +862,8 @@ export const Vouchers = () => {
           type="date"
           value={value as string}
           onChange={(e) => onChangeComponentFunction(e.target.value)}
+          className="py-1.5"
+          wrapperClassName="flex flex-col mb-1"
         />
       ),
     },
@@ -886,6 +890,7 @@ export const Vouchers = () => {
               type="checkbox"
               value={isChecked ? "true" : "false"}
               onChange={(e) => onChangeComponentFunction(e.target.checked)}
+              wrapperClassName="flex flex-col mb-0"
             />
           </div>
         );
@@ -907,6 +912,8 @@ export const Vouchers = () => {
           selectedFileName={formData[rowIndex || 0]?.XMLFile?.name || ""}
           type="file"
           accept=".xml"
+          className="py-1.5"
+          wrapperClassName="flex flex-col mb-1"
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file || rowIndex === undefined) {
@@ -973,6 +980,8 @@ export const Vouchers = () => {
           selectedFileName={formData[rowIndex || 0]?.PDFFile?.name || ""}
           type="file"
           accept=".pdf"
+          className="py-1.5"
+          wrapperClassName="flex flex-col mb-1"
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) {

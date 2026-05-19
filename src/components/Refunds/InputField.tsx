@@ -45,6 +45,7 @@ interface InputFieldProps {
   onFocus?: () => void;
   validateField?: (value: string) => string | undefined;
   selectedFileName?: string;
+  wrapperClassName?: string;
 }
 
 /**
@@ -68,6 +69,7 @@ const InputField: React.FC<InputFieldProps> = ({
   onFocus,
   validateField,
   selectedFileName,
+  wrapperClassName = "flex flex-col mb-4",
 }) => {
   // Set default placeholder for date inputs
   const effectivePlaceholder =
@@ -304,7 +306,7 @@ const InputField: React.FC<InputFieldProps> = ({
   };
 
   return (
-    <div className="flex flex-col mb-4">
+    <div className={wrapperClassName}>
       {renderInput()}
       {errorMessage && (
         <p className="mt-1 text-xs text-red-600">{errorMessage}</p>
