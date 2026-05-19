@@ -16,6 +16,7 @@ interface FilePreviewerProps {
         file_url_xml: string;
         class: string;
         amount: number;
+    amount_mxn?: number;
         date: string;
         status: string;
     };
@@ -31,6 +32,8 @@ interface FilePreviewerProps {
 const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
     const pdfUrl = resolveFileUrl(file.file_url_pdf);
     const xmlUrl = resolveFileUrl(file.file_url_xml);
+  const amountValue =
+    typeof file.amount_mxn === "number" ? file.amount_mxn : file.amount;
 
     return (
         <>
@@ -45,7 +48,7 @@ const FilePreviewer = ({ file, fileIndex }: FilePreviewerProps) => {
 
                 <div className="flex flex-col bg-white p-6 gap-3 col-span-1">
                   <p id={`class-file-${fileIndex}`}><span className="font-semibold text-[var(--blue)]">Clase: </span>{file.class}</p>
-                  <p id={`amount-file-${fileIndex}`}><span className="font-semibold text-[var(--blue)]">Cantidad: </span><span className="text-green-700">{formatMoney(file.amount)}</span></p>
+                  <p id={`amount-file-${fileIndex}`}><span className="font-semibold text-[var(--blue)]">Cantidad: </span><span className="text-green-700">{formatMoney(amountValue)}</span></p>
                   <p id={`date-file-${fileIndex}`}><span className="font-semibold text-[var(--blue)]">Fecha: </span>{formatDate(file.date)}</p>
                   <p id={`status-file-${fileIndex}`}><span className="font-semibold text-[var(--blue)]">Estado: </span>{file.status}</p>
                 </div>

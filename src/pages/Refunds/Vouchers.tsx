@@ -18,10 +18,12 @@ import GoBack from "../../components/GoBack";
 import { Tutorial } from "../../components/Tutorial";
 import { PolicyAlert } from "../../components/Refunds/PolicyAlert";
 import { ConfirmationModal } from "../../components/ui/ConfirmationModal";
+import { useExchangeRate } from "../../hooks/exchange-rate/useExchangeRate";
 
 interface FormDataRow extends DynamicTableRow {
   spentClass: string;
   amount: number;
+  currency?: string;
   taxIndicator: string;
   date: string;
   isForeign?: boolean;
@@ -76,6 +78,56 @@ interface PolicySummary {
 interface PolicyPreviewResponse {
   policy_summary?: PolicySummary;
 }
+
+const currencyOptions = ["MXN", "USD", "EUR", "JPY", "CNY"];
+
+const AmountMxnNote = ({
+  amount,
+  currency,
+  date,
+}: {
+  amount: number;
+  currency: string;
+  date?: string;
+}) => {
+  const normalizedAmount = Number.isFinite(amount) ? amount : 0;
+  const today = new Date().toISOString().split("T")[0] ?? "";
+  const effectiveDate = date || today;
+  const shouldFetchRate = currency !== "MXN" && Boolean(effectiveDate);
+  const rateQuery = useExchangeRate(effectiveDate, currency, shouldFetchRate);
+
+  if (currency === "MXN") {
+    return (
+      <p className="text-xs text-gray-100 mt-2">
+        Se guardara en MXN: {formatMoney(normalizedAmount)}.
+      </p>
+    );
+  }
+
+  if (rateQuery.isLoading) {
+    return (
+      <p className="text-xs text-gray-100 mt-2">
+        Consultando tipo de cambio a MXN...
+      </p>
+    );
+  }
+
+  const rateValue = Number(rateQuery.data?.rate);
+  if (rateQuery.isError || !Number.isFinite(rateValue)) {
+    return (
+      <p className="text-xs text-gray-100 mt-2">
+        No se pudo obtener el tipo de cambio a MXN.
+      </p>
+    );
+  }
+
+  const mxnValue = Number((normalizedAmount * rateValue).toFixed(2));
+  return (
+    <p className="text-xs text-gray-100 mt-2">
+      Equivalente en MXN: {formatMoney(mxnValue)}.
+    </p>
+  );
+};
 
 /**
  * Shows a warning toast when the API response includes email delivery warnings.
@@ -216,28 +268,71 @@ export const Vouchers = () => {
     const vouchersPayload: Array<{
       class: string;
       amount: number;
+      amount_mxn: number;
       currency: string;
       date: string;
       has_xml: boolean;
       has_pdf: boolean;
+      is_foreign: boolean;
     }> = [];
     const voucherRowNumbers: number[] = [];
 
-    formData.forEach((row, index) => {
-      if (isEmptyVoucherRow(row)) {
-        return;
+    const exchangeRateCache = new Map<string, number>();
+    const resolveAmountMxnForPreview = async (rowData: FormDataRow) => {
+      const amountValue = Number(rowData.amount);
+      if (!Number.isFinite(amountValue)) {
+        return null;
       }
+
+      const currency = rowData.currency || "MXN";
+      if (currency === "MXN") {
+        return amountValue;
+      }
+
+      const dateValue = rowData.date || new Date().toISOString().split("T")[0];
+      const cacheKey = `${dateValue}-${currency}`;
+      const cachedRate = exchangeRateCache.get(cacheKey);
+
+      if (cachedRate) {
+        return Number((amountValue * cachedRate).toFixed(2));
+      }
+
+      const response = (await getRequest("/exchange-rates", {
+        date: dateValue,
+        currency,
+      })) as { rate?: number };
+
+      const rateValue = Number(response?.rate);
+      if (!Number.isFinite(rateValue)) {
+        return null;
+      }
+
+      exchangeRateCache.set(cacheKey, rateValue);
+      return Number((amountValue * rateValue).toFixed(2));
+    };
+
+    for (const [index, row] of formData.entries()) {
+      if (isEmptyVoucherRow(row)) {
+        continue;
+      }
+
+      const amountValue = Number(row.amount);
+      const normalizedAmount = Number.isFinite(amountValue) ? amountValue : 0;
+      const amountMxn = await resolveAmountMxnForPreview(row);
 
       vouchersPayload.push({
         class: row.spentClass,
-        amount: row.amount,
-        currency: "MXN",
+        amount: normalizedAmount,
+        amount_mxn:
+          amountMxn ?? (Number.isFinite(normalizedAmount) ? normalizedAmount : 0),
+        currency: row.currency || "MXN",
         date: row.date,
         has_xml: Boolean(row.XMLFile),
         has_pdf: Boolean(row.PDFFile),
+        is_foreign: row.isForeign === true || row.isForeign === "true",
       });
       voucherRowNumbers.push(index + 1);
-    });
+    }
 
     if (vouchersPayload.length === 0) {
       setPolicyViolations([]);
@@ -352,6 +447,41 @@ export const Vouchers = () => {
     setPolicyViolations([]);
     setIsSubmitting(true);
 
+    const exchangeRateCache = new Map<string, number>();
+
+    const resolveAmountMxn = async (rowData: FormDataRow) => {
+      const amountValue = Number(rowData.amount);
+      if (!Number.isFinite(amountValue)) {
+        return null;
+      }
+
+      const currency = rowData.currency || "MXN";
+      if (currency === "MXN") {
+        return amountValue;
+      }
+
+      const dateValue = rowData.date || new Date().toISOString().split("T")[0];
+      const cacheKey = `${dateValue}-${currency}`;
+      const cachedRate = exchangeRateCache.get(cacheKey);
+
+      if (cachedRate) {
+        return Number((amountValue * cachedRate).toFixed(2));
+      }
+
+      const response = (await getRequest("/exchange-rates", {
+        date: dateValue,
+        currency,
+      })) as { rate?: number };
+
+      const rateValue = Number(response?.rate);
+      if (!Number.isFinite(rateValue)) {
+        return null;
+      }
+
+      exchangeRateCache.set(cacheKey, rateValue);
+      return Number((amountValue * rateValue).toFixed(2));
+    };
+
     try {
       // comprobante_pendiente, comprobante_denegado, comprobante_aprobado
       let formDataToSend = null;
@@ -372,6 +502,15 @@ export const Vouchers = () => {
           return;
         }
 
+        const amountValue = Number(rowData.amount);
+        if (!Number.isFinite(amountValue) || amountValue <= 0) {
+          toast.error(
+            `La fila ${index + 1} requiere un monto valido mayor a 0.`,
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
         if (!isForeign && !rowData.XMLFile) {
           toast.error(
             `La fila ${index + 1} requiere XML cuando el comprobante no es extranjero.`,
@@ -383,14 +522,24 @@ export const Vouchers = () => {
         attemptedUploads += 1;
         formDataToSend = new FormData();
 
+        const amountMxn = await resolveAmountMxn(rowData);
+        if (amountMxn === null) {
+          toast.error(
+            `No se pudo calcular el monto en MXN para la fila ${index + 1}.`,
+          );
+          setIsSubmitting(false);
+          return;
+        }
+
         formDataToSend.append("id_request", trip.id.toString());
         //formDataToSend.append("comment", commentDescriptionOfSpend);
         formDataToSend.append("date", rowData.date);
         formDataToSend.append("class", rowData.spentClass);
-        formDataToSend.append("amount", rowData.amount.toString());
+        formDataToSend.append("amount", amountValue.toString());
         formDataToSend.append("tax_type", rowData.taxIndicator);
         formDataToSend.append("status", "comprobante_pendiente");
-        formDataToSend.append("currency", "MXN");
+        formDataToSend.append("currency", rowData.currency || "MXN");
+        formDataToSend.append("amount_mxn", amountMxn.toString());
         formDataToSend.append("id_approver", "");
         formDataToSend.append("is_foreign", isForeign ? "true" : "false");
         if (rowData.XMLFile) {
@@ -628,7 +777,7 @@ export const Vouchers = () => {
     },
     {
       key: "amount",
-      header: "Monto MXN",
+      header: "Monto",
       defaultValue: 0,
       renderCell: (
         value: CellValueType,
@@ -636,20 +785,45 @@ export const Vouchers = () => {
         _rowIndex?: number,
         _cellIndex?: number,
       ) => (
-        <div className="relative inline-block group">
+        <div className="flex flex-col items-center gap-1">
           <InputField
             id={`amount-${_rowIndex}-${_cellIndex}`}
             type="number"
             value={value as string}
             onChange={(e) => onChangeComponentFunction(Number(e.target.value))}
             placeholder="Ingrese"
-            className="w-full"
+            className="w-28 text-center"
           />
-          <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-2 w-max -translate-x-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-gray-100 opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-            Solo MXN por el formato del XML.
-            <div className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gray-900"></div>
-          </div>
+          <AmountMxnNote
+            amount={Number(value)}
+            currency={formData[_rowIndex || 0]?.currency || "MXN"}
+            date={formData[_rowIndex || 0]?.date}
+          />
         </div>
+      ),
+    },
+    {
+      key: "currency",
+      header: "Moneda",
+      defaultValue: "MXN",
+      renderCell: (
+        value: CellValueType,
+        onChangeComponentFunction: (newValue: CellValueType) => void,
+        _rowIndex?: number,
+        _cellIndex?: number,
+      ) => (
+        <Dropdown
+          id={`currency-${_rowIndex}-${_cellIndex}`}
+          options={currencyOptions.map((currency) => ({
+            value: currency,
+            label: currency,
+          }))}
+          value={(value as string) || "MXN"}
+          onChange={(e) => onChangeComponentFunction(e.target.value)}
+          placeholder="Seleccione"
+          className="p-2 border border-gray-300 rounded-md w-24 text-center focus:outline-none focus:ring-2 text-[#0a2c6d] focus:ring-blue-500 bg-white hover:cursor-pointer"
+          wrapperClassName="relative"
+        />
       ),
     },
     {

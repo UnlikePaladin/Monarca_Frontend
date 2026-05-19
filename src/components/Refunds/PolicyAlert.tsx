@@ -3,6 +3,7 @@
  * UI Component to display blocking and warning violations from the policy engine.
  */
 import { ShieldExclamationIcon, XCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import formatMoney from "../../utils/formatMoney";
 
 interface Violation {
   policy_code: string;
@@ -31,6 +32,9 @@ export const PolicyAlert = ({ violations }: { violations: Violation[] }) => {
         const rowMatch = safeMessage.match(/^\[Fila\s+(\d+)\]\s*(.*)$/);
         const rowLabel = rowMatch ? `Fila ${rowMatch[1]}` : null;
         const displayMessage = rowMatch ? rowMatch[2] : safeMessage;
+        const rawAmount = v.evaluated_value?.amount_mxn ?? v.evaluated_value?.amount;
+        const numericAmount = Number(rawAmount);
+        const hasAmount = Number.isFinite(numericAmount);
 
         return (
         <div 
@@ -57,22 +61,10 @@ export const PolicyAlert = ({ violations }: { violations: Violation[] }) => {
                   )}
                   <p className="text-sm font-bold leading-snug">{displayMessage}</p>
                 </div>
-                
-                {v.evaluated_value && (
-                  <div className="mt-2 text-xs font-medium opacity-90 bg-white/60 p-2 rounded border border-current/10 font-mono">
-                    {['LT', 'LTE', 'GT', 'GTE'].includes(v.policy_code) || v.evaluated_value.operator && (
-                        <p>Monto ingresado: <span className="font-bold">${v.evaluated_value.amount}</span> | Limite: <span className="font-bold">{v.evaluated_value.operator} {v.evaluated_value.threshold} {v.evaluated_value.currency}</span></p>
-                    )}
-                    {(v.policy_code === 'TOTAL_LTE_ADVANCE' || v.message.includes('Total vouchers')) && (
-                      <p>Total detectado: <span className="font-bold text-red-700">${v.evaluated_value.total_vouchers}</span> | Limite (Anticipo): <span className="font-bold">${v.evaluated_value.advance_money}</span></p>
-                    )}
-                    {v.policy_code === 'VOUCHER_DATE_WITHIN_TRIP_WINDOW' && (
-                      <p>Rango del viaje: <span className="font-bold">{new Date(v.evaluated_value.trip_start_date).toLocaleDateString()}</span> al <span className="font-bold">{new Date(v.evaluated_value.trip_end_date).toLocaleDateString()}</span></p>
-                    )}
-                    {(v.policy_code === 'DAYS_EXCEEDED' || v.policy_code === 'TIME_LIMIT') && (
-                      <p>Dias desde la creacion: <span className="font-bold text-red-700">{v.evaluated_value.elapsed_days}</span> | Maximo permitido: <span className="font-bold">{v.evaluated_value.max_days} dias</span></p>
-                    )}
-                  </div>
+                {hasAmount && (
+                  <p className="text-xs text-gray-700 mt-1">
+                    Monto evaluado: {formatMoney(numericAmount)}
+                  </p>
                 )}
               </div>
             </div>
