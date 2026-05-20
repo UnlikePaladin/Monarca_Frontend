@@ -135,13 +135,22 @@ function BankAccountsList() {
         <div id="tenant_bank_accounts" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-gray-900">Cuentas bancarias registradas</h3>
-            <Button
-              id="create_bank_account"
-              type="button"
-              onClick={() => navigate("/admin/bank-accounts/create")}
-            >
-              Crear cuenta bancaria
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                className="!bg-white !text-[var(--blue)] !border !border-[var(--blue)] hover:!bg-[var(--blue)] hover:!text-white"
+                onClick={() => navigate("/admin/bank-accounts/import")}
+              >
+                Importar desde Excel
+              </Button>
+              <Button
+                id="create_bank_account"
+                type="button"
+                onClick={() => navigate("/admin/bank-accounts/create")}
+              >
+                Crear cuenta bancaria
+              </Button>
+            </div>
           </div>
           <div className="rounded-md bg-white p-4 shadow-lg">
             {isLoadingBankAccounts ? (
@@ -159,7 +168,7 @@ function BankAccountsList() {
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Nombre</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">País</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Región</th>
-                      <th className="py-3 px-4 text-sm font-medium text-gray-600">IBAN</th>
+                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Clave</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Acciones</th>
                     </tr>
                   </thead>

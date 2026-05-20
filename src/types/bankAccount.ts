@@ -4,6 +4,8 @@ export type BankAccount = {
   country: string;
   region: string;
   iban: string;
+  identifierType?: string | null;
+  identifierValue?: string | null;
   id_company?: string;
   updatedAt?: string;
 };

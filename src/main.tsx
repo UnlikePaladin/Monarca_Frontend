@@ -42,14 +42,18 @@ import Companies from "./pages/Admin/Companies.tsx";
 import CreateDepartment from "./pages/Admin/CreateDepartment.tsx";
 import CreateCostCenter from "./pages/Admin/CreateCostCenter.tsx";
 import Departments from "./pages/Admin/Departments.tsx";
+import ImportDepartments from "./pages/Admin/ImportDepartments.tsx";
 import CreateAccountingAccount from "./pages/Admin/CreateAccountingAccount.tsx";
 import CreateBankAccount from "./pages/Admin/CreateBankAccount.tsx";
+import ImportBankAccounts from "./pages/Admin/ImportBankAccounts.tsx";
+import ImportAccountingAccounts from "./pages/Admin/ImportAccountingAccounts.tsx";
 import EditAccountingAccount from "./pages/Admin/EditAccountingAccount.tsx";
 import RefundPolicies from "./pages/Admin/RefundPolicies.tsx";
 import CostCenterList from "./components/Admin/CostCenterList.tsx";
 import AccountingAccountsList from "./components/Admin/AccountingAccountList.tsx";
 import ImportEmployees from "./pages/CompanyAdmin/ImportEmployees.tsx";
 import ViewEmployees from "./pages/CompanyAdmin/ViewEmployees.tsx";
+import ImportCostCenters from "./pages/Admin/ImportCostCenters.tsx";
 import { VoucherHistory } from "./pages/Historial/VoucherHistory.tsx";
 import BankAccountsList from "./components/Admin/BankAccountList.tsx";
 
@@ -190,6 +194,10 @@ export const router = createBrowserRouter([
             path: "create",
             element: <CreateDepartment />,
           },
+          {
+            path: "import",
+            element: <ImportDepartments />,
+          },
         ],
       },
       {
@@ -209,6 +217,10 @@ export const router = createBrowserRouter([
             path: "create",
             element: <CreateCostCenter />,
           },
+          {
+            path: "import",
+            element: <ImportCostCenters />,
+          },
         ],
       },
       {
@@ -227,6 +239,10 @@ export const router = createBrowserRouter([
           {
             path: "create",
             element: <CreateAccountingAccount />,
+          },
+          {
+            path: "import",
+            element: <ImportAccountingAccounts />,
           },
           {
             path: ":id/edit",
@@ -261,6 +277,10 @@ export const router = createBrowserRouter([
           {
             path: "create",
             element: <CreateBankAccount />,
+          },
+          {
+            path: "import",
+            element: <ImportBankAccounts />,
           },
         ],
       },

@@ -213,13 +213,22 @@ function DepartmentList() {
         <div id="tenant_departments" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-lg font-semibold text-gray-900">Departamentos registrados</h3>
-            <Button
-              id="create_department"
-              type="button"
-              onClick={() => navigate("/admin/departments/create")}
-            >
-              Crear departamento
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                className="!bg-white !text-[var(--blue)] !border !border-[var(--blue)] hover:!bg-[var(--blue)] hover:!text-white"
+                onClick={() => navigate("/admin/departments/import")}
+              >
+                Importar desde Excel
+              </Button>
+              <Button
+                id="create_department"
+                type="button"
+                onClick={() => navigate("/admin/departments/create")}
+              >
+                Crear departamento
+              </Button>
+            </div>
           </div>
 
           <div className="rounded-md bg-white p-4 shadow-lg">

@@ -137,14 +137,23 @@ function AccountingAccountsList() {
 
         <div id="tenant_accounting_accounts" className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold text-gray-900">Cuentas contables registradas</h3>
-            <Button
-              id="create_accounting_account"
-              type="button"
-              onClick={() => navigate("/admin/accounting-accounts/create")}
-            >
-              Crear cuenta contable
-            </Button>
+            <h3 className="text-lg font-semibold text-gray-900">Cuentas contables registradas</h3>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                className="!bg-white !text-[var(--blue)] !border !border-[var(--blue)] hover:!bg-[var(--blue)] hover:!text-white"
+                onClick={() => navigate("/admin/accounting-accounts/import")}
+              >
+                Importar desde Excel
+              </Button>
+              <Button
+                id="create_accounting_account"
+                type="button"
+                onClick={() => navigate("/admin/accounting-accounts/create")}
+              >
+                Crear cuenta contable
+              </Button>
+            </div>
           </div>
           <div className="rounded-md bg-white p-4 shadow-lg">
             {isLoadingAccountingAccounts ? (
