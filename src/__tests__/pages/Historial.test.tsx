@@ -112,15 +112,22 @@ describe('Historial page', () => {
 
     const { data } = tableSpy.mock.calls.at(-1)![0];
     data[0].action.props.onClickFunction();
-    expect(mockedNavigate).toHaveBeenCalledWith('/requests/1');
+    expect(mockedNavigate).toHaveBeenCalledWith('/requests/1', {
+      state: { from: 'history' },
+    });
   });
 
-  it('approve_request filtra Pending Review', async () => {
-    mockAuth = { userId: '999', userPermissions: ['approve_request'] };
+  it('approve_request usa historial de aprobador del backend', async () => {
+    mockAuth = {
+      userId: '999',
+      userPermissions: ['approve_request', 'view_assigned_requests_readonly'],
+    };
+    getRequestMock.mockResolvedValue([baseTrips[0]]);
 
     renderPage();
     await waitFor(() => expect(tableSpy).toHaveBeenCalled());
 
+    expect(getRequestMock).toHaveBeenCalledWith('/requests/approver/history');
     const { data } = tableSpy.mock.calls.at(-1)![0];
     expect(data.map((r: any) => r.id)).toEqual([1]);
   });
@@ -165,6 +172,6 @@ describe('Historial page', () => {
     await waitFor(() => expect(tableSpy).toHaveBeenCalled());
 
     const { data } = tableSpy.mock.calls.at(-1)![0];
-    expect(data.map((r: any) => r.id)).toEqual([3, 4]);
+    expect(data.map((r: any) => r.id)).toEqual([3]);
   });
 });

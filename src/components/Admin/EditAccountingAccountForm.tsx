@@ -20,9 +20,12 @@ import { useNavigate } from "react-router-dom";
 
 const accountingAccountSchema = z.object({
   key: z.string().trim().min(1, { message: "Escriba la clave de la cuenta contable" }),
-  description: z.string().trim().min(1, { message: "Escriba la descripcion de la cuenta contable" }),
+  description: z.string().trim().min(1, { message: "Escriba la descripción de la cuenta contable" }),
   requiresCostCenter: z.boolean(),
-  bankAccountId: z.string().optional(),
+  bankAccountId: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().uuid().optional()
+  ),
 });
 
 type Props = {
@@ -139,7 +142,7 @@ function EditAccountingAccountForm({ accountingAccountId, initialData }: Props) 
             </div>
 
             <div>
-              <label htmlFor="accounting-account-description" className="mb-2 block text-sm font-medium text-gray-900">Descripcion</label>
+              <label htmlFor="accounting-account-description" className="mb-2 block text-sm font-medium text-gray-900">Descripción</label>
               <Input id="accounting-account-description" {...register("description")} />
               <FieldError msg={errors.description?.message} />
             </div>
@@ -157,7 +160,17 @@ function EditAccountingAccountForm({ accountingAccountId, initialData }: Props) 
                 const selected = companyBankAccounts.find((b) => b.id === field.value) || null;
                 return (
                   <>
-                    <Select id="accounting-account-bank" options={companyBankAccounts.map((b) => ({ id: b.id, name: `${b.name} · ${b.iban}` }))} value={selected ? { id: selected.id, name: `${selected.name} · ${selected.iban}` } : null} onChange={(opt) => field.onChange(opt ? opt.id : "")} placeholder={companyBankAccounts.length === 0 ? "No hay cuentas" : "Selecciona una cuenta bancaria (opcional)"} />
+                    {/* Explicit 'Ninguna' option to allow clearing the bank account */}
+                    <Select
+                      id="accounting-account-bank"
+                      options={[
+                        { id: "", name: "Ninguna" },
+                        ...companyBankAccounts.map((b) => ({ id: b.id, name: `${b.name} · ${b.iban}` })),
+                      ]}
+                      value={selected ? { id: selected.id, name: `${selected.name} · ${selected.iban}` } : (field.value === "" ? { id: "", name: "Ninguna" } : null)}
+                      onChange={(opt) => field.onChange(opt ? opt.id : "")}
+                      placeholder={companyBankAccounts.length === 0 ? "No hay cuentas" : "Selecciona una cuenta bancaria (opcional)"}
+                    />
                     <FieldError msg={errors.bankAccountId?.message} />
                   </>
                 );

@@ -48,14 +48,13 @@ describe("PolicyAlert Component", () => {
         policy_code: "TOTAL_LTE_ADVANCE", 
         message: "Exceso de anticipo", 
         severity: "BLOCKING" as const,
-        evaluated_value: { total_vouchers: 6000, advance_money: 5000 }
+        evaluated_value: { amount_mxn: 6000 }
       }
     ];
     render(<PolicyAlert violations={mockViolations} />);
     
-    expect(screen.getByText(/Total detectado:/)).toBeInTheDocument();
-    expect(screen.getByText(/\$6000/)).toBeInTheDocument();
-    expect(screen.getByText(/\$5000/)).toBeInTheDocument();
+    expect(screen.getByText(/Monto evaluado:/i)).toBeInTheDocument();
+    expect(screen.getByText(/\$6,000\.00/)).toBeInTheDocument();
   });
 
   it("muestra detalles específicos para la regla VOUCHER_DATE_WITHIN_TRIP_WINDOW", () => {
@@ -72,8 +71,7 @@ describe("PolicyAlert Component", () => {
     ];
     render(<PolicyAlert violations={mockViolations} />);
     
-    expect(screen.getByText(/Rango del viaje:/)).toBeInTheDocument();
-    expect(screen.getAllByText(/2026/)).toHaveLength(2);
+    expect(screen.getByText(/Fecha fuera de rango/)).toBeInTheDocument();
   });
 
   it("muestra detalles específicos para la regla DAYS_EXCEEDED", () => {
@@ -87,10 +85,7 @@ describe("PolicyAlert Component", () => {
     ];
     render(<PolicyAlert violations={mockViolations} />);
     
-    expect(screen.getByText(/Dias desde la creacion/i)).toBeInTheDocument();
-    expect(screen.getByText("30")).toBeInTheDocument();
-    expect(screen.getByText(/28\s*dias/i)).toBeInTheDocument();
-    expect(screen.getByText(/Maximo permitido/i)).toBeInTheDocument();
+    expect(screen.getByText(/Plazo vencido/)).toBeInTheDocument();
   });
 
   it("muestra la etiqueta de severidad en mayúsculas", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { HISTORIAL_DATA } from "../../pages/historial/local/dummyData.ts";
+import { HISTORIAL_DATA } from "../../pages/Historial/local/dummyData";
 
 describe("HISTORIAL_DATA", () => {
   it("exports array with 3 items", () => {
@@ -21,9 +21,9 @@ describe("HISTORIAL_DATA", () => {
   it("contains expected data", () => {
     expect(HISTORIAL_DATA[0]).toEqual({
       id: "0001",
-      title: "Viaje a Cancún",
+      title: "Viaje a Cancun",
       travelDate: "14/09/2020",
-      destination: "Cancún, MX",
+      destination: "Cancun, MX",
       requestDate: "10/09/2020",
     });
   });

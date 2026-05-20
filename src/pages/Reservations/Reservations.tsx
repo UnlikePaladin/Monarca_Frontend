@@ -58,7 +58,7 @@ export const Reservations = () => {
   const [request, setRequest] = useState<any>({});
   const [isFormValid, _setIsFormValid] = useState(true);
   const { handleVisitPage, tutorial } = useApp();
-  const { createOfferRequest, createOrder } = useDuffel();
+  const { createOfferRequest } = useDuffel();
   const { destinations } = useDestinations();
   const [duffelSearchIds, setDuffelSearchIds] = useState<
     Record<string, string>
@@ -66,18 +66,8 @@ export const Reservations = () => {
   const [searchingDuffel, setSearchingDuffel] = useState<
     Record<string, boolean>
   >({});
-  const [selectedOffer, setSelectedOffer] = useState<
-    Record<string, DuffelOffer | null>
-  >({});
-
   const [confirmReservationsModal, setConfirmReservationsModal] =
     useState(false);
-  const [confirmDuffelModal, setConfirmDuffelModal] = useState(false);
-  const [pendingDuffelOrder, setPendingDuffelOrder] = useState<{
-    destId: string;
-    passengerData: any;
-    backendDestId?: string;
-  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currencyOptions = ["MXN", "USD", "EUR", "JPY", "CNY"];
@@ -121,9 +111,17 @@ export const Reservations = () => {
     [],
 );
 
+  const sanitizePriceFieldValue = (value: string): string => {
+    if (value === "" || value === "-") return "";
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return value;
+    if (parsed < 0) return "0";
+    return value;
+  };
+
   const getMxnPrice = (data: any, field: "hotel" | "plane") => {
     const rawAmount = Number(data?.[`${field}_price`]);
-    if (Number.isNaN(rawAmount)) return NaN;
+    if (Number.isNaN(rawAmount) || rawAmount < 0) return NaN;
 
     const currency = String(data?.[`${field}_currency`] || "MXN");
     if (currency === "MXN") return rawAmount;
@@ -271,11 +269,15 @@ export const Reservations = () => {
     id: string,
   ) => {
     const { name, value } = e.target;
+    const nextValue =
+      name.endsWith("_price") && typeof value === "string"
+        ? sanitizePriceFieldValue(value)
+        : value;
     const updatedFormData = {
       ...formData,
       [id]: {
         ...formData[id],
-        [name]: value,
+        [name]: nextValue,
       },
     };
     setFormData(updatedFormData);
@@ -483,75 +485,44 @@ export const Reservations = () => {
   };
 
   const handleSelectOffer = (destId: string, offer: DuffelOffer) => {
-    setSelectedOffer((prev) => ({ ...prev, [destId]: offer }));
-    // Al seleccionar, podemos ocultar la lista y mostrar un resumen con el botón de "Confirmar Reserva"
-  };
+    const rawAmount = offer.total_amount || offer.price?.total_amount || "";
+    const parsedAmount = Number.parseFloat(String(rawAmount));
+    const amount = Number.isFinite(parsedAmount) ? String(parsedAmount) : "";
+    const rawCurrency = offer.total_currency || offer.price?.total_currency || "";
+    const currency = currencyOptions.includes(rawCurrency)
+      ? rawCurrency
+      : "MXN";
+    const ownerName = offer.owner?.name || "Aerolínea";
+    const outbound = offer.slices?.[0];
+    const firstSegment = outbound?.segments?.[0];
+    const lastSegment = outbound?.segments?.[outbound.segments.length - 1];
+    const fallbackOrigin = (outbound as any)?.origin?.iata_code || "---";
+    const fallbackDestination = (outbound as any)?.destination?.iata_code || "---";
+    const originCode = firstSegment?.origin?.iata_code || fallbackOrigin;
+    const destinationCode = lastSegment?.destination?.iata_code || fallbackDestination;
+    const departureTime = firstSegment?.departing_at
+      ? dayjs(firstSegment.departing_at).format("HH:mm")
+      : "";
+    const arrivalTime = lastSegment?.arriving_at
+      ? dayjs(lastSegment.arriving_at).format("HH:mm")
+      : "";
+    const routeLabel = `${originCode}-${destinationCode}`;
+    const timeLabel = departureTime && arrivalTime
+      ? ` ${departureTime}-${arrivalTime}`
+      : "";
+    const title = `Vuelo ${ownerName} ${routeLabel}${timeLabel}`.trim();
+    const comments = `Aerolínea: ${ownerName}. Ruta ${routeLabel}.`;
 
-  /**
-   * Stores pending Duffel order data and opens the confirmation modal.
-   * Actual order emission happens in executeDuffelOrder after user confirms.
-   * @param destId - Destination ID in the UI state.
-   * @param passengerData - Passenger form data from DuffelPassengerForm.
-   * @param backendDestId - Optional backend destination ID override.
-   */
-  const handleSubmitDuffelOrder = (
-    destId: string,
-    passengerData: any,
-    backendDestId?: string,
-  ) => {
-    setPendingDuffelOrder({ destId, passengerData, backendDestId });
-    setConfirmDuffelModal(true);
-  };
+    updateFormData(destId, {
+      plane_title: title,
+      plane_comments: comments,
+      plane_price: amount,
+      plane_currency: currency,
+      ...(currency === "MXN" ? { plane_rate: 1 } : {}),
+    });
 
-  /**
-   * Executes the Duffel order after user confirms the modal.
-   * Emits the flight ticket via the backend integration.
-   */
-  const executeDuffelOrder = async () => {
-    if (!pendingDuffelOrder) return;
-    const { destId, passengerData, backendDestId } = pendingDuffelOrder;
-    const offer = selectedOffer[destId];
-    if (!offer) return;
-
-    setConfirmDuffelModal(false);
-
-    const finalOfferId = offer.id || offer.offer_id;
-    const finalPrice = parseFloat(
-      offer.price?.total_amount || offer.total_amount || "0",
-    );
-
-    try {
-      const payload = {
-        requestDestinationId: backendDestId ?? destId,
-        offerId: finalOfferId,
-        reservationTitle: `Vuelo Duffel: ${offer.owner?.name || "Aerolínea"}`,
-        reservationComments: `Reserva digital emitida para ${passengerData.given_name}.`,
-        reservationPrice: finalPrice,
-        data: {
-          selected_offers: [finalOfferId],
-          passengers: [
-            {
-              ...passengerData,
-              phone_number: passengerData.phone_number.replace(/\s/g, ""),
-            },
-          ],
-          type: "instant" as const,
-        },
-      };
-
-      await createOrder.mutateAsync(payload as any);
-
-      toast.success("¡Vuelo reservado y emitido correctamente!");
-      setDuffelSearchIds((prev) => ({ ...prev, [destId]: "" }));
-      setSelectedOffer((prev) => ({ ...prev, [destId]: null }));
-      setPendingDuffelOrder(null);
-    } catch (error: any) {
-      console.error("Duffel Order Error:", error);
-      const errorMsg =
-        error.response?.data?.message ||
-        "Error al emitir el boleto. Verifique los datos.";
-      toast.error(errorMsg);
-    }
+    setDuffelSearchIds((prev) => ({ ...prev, [destId]: "" }));
+    toast.success("Vuelo seleccionado. Datos cargados en la forma manual.");
   };
 
   /**
@@ -783,15 +754,8 @@ export const Reservations = () => {
                     destination={destination}
                     formData={formData}
                     duffelSearchIds={duffelSearchIds}
-                    selectedOffer={selectedOffer}
                     searchingDuffel={searchingDuffel}
                     labels={getDestinationLabels(destination, index === 0)}
-                    requestUser={{
-                      name: request?.user?.name || "",
-                      last_name: request?.user?.last_name || "",
-                      email: request?.user?.email || "",
-                    }}
-                    isOrderPending={createOrder.isPending}
                     onFileChange={handleFileChange}
                     onFieldChange={handleChange}
                     currencyOptions={currencyOptions}
@@ -799,12 +763,8 @@ export const Reservations = () => {
                     onRateChange={handleRateChange}
                     onDuffelSearch={handleDuffelSearch}
                     onSelectOffer={handleSelectOffer}
-                    onSubmitDuffelOrder={handleSubmitDuffelOrder}
                     onClearDuffelSearch={(destId) =>
                       setDuffelSearchIds((prev) => ({ ...prev, [destId]: "" }))
-                    }
-                    onClearSelectedOffer={(destId) =>
-                      setSelectedOffer((prev) => ({ ...prev, [destId]: null }))
                     }
                   />
                 ),
@@ -816,14 +776,7 @@ export const Reservations = () => {
                 request={request}
                 formData={formData}
                 duffelSearchIds={duffelSearchIds}
-                selectedOffer={selectedOffer}
                 searchingDuffel={searchingDuffel}
-                requestUser={{
-                  name: request?.user?.name || "",
-                  last_name: request?.user?.last_name || "",
-                  email: request?.user?.email || "",
-                }}
-                isOrderPending={createOrder.isPending}
                 onFileChange={handleFileChange}
                 onFieldChange={handleChange}
                 currencyOptions={currencyOptions}
@@ -831,12 +784,8 @@ export const Reservations = () => {
                 onRateChange={handleRateChange}
                 onDuffelSearch={handleDuffelSearch}
                 onSelectOffer={handleSelectOffer}
-                onSubmitDuffelOrder={handleSubmitDuffelOrder}
                 onClearDuffelSearch={(destId) =>
                   setDuffelSearchIds((prev) => ({ ...prev, [destId]: "" }))
-                }
-                onClearSelectedOffer={(destId) =>
-                  setSelectedOffer((prev) => ({ ...prev, [destId]: null }))
                 }
               />
             )}
@@ -857,19 +806,6 @@ export const Reservations = () => {
           </form>
         </div>
       </div>
-      <ConfirmationModal
-        isOpen={confirmDuffelModal}
-        onClose={() => {
-          setConfirmDuffelModal(false);
-          setPendingDuffelOrder(null);
-        }}
-        onConfirm={executeDuffelOrder}
-        title="Confirmar emisión de boleto"
-        description="Estás a punto de emitir un boleto de avión a través de Duffel. Esta acción genera un cargo real con la aerolínea."
-        confirmText="Emitir boleto"
-        warningNote="Esta acción es irreversible. Una vez emitido, el boleto no puede cancelarse desde esta plataforma."
-        isLoading={createOrder.isPending}
-      />
       <ConfirmationModal
         isOpen={confirmReservationsModal}
         onClose={() => setConfirmReservationsModal(false)}

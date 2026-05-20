@@ -6,7 +6,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SubstituteDelegation } from "../../types/auth";
 import { postRequest } from "../../utils/apiService";
 
-type CreateSubstitutePayload = Omit<SubstituteDelegation, "id">;
+type CreateSubstitutePayload = Omit<SubstituteDelegation, "id" | "roleId"> & {
+  roleId?: string | null;
+};
 
 /**
  * Sends a POST request to create a new substitute delegation.
@@ -16,10 +18,18 @@ type CreateSubstitutePayload = Omit<SubstituteDelegation, "id">;
 const createSubstitute = async (
   payload: CreateSubstitutePayload,
 ): Promise<SubstituteDelegation> => {
-  const response = await postRequest(
-    "/substitutes",
-    payload as Record<string, unknown>,
-  );
+  const body: Record<string, unknown> = {
+    originalUserId: payload.originalUserId,
+    targetUserId: payload.targetUserId,
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+  };
+  if (payload.roleId != null && payload.roleId !== "") {
+    body.roleId = payload.roleId;
+  }
+  if (payload.notes) body.notes = payload.notes;
+
+  const response = await postRequest("/substitutes", body);
   return response as SubstituteDelegation;
 };
 

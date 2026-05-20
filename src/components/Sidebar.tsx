@@ -82,7 +82,7 @@ function Sidebar({ user, isOpen }: SidebarProps) {
             )}
           {user.userPermissions.includes("upload_vouchers" as Permission) && (
             <SidebarOption
-              label="Comprobar Gastos"
+              label="Comprobar gastos"
               pathIcon="/assets/solicitud_de_reembolso.png"
               link="/refunds"
             />
@@ -162,7 +162,7 @@ function Sidebar({ user, isOpen }: SidebarProps) {
           )}
           {user.userPermissions.includes("check_budgets" as Permission) && (
             <SidebarOption
-              label="Gestión de Polizas"
+              label="Gestión de pólizas"
               pathIcon="/assets/policies.png"
               link="/policies"
             />

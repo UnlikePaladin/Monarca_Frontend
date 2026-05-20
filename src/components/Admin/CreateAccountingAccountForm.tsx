@@ -23,11 +23,15 @@ const accountingAccountSchema = z.object({
     message: "Escriba la clave de la cuenta contable",
   }),
   description: z.string().trim().min(1, {
-    message: "Escriba la descripcion de la cuenta contable",
+    message: "Escriba la descripción de la cuenta contable",
   }),
   requiresCostCenter: z.boolean(),
-  bankAccountId: z.string().optional(),
+  bankAccountId: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().uuid().optional()
+  ),
 });
+
 
 type AccountingAccountFormValues = z.infer<typeof accountingAccountSchema>;
 
@@ -224,7 +228,7 @@ function CreateAccountingAccountForm() {
                 htmlFor="accounting-account-description"
                 className="mb-2 block text-sm font-medium text-gray-900"
               >
-                Descripcion
+                Descripción
               </label>
               <Input id="accounting-account-description" {...register("description")} />
               <FieldError msg={errors.description?.message} />
@@ -244,14 +248,20 @@ function CreateAccountingAccountForm() {
                   const selected = companyBankAccounts.find((b) => b.id === field.value) || null;
                   return (
                     <>
-                      <Select
-                        id="accounting-account-bank"
-                        options={companyBankAccounts.map((b) => ({ id: b.id, name: `${b.name} · ${b.iban}` }))}
-                        value={selected ? { id: selected.id, name: `${selected.name} · ${selected.iban}` } : null}
-                        onChange={(opt) => field.onChange(opt ? opt.id : "")}
-                        placeholder={isLoadingBankAccounts ? "Cargando cuentas..." : "Selecciona una cuenta bancaria (opcional)"}
-                        isDisabled={!profileCompanyId || isLoadingBankAccounts}
-                      />
+                          {
+                            // Include an explicit 'none' option so the user can clear the bank account
+                          }
+                          <Select
+                            id="accounting-account-bank"
+                            options={[
+                              { id: "", name: "Ninguna" },
+                              ...companyBankAccounts.map((b) => ({ id: b.id, name: `${b.name} · ${b.iban}` })),
+                            ]}
+                            value={selected ? { id: selected.id, name: `${selected.name} · ${selected.iban}` } : (field.value === "" ? { id: "", name: "Ninguna" } : null)}
+                            onChange={(opt) => field.onChange(opt ? opt.id : "")}
+                            placeholder={isLoadingBankAccounts ? "Cargando cuentas..." : "Selecciona una cuenta bancaria (opcional)"}
+                            isDisabled={!profileCompanyId || isLoadingBankAccounts}
+                          />
                       <FieldError msg={bankAccountsError instanceof Error ? bankAccountsError.message : undefined} />
                     </>
                   );

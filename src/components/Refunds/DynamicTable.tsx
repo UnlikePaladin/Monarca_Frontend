@@ -172,16 +172,16 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
   return (
     <div className="relative">
       <div className="overflow-x-auto mb-4">
-        <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border-separate border-spacing-y-2">
+        <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 border-separate border-spacing-y-1">
           <thead>
             <tr className="text-xs text-white uppercase bg-[#0a2c6d]">
               {showRowNumbers && (
-                <th className="px-4 py-2 text-center rounded-l-lg">Fila</th>
+                <th className="px-3 py-2 text-center rounded-l-lg">Fila</th>
               )}
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`px-4 py-2 text-center ${
+                  className={`px-3 py-2 text-center ${
                     index === 0 && !showRowNumbers ? "rounded-l-lg" : ""
                   } ${index === columns.length - 1 && !allowDelete ? "rounded-r-lg" : ""}`}
                 >
@@ -189,7 +189,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                 </th>
               ))}
               {allowDelete && (
-                <th className="px-4 py-2 text-center rounded-r-lg">Acciones</th>
+                <th className="px-3 py-2 text-center rounded-r-lg">Acciones</th>
               )}
             </tr>
           </thead>
@@ -198,14 +198,14 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
               <React.Fragment key={rowIndex}>
                 <tr className="bg-[#4C6997] text-white text-center">
                   {showRowNumbers && (
-                    <td className="px-4 py-3 rounded-l-lg font-semibold">
+                    <td className="px-3 py-2 rounded-l-lg font-semibold">
                       {rowIndex + 1}
                     </td>
                   )}
                   {columns.map((column, cellIndex) => (
                     <td
                       key={cellIndex}
-                      className={`px-4 py-3 ${
+                      className={`overflow-visible px-3 py-2 ${
                         cellIndex === 0 && !showRowNumbers ? "rounded-l-lg" : ""
                       } ${
                         cellIndex === columns.length - 1 && !allowDelete ? "rounded-r-lg" : ""
@@ -239,7 +239,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
                     </td>
                   ))}
                   {allowDelete && (
-                    <td className="px-4 py-3 rounded-r-lg text-center">
+                    <td className="px-3 py-2 rounded-r-lg text-center">
                       <button
                         onClick={() => handleDeleteRow(rowIndex)}
                         className="text-red-500 hover:text-red-700 transition-colors p-2 rounded-full hover:bg-red-50"

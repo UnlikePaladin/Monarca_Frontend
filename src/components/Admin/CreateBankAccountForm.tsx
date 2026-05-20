@@ -13,14 +13,59 @@ import { useGetCompany } from "../../hooks/companies/useGetCompany";
 import { useCreateCompanyBankAccount } from "../../hooks/companies/useCreateCompanyBankAccount";
 import { CreateBankAccountPayload } from "../../types/bankAccount";
 import { useNavigate } from "react-router-dom";
+import { useRegions } from "../../hooks/useRegions";
 
-// IBAN validation: alphanumeric, 15-34 chars
-const ibanSchema = z
-  .string()
-  .trim()
-  .regex(/^[A-Za-z0-9]+$/, { message: "IBAN debe ser alfanumérico" })
-  .min(15, { message: "IBAN debe tener al menos 15 caracteres" })
-  .max(34, { message: "IBAN no debe exceder 34 caracteres" });
+// Countries where IBAN is commonly used
+const IBAN_COUNTRIES = new Set(["es", "fr", "de", "it", "pt", "nl", "gb", "se", "no", "fi", "dk", "be", "ch", "at", "ie", "lu", "mt", "gr"]);
+
+const formatIdentifierForCountry = (country: string, value: string) => {
+  const c = (country || "").toLowerCase();
+  let v = String(value || "").trim();
+  if (!v) return v;
+
+  // If contains letters, prefer uppercase and remove spaces
+  if (/[A-Za-z]/.test(v)) {
+    v = v.replace(/\s+/g, "").toUpperCase();
+  }
+
+  if (c === "mx") {
+    // CLABE (18 digits) or SWIFT
+    const digits = v.replace(/\D/g, "");
+    if (digits.length >= 18) return digits.slice(0, 18);
+    return v.toUpperCase();
+  }
+
+  if (c === "us") {
+    // US routing number (9 digits) or SWIFT
+    const digits = v.replace(/\D/g, "");
+    if (digits.length >= 9) return digits.slice(0, 9);
+    return v.toUpperCase();
+  }
+
+  if (c === "ca") {
+    // Canadian transit+institution as 9 digits
+    const digits = v.replace(/\D/g, "");
+    if (digits.length >= 9) return digits.slice(0, 9);
+    return v.toUpperCase();
+  }
+
+  if (c === "au" || c === "nz") {
+    // BSB 6 digits
+    const digits = v.replace(/\D/g, "");
+    if (digits.length >= 6) return digits.slice(0, 6);
+    return v.toUpperCase();
+  }
+
+  if (IBAN_COUNTRIES.has(c)) {
+    return v.replace(/\s+/g, "").toUpperCase();
+  }
+
+  // Fallback: remove excessive spaces and uppercase
+  return v.replace(/\s+/g, "").toUpperCase();
+};
+
+// Account identifier validation will be performed conditionally in superRefine
+const basicId = z.string().trim().min(1, { message: "Escriba el identificador de la cuenta" });
 
 const bankAccountSchema = z.object({
   name: z.string().trim().min(1, {
@@ -32,7 +77,50 @@ const bankAccountSchema = z.object({
   region: z.string().trim().min(1, {
     message: "Escriba la región",
   }),
-  iban: ibanSchema,
+  regionOther: z.string().optional(),
+  iban: basicId,
+});
+
+// Cross-field validation: validate `iban` according to `country` meaning accept
+// IBAN where appropriate, SWIFT/BIC, CLABE (MX), Canadian transit (CA), BSB (AU/NZ), or US routing
+bankAccountSchema.superRefine((obj, ctx) => {
+  const country = (obj.country || "").toLowerCase();
+  const id = (obj.iban || "").trim();
+
+  const isIban = /^[A-Za-z0-9]{15,34}$/.test(id);
+  const isSwift = /^[A-Za-z]{6}[A-Za-z0-9]{2}([A-Za-z0-9]{3})?$/.test(id); // 8 or 11
+  const isClabe = /^\d{18}$/.test(id); // Mexico
+  const isUsRouting = /^\d{9}$/.test(id); // US ABA routing
+  const isCaTransit = /^\d{9}$/.test(id); // CA transit+institution as 9 digits
+  const isBsb = /^\d{6}$/.test(id); // AU/NZ BSB
+
+  const allowIbanCountries = new Set(["es", "fr", "de", "it", "pt", "nl", "gb", "se", "no", "fi", "dk", "be", "ch", "at", "ie", "lu", "mt", "gr"]);
+
+  let valid = false;
+
+  if (country === "mx") {
+    valid = isClabe || isSwift;
+  } else if (country === "us") {
+    valid = isUsRouting || isSwift;
+  } else if (country === "ca") {
+    valid = isCaTransit || isSwift;
+  } else if (country === "au" || country === "nz") {
+    valid = isBsb || isSwift;
+  } else if (allowIbanCountries.has(country)) {
+    valid = isIban || isSwift;
+  } else {
+    // Fallback: accept IBAN-like or SWIFT or numeric identifiers
+    valid = isIban || isSwift || /^\d+$/.test(id);
+  }
+
+  if (!valid) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        "Identificador inválido para el país seleccionado. Use IBAN, SWIFT/BIC, CLABE (MX), BSB (AU/NZ) o número de tránsito (CA/US) según corresponda.",
+      path: ["iban"],
+    });
+  }
 });
 
 type BankAccountFormValues = z.infer<typeof bankAccountSchema>;
@@ -44,9 +132,25 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     }
 
     if (error.response?.data) {
-      const responseData = error.response.data as { message?: unknown };
+      const responseData = error.response.data as {
+        message?: unknown;
+        errors?: Record<string, string[]>;
+      };
+
+      // First try to get a direct message
       if (typeof responseData.message === "string" && responseData.message) {
         return responseData.message;
+      }
+
+      // Then try to extract field-specific errors
+      if (responseData.errors && typeof responseData.errors === "object") {
+        const errorMessages = Object.values(responseData.errors)
+          .flat()
+          .filter((msg) => typeof msg === "string" && msg.length > 0);
+
+        if (errorMessages.length > 0) {
+          return errorMessages.join(" | ");
+        }
       }
     }
 
@@ -82,6 +186,7 @@ function CreateBankAccountForm() {
     reset,
     setValue,
     watch,
+    setError,
     formState: {
       errors,
       isSubmitting,
@@ -92,6 +197,7 @@ function CreateBankAccountForm() {
       name: "",
       country: "",
       region: "",
+      regionOther: "",
       iban: "",
     },
   });
@@ -107,88 +213,33 @@ function CreateBankAccountForm() {
     { id: "pe", name: "Peru" },
     { id: "uy", name: "Uruguay" },
     { id: "ve", name: "Venezuela" },
+    { id: "gb", name: "United Kingdom" },
     { id: "es", name: "Spain" },
     { id: "fr", name: "France" },
     { id: "de", name: "Germany" },
     { id: "it", name: "Italy" },
     { id: "pt", name: "Portugal" },
     { id: "nl", name: "Netherlands" },
+    { id: "be", name: "Belgium" },
+    { id: "ch", name: "Switzerland" },
+    { id: "at", name: "Austria" },
+    { id: "jp", name: "Japan" },
+    { id: "cn", name: "China" },
+    { id: "in", name: "India" },
+    { id: "sg", name: "Singapore" },
+    { id: "kr", name: "South Korea" },
+    { id: "th", name: "Thailand" },
+    { id: "my", name: "Malaysia" },
+    { id: "id", name: "Indonesia" },
+    { id: "vn", name: "Vietnam" },
+    { id: "ph", name: "Philippines" },
   ];
 
-  const regionsByCountry: Record<string, { id: string; name: string }[]> = {
-    mx: [
-      { id: "cdmx", name: "Ciudad de México" },
-      { id: "jal", name: "Jalisco" },
-      { id: "nle", name: "Nuevo León" },
-      { id: "pue", name: "Puebla" },
-      { id: "yuc", name: "Yucatán" },
-    ],
-    us: [
-      { id: "ca", name: "California" },
-      { id: "ny", name: "New York" },
-      { id: "tx", name: "Texas" },
-      { id: "fl", name: "Florida" },
-      { id: "il", name: "Illinois" },
-    ],
-    ca: [
-      { id: "on", name: "Ontario" },
-      { id: "qc", name: "Quebec" },
-      { id: "bc", name: "British Columbia" },
-      { id: "ab", name: "Alberta" },
-    ],
-    ar: [
-      { id: "bue", name: "Buenos Aires" },
-      { id: "cor", name: "Córdoba" },
-      { id: "sfe", name: "Santa Fe" },
-    ],
-    br: [
-      { id: "sp", name: "São Paulo" },
-      { id: "rj", name: "Rio de Janeiro" },
-      { id: "mg", name: "Minas Gerais" },
-    ],
-    cl: [
-      { id: "stg", name: "Santiago" },
-      { id: "vla", name: "Valparaíso" },
-    ],
-    co: [
-      { id: "bog", name: "Bogotá" },
-      { id: "ant", name: "Antioquia" },
-    ],
-    pe: [
-      { id: "lma", name: "Lima" },
-      { id: "are", name: "Arequipa" },
-    ],
-    uy: [
-      { id: "mvd", name: "Montevideo" },
-    ],
-    ve: [
-      { id: "ccs", name: "Caracas" },
-    ],
-    es: [
-      { id: "md", name: "Madrid" },
-      { id: "ct", name: "Catalonia" },
-    ],
-    fr: [
-      { id: "idfr", name: "Île-de-France" },
-      { id: "oc", name: "Occitanie" },
-    ],
-    de: [
-      { id: "bw", name: "Baden-Württemberg" },
-      { id: "by", name: "Bavaria" },
-    ],
-    it: [
-      { id: "rm", name: "Lazio (Rome)" },
-      { id: "lb", name: "Lombardy" },
-    ],
-    pt: [
-      { id: "lis", name: "Lisbon" },
-    ],
-    nl: [
-      { id: "nh", name: "North Holland" },
-    ],
-  };
+  // Load regions via hook (tries VITE_REGIONS_URL then falls back to local JSON)
+  const { regionsByCountry, loading: regionsLoading } = useRegions();
 
   const watchedCountry = watch("country");
+  const ibanRegister = register("iban");
   const onSubmit = async (data: BankAccountFormValues) => {
     if (!profileCompanyId) {
       toast.error("Tu usuario no tiene una empresa asignada", {
@@ -199,7 +250,16 @@ function CreateBankAccountForm() {
     }
 
     const countryName = countryOptions.find((c) => c.id === data.country)?.name ?? data.country;
-    const regionName = (regionsByCountry[data.country] || []).find((r) => r.id === data.region)?.name ?? data.region;
+    const regionName =
+      data.region === "other"
+        ? (data.regionOther ?? "").trim()
+        : (regionsByCountry[data.country] || []).find((r) => r.id === data.region)?.name ?? data.region;
+
+    if (!regionName) {
+      // If user selected Other but didn't type a region, show validation
+      setError("region", { type: "manual", message: "Escriba la región" });
+      return;
+    }
 
     const payload: CreateBankAccountPayload = {
       name: data.name.trim(),
@@ -222,8 +282,11 @@ function CreateBankAccountForm() {
         name: "",
         country: "",
         region: "",
+        regionOther: "",
         iban: "",
       });
+
+      navigate("/admin/bank-accounts");
     } catch (error) {
       toast.error(getErrorMessage(error, "Error al crear la cuenta bancaria"), {
         position: "top-right",
@@ -233,7 +296,6 @@ function CreateBankAccountForm() {
         pauseOnHover: true,
       });
     }
-    navigate("/admin/bank-accounts")
   };
 
   if (!profileCompanyId) {
@@ -316,10 +378,11 @@ function CreateBankAccountForm() {
                         id="bank-account-country"
                         options={countryOptions}
                         value={selected}
-                        onChange={(opt) => {
-                          field.onChange(opt.id);
-                          setValue("region", "");
-                        }}
+                                onChange={(opt) => {
+                                  field.onChange(opt.id);
+                                  setValue("region", "");
+                                  setValue("regionOther", "");
+                                }}
                         placeholder="Selecciona un país"
                       />
                       <FieldError msg={errors.country?.message} />
@@ -341,17 +404,49 @@ function CreateBankAccountForm() {
                 name="region"
                 render={({ field }) => {
                   const regionOptions = watchedCountry ? regionsByCountry[watchedCountry] || [] : [];
-                  const selected = regionOptions.find((o) => o.id === field.value) || null;
+                  const selectOptions = regionOptions.length > 0 ? [...regionOptions, { id: "other", name: "Otro (escribir)" }] : [{ id: "other", name: "Otro (escribir)" }];
+                  const selected = selectOptions.find((o) => o.id === field.value) || null;
+
+                  // If no country selected yet, show disabled select
+                  if (!watchedCountry) {
+                    return (
+                      <>
+                        <Select
+                          id="bank-account-region"
+                          options={[]}
+                          value={null}
+                          onChange={() => {}}
+                          placeholder={"Selecciona país primero"}
+                          isDisabled
+                        />
+                        <FieldError msg={errors.region?.message} />
+                      </>
+                    );
+                  }
+
+                  // Render the Select always (it will contain the 'Other' option)
                   return (
                     <>
                       <Select
                         id="bank-account-region"
-                        options={regionOptions}
+                        options={selectOptions}
                         value={selected}
-                        onChange={(opt) => field.onChange(opt.id)}
-                        placeholder={watchedCountry ? "Selecciona una región" : "Selecciona país primero"}
-                        isDisabled={!watchedCountry}
+                        onChange={(opt) => {
+                          field.onChange(opt.id);
+                          // clear manual input when choosing a real option
+                          if (opt.id !== "other") setValue("regionOther", "");
+                        }}
+                        placeholder={regionsLoading ? "Cargando regiones..." : "Selecciona una región"}
+                        isDisabled={regionsLoading}
                       />
+
+                      {field.value === "other" && (
+                        <div className="mt-2">
+                          <Input id="bank-account-region-other" {...register("regionOther")} placeholder="Escribe la región" />
+                          <FieldError msg={errors.regionOther?.message} />
+                        </div>
+                      )}
+
                       <FieldError msg={errors.region?.message} />
                     </>
                   );
@@ -361,16 +456,21 @@ function CreateBankAccountForm() {
 
             <div>
               <label
-                htmlFor="bank-account-iban"
-                className="mb-2 block text-sm font-medium text-gray-900"
-              >
-                IBAN
-              </label>
-              <Input
-                id="bank-account-iban"
-                {...register("iban")}
-                placeholder="Ej: GB82WEST12345698765432"
-              />
+                  htmlFor="bank-account-iban"
+                  className="mb-2 block text-sm font-medium text-gray-900"
+                >
+                  Identificador de cuenta (IBAN / CLABE / SWIFT / Transit / BSB)
+                </label>
+                <Input
+                  id="bank-account-iban"
+                  {...ibanRegister}
+                  onBlur={(e: any) => {
+                    ibanRegister.onBlur?.(e);
+                    const formatted = formatIdentifierForCountry(watchedCountry, e.target.value);
+                    setValue("iban", formatted);
+                  }}
+                  placeholder="Ej: IBAN: GB82WEST..., SWIFT: BKENGB2L, CLABE: 012345678901234567"
+                />
               <FieldError msg={errors.iban?.message} />
             </div>
           </div>
@@ -398,6 +498,7 @@ function CreateBankAccountForm() {
                     name: "",
                     country: "",
                     region: "",
+                    regionOther: "",
                     iban: "",
                   })
                 }

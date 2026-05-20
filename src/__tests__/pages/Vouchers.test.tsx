@@ -47,6 +47,10 @@ vi.mock("../../components/Refunds/DynamicTable", () => ({
               amount: 100,
               taxIndicator: "yes",
               date: "2024-01-01",
+              XMLFile: new File(["xml"], "row1.xml", { type: "text/xml" }),
+              PDFFile: new File(["pdf"], "row1.pdf", {
+                type: "application/pdf",
+              }),
             },
             {
               id: 2,
@@ -54,6 +58,10 @@ vi.mock("../../components/Refunds/DynamicTable", () => ({
               amount: 200,
               taxIndicator: "no",
               date: "2024-01-02",
+              XMLFile: new File(["xml"], "row2.xml", { type: "text/xml" }),
+              PDFFile: new File(["pdf"], "row2.pdf", {
+                type: "application/pdf",
+              }),
             },
           ])
         }
@@ -187,7 +195,7 @@ describe("Vouchers Component", () => {
     expect(screen.getByTestId("column-PDFFile")).toBeInTheDocument();
 
     expect(screen.getByText("Clase de gasto")).toBeInTheDocument();
-    expect(screen.getByText("Monto MXN")).toBeInTheDocument();
+    expect(screen.getByText("Monto")).toBeInTheDocument();
     expect(screen.getByText("Indicador de impuesto")).toBeInTheDocument();
     expect(screen.getByText("Fecha del comprobante")).toBeInTheDocument();
     expect(screen.getByText("Archivo XML")).toBeInTheDocument();

@@ -116,7 +116,7 @@ export const Historial = () => {
   const pageTitle = isSoiTripsToRegisterView
     ? "Viajes por registrar"
     : isApproverHistoryView
-      ? "Historial"
+      ? "Historial de viajes aprobados"
       : isTravelAgentReservedHistoryView
         ? "Historial"
         : "Historial de viajes";
@@ -144,7 +144,9 @@ export const Historial = () => {
           id={`details-${record.id}`}
           driver-id="details"
           onClickFunction={() => {
-            navigate(`/requests/${record.id}`);
+            navigate(`/requests/${record.id}`, {
+              state: { from: "history" },
+            });
           }}
         />
       ),
@@ -193,25 +195,17 @@ export const Historial = () => {
 
     const fetchTravelRecords = async () => {
       try {
-        const endpoint = authState.userPermissions.includes(
-          "create_request" as Permission
-        )
-          ? "/requests/user"
-          : authState.userPermissions.includes("check_budgets" as Permission)
+        const endpoint = isApproverHistoryView
+          ? "/requests/approver/history"
+          : isSoiTripsToRegisterView
             ? "/requests/to-approve-SOI"
-            : "/requests/all";
+            : authState.userPermissions.includes("create_request" as Permission)
+              ? "/requests/user"
+              : "/requests/all";
         let response = await getRequest(endpoint);
-        if (
-          authState.userPermissions.includes("approve_request" as Permission)
-        ) {
-          response = response.filter(
-            (record: any) =>
-              !["Pending Review", "Denied", "Cancelled"].includes(
-                record.status
-              ) && record.id_admin === authState.userId
-          );
-        }
-        if (
+        if (isApproverHistoryView) {
+          response = Array.isArray(response) ? response : [];
+        } else if (
           authState.userPermissions.includes(
             "submit_reservations" as Permission
           )
@@ -233,8 +227,7 @@ export const Historial = () => {
               ].includes(record.status) &&
               travelAgentsIds.includes(authState.userId)
           );
-        }
-        if (
+        } else if (
           authState.userPermissions.includes("check_budgets" as Permission)
         ) {
           response = response.filter(
@@ -255,7 +248,14 @@ export const Historial = () => {
     };
 
     fetchTravelRecords();
-  }, [isTravelAgentReservedHistoryView, authState.userId, mapRecordToRow]);
+  }, [
+    isTravelAgentReservedHistoryView,
+    isApproverHistoryView,
+    isSoiTripsToRegisterView,
+    authState.userPermissions,
+    authState.userId,
+    mapRecordToRow,
+  ]);
 
   useEffect(() => {
       // Get the visited pages from localStorage

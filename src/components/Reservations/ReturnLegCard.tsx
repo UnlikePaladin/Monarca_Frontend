@@ -6,7 +6,6 @@ import React, { useEffect } from "react";
 import Input from "../Refunds/InputField";
 import TextArea from "../Refunds/TextArea";
 import { DuffelOfferList } from "./DuffelOfferList";
-import { DuffelPassengerForm } from "./DuffelPassengerForm";
 import { DuffelOffer } from "../../types/duffel";
 import formatMoney from "../../utils/formatMoney";
 import { useExchangeRate } from "../../hooks/exchange-rate/useExchangeRate";
@@ -15,10 +14,7 @@ interface ReturnLegCardProps {
   request: any;
   formData: Record<string, any>;
   duffelSearchIds: Record<string, string>;
-  selectedOffer: Record<string, DuffelOffer | null>;
   searchingDuffel: Record<string, boolean>;
-  requestUser: { name: string; last_name: string; email: string };
-  isOrderPending: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>, id: string) => void;
   onFieldChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -29,13 +25,7 @@ interface ReturnLegCardProps {
   onRateChange: (id: string, field: "hotel" | "plane", rate?: number) => void;
   onDuffelSearch: (destination: any) => void;
   onSelectOffer: (destId: string, offer: DuffelOffer) => void;
-  onSubmitDuffelOrder: (
-    destId: string,
-    passengerData: any,
-    backendDestId?: string,
-  ) => void;
   onClearDuffelSearch: (destId: string) => void;
-  onClearSelectedOffer: (destId: string) => void;
 }
 
 /**
@@ -48,10 +38,7 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
   request,
   formData,
   duffelSearchIds,
-  selectedOffer,
   searchingDuffel,
-  requestUser,
-  isOrderPending,
   onFileChange,
   onFieldChange,
   currencyOptions,
@@ -59,9 +46,7 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
   onRateChange,
   onDuffelSearch,
   onSelectOffer,
-  onSubmitDuffelOrder,
   onClearDuffelSearch,
-  onClearSelectedOffer,
 }) => {
   const lastDest = [...(request.requests_destinations || [])].sort(
     (a: any, b: any) => b.destination_order - a.destination_order,
@@ -79,7 +64,9 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
   );
   const planeRate = Number(formData[returnLegId]?.plane_rate);
   const planeAmount = Number(formData[returnLegId]?.plane_price);
-  const normalizedPlaneAmount = Number.isFinite(planeAmount) ? planeAmount : 0;
+  const normalizedPlaneAmount = Number.isFinite(planeAmount)
+    ? Math.max(0, planeAmount)
+    : 0;
   const planeRateValue = planeRateQuery.data?.rate ?? planeRate;
   const planeMxnValue =
     planeCurrency === "MXN"
@@ -137,18 +124,16 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
         <h3 className="font-bold text-lg text-[var(--blue)]">
           Vuelo de regreso
         </h3>
-        {!selectedOffer[returnLegId] && (
-          <button
-            type="button"
-            onClick={() => onDuffelSearch(returnLeg)}
-            disabled={searchingDuffel[returnLegId]}
-            className="text-xs bg-[#6032b3] text-white px-3 py-1 rounded hover:bg-[#4c2891] transition-colors"
-          >
-            {searchingDuffel[returnLegId]
-              ? "Buscando..."
-              : "Buscar vuelos (Duffel)"}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => onDuffelSearch(returnLeg)}
+          disabled={searchingDuffel[returnLegId]}
+          className="text-xs bg-[var(--blue)] text-white px-3 py-1 rounded hover:bg-[var(--light-blue)] transition-colors"
+        >
+          {searchingDuffel[returnLegId]
+            ? "Buscando..."
+            : "Buscar vuelos (Duffel)"}
+        </button>
       </div>
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-4">
@@ -187,7 +172,7 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
         </div>
       </section>
 
-      {!duffelSearchIds[returnLegId] && !selectedOffer[returnLegId] && (
+      {!duffelSearchIds[returnLegId] && (
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
           <div className="flex flex-col gap-y-4">
             <h3 className="text-[var(--blue)] mb-4 font-bold">
@@ -226,6 +211,8 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
                 onChange={(e) => onFieldChange(e, returnLegId)}
                 name="plane_price"
                 type="number"
+                min={0}
+                step="0.01"
                 className="flex-1"
               />
               <div className="min-w-[120px]">
@@ -272,15 +259,15 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
         </section>
       )}
 
-      {duffelSearchIds[returnLegId] && !selectedOffer[returnLegId] && (
-        <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 shadow-inner">
+      {duffelSearchIds[returnLegId] && (
+        <div className="bg-[var(--gray)] p-4 rounded-lg border border-[var(--light-blue)] shadow-inner">
           <div className="flex justify-between items-center mb-4">
-            <h4 className="text-sm font-bold text-purple-900">
+            <h4 className="text-sm font-bold text-[var(--blue)]">
               Vuelos encontrados (Precios en tiempo real)
             </h4>
             <button
               onClick={() => onClearDuffelSearch(returnLegId)}
-              className="text-xs text-purple-600 hover:underline"
+              className="text-xs text-[var(--light-blue)] hover:underline"
             >
               Cambiar a carga manual
             </button>
@@ -288,36 +275,6 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
           <DuffelOfferList
             offerRequestId={duffelSearchIds[returnLegId] || ""}
             onSelectOffer={(offer) => onSelectOffer(returnLegId, offer)}
-          />
-        </div>
-      )}
-
-      {selectedOffer[returnLegId] && (
-        <div className="bg-green-50 p-6 rounded-lg border-2 border-green-200">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h4 className="font-black text-green-900 uppercase tracking-tight">
-                Vuelo Seleccionado
-              </h4>
-              <p className="text-xs text-green-700">
-                Aerolínea: {selectedOffer[returnLegId]?.owner?.name} — ID:{" "}
-                {(selectedOffer[returnLegId]?.id || "").substring(0, 8)}
-              </p>
-            </div>
-            <button
-              onClick={() => onClearSelectedOffer(returnLegId)}
-              className="text-xs bg-white border border-green-300 px-2 py-1 rounded text-green-700 hover:bg-green-100"
-            >
-              Elegir otro vuelo
-            </button>
-          </div>
-          <DuffelPassengerForm
-            offer={selectedOffer[returnLegId]!}
-            initialData={requestUser}
-            isSubmitting={isOrderPending}
-            onSubmit={(data) =>
-              onSubmitDuffelOrder(returnLegId, data, lastDest.id)
-            }
           />
         </div>
       )}

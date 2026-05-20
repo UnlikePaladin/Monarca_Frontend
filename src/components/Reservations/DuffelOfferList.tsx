@@ -25,8 +25,10 @@ export const DuffelOfferList: React.FC<Props> = ({ offerRequestId, onSelectOffer
 
   if (isLoading) return (
     <div className="flex flex-col items-center py-10">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-700 mb-2"></div>
-      <p className="text-sm text-purple-600">Consultando con las aerolíneas...</p>
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--blue)] mb-2"></div>
+      <p className="text-sm text-[var(--blue)]">
+        Consultando con las aerolíneas...
+      </p>
     </div>
   );
 
