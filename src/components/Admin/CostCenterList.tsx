@@ -13,13 +13,17 @@ import { useDeleteCostCenter } from "../../hooks/companies/useDeleteCostCenter";
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (error instanceof AxiosError) {
     if (error.response?.status === 403) {
-      return "Solo CompanyAdmin puede gestionar centros de costos de su propia empresa.";
+      return "Solo CompanyAdmin puede gestionar centros de costos.";
     }
 
     if (error.response?.data) {
       const responseData = error.response.data as { message?: unknown };
-      if (typeof responseData.message === "string" && responseData.message) {
-        return responseData.message;
+      const { message } = responseData;
+      if (typeof message === "string" && message) {
+        return message;
+      }
+      if (Array.isArray(message) && message.length > 0) {
+        return message.map(String).join(", ");
       }
     }
 

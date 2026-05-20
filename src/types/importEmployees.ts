@@ -70,3 +70,27 @@ export type ImportResult = {
   updated: number;
   errors: ImportError[];
 };
+
+/** Selected input format on the import wizard's first step. */
+export type ImportFormat = 'excel' | 'json';
+
+/**
+ * Mirrors Monarca_Backend/.../dto/import-json-preview.dto.ts.
+ * Field names match the Spanish keys in the Excel template (camelCased).
+ */
+export type ImportJsonEmployee = {
+  noEmpleado: string;
+  nombre: string;
+  usuario?: string | null;
+  email?: string | null;
+  ceco: string;
+  jefeInmediato?: string | null;
+  proveedor?: string | null;
+  status?: string | null;
+  fechaAlta?: string | null;
+  fechaCambio?: string | null;
+};
+
+export type ImportJsonPayload = {
+  employees: ImportJsonEmployee[];
+};

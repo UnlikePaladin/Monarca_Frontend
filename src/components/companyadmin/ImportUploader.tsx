@@ -1,30 +1,123 @@
 /**
  * File: ImportUploader.tsx
- * Description: Step 1 of the employee import flow. Lets the CompanyAdmin download the
- *              static Excel template and pick a local .xlsx/.xls file to preview.
+ * Description: Step 1 of the employee import flow. Lets the CompanyAdmin choose
+ *              between Excel and JSON formats, download the matching template
+ *              and pick a local file to preview.
  */
 
 import { ChangeEvent, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { Button } from '../ui/Button';
+import {
+  ImportFormat,
+  ImportJsonEmployee,
+  ImportJsonPayload,
+} from '../../types/importEmployees';
 
-const ACCEPTED_EXTENSIONS = ['.xlsx', '.xls'];
+const EXCEL_ACCEPTED_EXTENSIONS = ['.xlsx', '.xls'];
+const JSON_ACCEPTED_EXTENSIONS = ['.json'];
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const TEMPLATE_URL = '/templates/plantilla-empleados.xlsx';
+const EXCEL_TEMPLATE_URL = '/templates/plantilla-empleados.xlsx';
+const JSON_TEMPLATE_URL = '/templates/plantilla-empleados.json';
 
 type ImportUploaderProps = {
-  onUpload: (file: File) => void;
+  format: ImportFormat;
+  onFormatChange: (format: ImportFormat) => void;
+  onUploadExcel: (file: File) => void;
+  onUploadJson: (payload: ImportJsonPayload) => void;
   isUploading: boolean;
 };
 
+type FormatTabProps = {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  onClick: () => void;
+};
+
+const FormatTab = ({ label, active, disabled, onClick }: FormatTabProps) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
+      active
+        ? 'bg-[var(--blue)] text-white border-[var(--blue)]'
+        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+    } ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+  >
+    {label}
+  </button>
+);
+
 /**
- * Renders the template download button and the Excel file picker.
- * @param onUpload Callback invoked with the validated file when the admin confirms upload.
- * @param isUploading True while the preview request is in-flight.
+ * Reads the picked .json file, parses it and normalizes it to ImportJsonPayload.
+ * Accepts either `{ "employees": [...] }` or a raw array `[...]`.
  */
-const ImportUploader = ({ onUpload, isUploading }: ImportUploaderProps) => {
+const readJsonFile = (file: File): Promise<ImportJsonPayload> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo JSON'));
+    reader.onload = () => {
+      try {
+        const text = String(reader.result ?? '');
+        const parsed: unknown = JSON.parse(text);
+        const employees = Array.isArray(parsed)
+          ? (parsed as ImportJsonEmployee[])
+          : (parsed as { employees?: ImportJsonEmployee[] })?.employees;
+
+        if (!Array.isArray(employees) || employees.length === 0) {
+          reject(
+            new Error(
+              'El JSON debe contener un arreglo "employees" con al menos un empleado.',
+            ),
+          );
+          return;
+        }
+        resolve({ employees });
+      } catch (error) {
+        reject(
+          error instanceof Error
+            ? new Error(`JSON inválido: ${error.message}`)
+            : new Error('JSON inválido'),
+        );
+      }
+    };
+    reader.readAsText(file);
+  });
+
+/**
+ * Renders the format selector, template download button and the file picker
+ * for either Excel or JSON imports.
+ */
+const ImportUploader = ({
+  format,
+  onFormatChange,
+  onUploadExcel,
+  onUploadJson,
+  isUploading,
+}: ImportUploaderProps) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
+
+  const acceptedExtensions =
+    format === 'excel' ? EXCEL_ACCEPTED_EXTENSIONS : JSON_ACCEPTED_EXTENSIONS;
+  const acceptAttr = acceptedExtensions.join(',');
+  const templateUrl =
+    format === 'excel' ? EXCEL_TEMPLATE_URL : JSON_TEMPLATE_URL;
+  const templateLabel =
+    format === 'excel'
+      ? 'Descargar plantilla de Excel'
+      : 'Descargar plantilla JSON';
+
+  const handleFormatChange = (next: ImportFormat) => {
+    if (next === format || isUploading) return;
+    onFormatChange(next);
+    setFile(null);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0] ?? null;
@@ -34,9 +127,13 @@ const ImportUploader = ({ onUpload, isUploading }: ImportUploaderProps) => {
     }
 
     const lowered = selected.name.toLowerCase();
-    const isAllowed = ACCEPTED_EXTENSIONS.some((ext) => lowered.endsWith(ext));
+    const isAllowed = acceptedExtensions.some((ext) => lowered.endsWith(ext));
     if (!isAllowed) {
-      toast.error('Solo se permiten archivos .xlsx o .xls');
+      toast.error(
+        format === 'excel'
+          ? 'Solo se permiten archivos .xlsx o .xls'
+          : 'Solo se permiten archivos .json',
+      );
       event.target.value = '';
       setFile(null);
       return;
@@ -52,12 +149,31 @@ const ImportUploader = ({ onUpload, isUploading }: ImportUploaderProps) => {
     setFile(selected);
   };
 
-  const handleUploadClick = () => {
+  const handleUploadClick = async () => {
     if (!file) {
-      toast.warn('Selecciona un archivo de Excel para continuar');
+      toast.warn(
+        format === 'excel'
+          ? 'Selecciona un archivo de Excel para continuar'
+          : 'Selecciona un archivo JSON para continuar',
+      );
       return;
     }
-    onUpload(file);
+
+    if (format === 'excel') {
+      onUploadExcel(file);
+      return;
+    }
+
+    try {
+      const payload = await readJsonFile(file);
+      onUploadJson(payload);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo leer el archivo JSON',
+      );
+    }
   };
 
   const handleChooseFile = () => {
@@ -71,24 +187,42 @@ const ImportUploader = ({ onUpload, isUploading }: ImportUploaderProps) => {
           1. Cargar archivo de empleados
         </h2>
         <p className="text-sm text-gray-500">
-          Descarga la plantilla, complétala con la información de tus empleados y
-          súbela para obtener una vista previa antes de confirmar la importación.
+          Elige el formato, descarga la plantilla y súbela para obtener una
+          vista previa antes de confirmar la importación.
         </p>
       </header>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-gray-700">Formato</p>
+        <div className="flex items-center gap-2">
+          <FormatTab
+            label="Excel"
+            active={format === 'excel'}
+            disabled={isUploading}
+            onClick={() => handleFormatChange('excel')}
+          />
+          <FormatTab
+            label="JSON"
+            active={format === 'json'}
+            disabled={isUploading}
+            onClick={() => handleFormatChange('json')}
+          />
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <p className="text-sm font-medium text-gray-700">Plantilla</p>
           <p className="text-xs text-gray-500">
-            Columnas requeridas: NoEmpleado, Nombre, Usuario, Email, Ceco, Jefe
+            Campos requeridos: NoEmpleado, Nombre, Usuario, Email, Ceco, Jefe
             Inmediato, Proveedor, status, FechaAlta, FechaCambio.
           </p>
           <a
-            href={TEMPLATE_URL}
+            href={templateUrl}
             download
             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--blue)] border border-[var(--blue)] rounded-lg hover:bg-[var(--blue)] hover:text-white transition-colors"
           >
-            Descargar plantilla de Excel
+            {templateLabel}
           </a>
         </div>
 
@@ -97,10 +231,14 @@ const ImportUploader = ({ onUpload, isUploading }: ImportUploaderProps) => {
           <input
             ref={inputRef}
             type="file"
-            accept=".xlsx,.xls"
+            accept={acceptAttr}
             onChange={handleFileChange}
             className="hidden"
-            aria-label="Seleccionar archivo de Excel"
+            aria-label={
+              format === 'excel'
+                ? 'Seleccionar archivo de Excel'
+                : 'Seleccionar archivo JSON'
+            }
           />
           <div className="flex items-center gap-3 flex-wrap">
             <button
@@ -118,7 +256,9 @@ const ImportUploader = ({ onUpload, isUploading }: ImportUploaderProps) => {
               {file ? file.name : 'Ningún archivo seleccionado'}
             </span>
           </div>
-          <p className="text-xs text-gray-400">Máximo 10 MB. Formato .xlsx o .xls.</p>
+          <p className="text-xs text-gray-400">
+            Máximo 10 MB. Formato {acceptedExtensions.join(' o ')}.
+          </p>
         </div>
       </div>
 
