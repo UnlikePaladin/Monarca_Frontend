@@ -12,7 +12,8 @@ const patchCompanyAccountingAccount = async (
     key: payload.key,
     description: payload.description,
     requiresCostCenter: payload.requiresCostCenter,
-    ...(payload.bankAccountId ? { idBankAccount: payload.bankAccountId } : {}),
+    // Backend should accept null to clear an existing bank account association.
+    idBankAccount: payload.bankAccountId ?? null,
   };
 
   const response = await patchRequest(`/companies/${companyId}/accounting-accounts/${accountingAccountId}`, requestPayload);
