@@ -1,0 +1,28 @@
+{
+  "employees": [
+    {
+      "noEmpleado": "001",
+      "nombre": "María López",
+      "usuario": "mlopez",
+      "email": "mlopez@empresa.com",
+      "ceco": "MKT-01",
+      "jefeInmediato": null,
+      "proveedor": "20000000008",
+      "status": "A",
+      "fechaAlta": "2026-01-15",
+      "fechaCambio": "2026-04-10"
+    },
+    {
+      "noEmpleado": "002",
+      "nombre": "Juan Pérez",
+      "usuario": "jperez",
+      "email": "jperez@empresa.com",
+      "ceco": "MKT-01",
+      "jefeInmediato": "001",
+      "proveedor": null,
+      "status": "A",
+      "fechaAlta": "2026-02-01",
+      "fechaCambio": null
+    }
+  ]
+}

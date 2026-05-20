@@ -16,10 +16,13 @@ import ImportResultPanel from '../../components/companyadmin/ImportResultPanel';
 import { Button } from '../../components/ui/Button';
 import { useApp } from '../../hooks/app/appContext';
 import { usePreviewImport } from '../../hooks/companyadmin/usePreviewImport';
+import { usePreviewImportJson } from '../../hooks/companyadmin/usePreviewImportJson';
 import { useConfirmImport } from '../../hooks/companyadmin/useConfirmImport';
 import { buildOrgTree } from '../../utils/flatToTree';
 import {
   ConfirmEmployee,
+  ImportFormat,
+  ImportJsonPayload,
   ImportResult,
   PreviewResponse,
 } from '../../types/importEmployees';
@@ -53,9 +56,14 @@ const ImportEmployees = () => {
   const [roleByEmpNo, setRoleByEmpNo] = useState<Record<string, string>>({});
   const [view, setView] = useState<PreviewView>('table');
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [importFormat, setImportFormat] = useState<ImportFormat>('excel');
 
-  const { mutateAsync: runPreview, isPending: isPreviewing } = usePreviewImport();
+  const { mutateAsync: runPreviewExcel, isPending: isPreviewingExcel } =
+    usePreviewImport();
+  const { mutateAsync: runPreviewJson, isPending: isPreviewingJson } =
+    usePreviewImportJson();
   const { mutateAsync: runConfirm, isPending: isConfirming } = useConfirmImport();
+  const isPreviewing = isPreviewingExcel || isPreviewingJson;
 
   useEffect(() => {
     setPageTitle('Importar empleados');
@@ -106,29 +114,47 @@ const ImportEmployees = () => {
   const isReadyToConfirm =
     validEmployees.length > 0 && unassignedCount === 0 && missingStatusCount === 0 && !isConfirming;
 
-  const handleUpload = async (file: File) => {
-    try {
-      const response = await runPreview(file);
-      setPreview(response);
+  const applyPreviewResponse = (response: PreviewResponse) => {
+    setPreview(response);
 
-      // Pre-fill roles from backend suggestion; admin can still change them per row.
-      const initialRoles: Record<string, string> = {};
-      for (const employee of response.employees) {
-        if (
-          employee.validationErrors.length === 0 &&
-          employee.employeeNumber &&
-          employee.suggestedRoleId
-        ) {
-          initialRoles[employee.employeeNumber] = employee.suggestedRoleId;
-        }
+    // Pre-fill roles from backend suggestion; admin can still change them per row.
+    const initialRoles: Record<string, string> = {};
+    for (const employee of response.employees) {
+      if (
+        employee.validationErrors.length === 0 &&
+        employee.employeeNumber &&
+        employee.suggestedRoleId
+      ) {
+        initialRoles[employee.employeeNumber] = employee.suggestedRoleId;
       }
-      setRoleByEmpNo(initialRoles);
+    }
+    setRoleByEmpNo(initialRoles);
 
-      setStep('preview');
-      setView('table');
-      toast.success(
-        `Vista previa lista: ${response.validRows}/${response.totalRows} filas válidas`,
+    setStep('preview');
+    setView('table');
+    toast.success(
+      `Vista previa lista: ${response.validRows}/${response.totalRows} filas válidas`,
+    );
+  };
+
+  const handleUploadExcel = async (file: File) => {
+    try {
+      const response = await runPreviewExcel(file);
+      applyPreviewResponse(response);
+    } catch (error) {
+      toast.error(
+        extractErrorMessage(
+          error,
+          'No se pudo generar la vista previa del archivo.',
+        ),
       );
+    }
+  };
+
+  const handleUploadJson = async (payload: ImportJsonPayload) => {
+    try {
+      const response = await runPreviewJson(payload);
+      applyPreviewResponse(response);
     } catch (error) {
       toast.error(
         extractErrorMessage(
@@ -211,15 +237,22 @@ const ImportEmployees = () => {
             Importar empleados
           </h1>
           <p className="text-sm text-gray-500">
-            Administra el alta masiva de empleados desde un archivo Excel. Revisa
-            la vista previa y asigna el rol correspondiente antes de confirmar.
+            Administra el alta masiva de empleados desde un archivo Excel o JSON.
+            Revisa la vista previa y asigna el rol correspondiente antes de
+            confirmar.
           </p>
         </header>
 
         <Stepper step={step} />
 
         {step === 'upload' && (
-          <ImportUploader onUpload={handleUpload} isUploading={isPreviewing} />
+          <ImportUploader
+            format={importFormat}
+            onFormatChange={setImportFormat}
+            onUploadExcel={handleUploadExcel}
+            onUploadJson={handleUploadJson}
+            isUploading={isPreviewing}
+          />
         )}
 
         {step === 'preview' && preview && (
@@ -446,7 +479,7 @@ const ErrorsPanel = ({ employees }: { employees: any[] }) => {
         ))}
       </div>
       <p className="text-xs text-red-600 mt-3 italic">
-        Corrige estos errores en tu archivo Excel y sube nuevamente.
+        Corrige estos errores en tu archivo y súbelo nuevamente.
       </p>
     </div>
   );
