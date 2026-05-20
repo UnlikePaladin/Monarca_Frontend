@@ -93,7 +93,7 @@ describe("SidebarOption", () => {
 
     // Check if the image has the correct classes
     const img = screen.getByRole("img");
-    expect(img).toHaveClass("w-6 h-6 group-hover:invert-0 invert");
+    expect(img).toHaveClass("w-6 h-6 brightness-0 group-hover:invert");
 
     // Check if the text span has the correct classes
     const span = screen.getByText("Settings");

@@ -164,9 +164,12 @@ describe('RequestInfo – full coverage', () => {
   /* D. Cancelar (permiso create_request) */
   it('flujo de Cancelar con permiso create_request', async () => {
     mockPermissions = ['create_request'];
+    mockRequestPayload = { ...baseRequest, id_user: '999' };
     renderPage();
 
-    await userEvent.click(screen.getByRole('button', { name: /cancelar/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /cancelar/i })
+    );
     await confirmModal(/Sí, cancelar solicitud/i);
 
     await waitFor(() =>

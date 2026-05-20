@@ -48,6 +48,7 @@ interface RequestData {
     status: string;
     class: string;
     amount: number;
+    amount_mxn?: number;
     date: string;
   }>;
 }
@@ -270,6 +271,22 @@ const RefundsAcceptance: React.FC = () => {
     onConfirm: () => {},
   });
 
+  const approvedVouchersTotal = (data?.vouchers ?? []).reduce(
+    (
+      acc: number,
+      file: { status: string; amount: number; amount_mxn?: number },
+    ) => {
+      if (file.status !== "comprobante_aprobado") {
+        return acc;
+      }
+
+      const rawAmount = file.amount_mxn ?? file.amount;
+      const normalizedAmount = Number(rawAmount);
+      return acc + (Number.isFinite(normalizedAmount) ? normalizedAmount : 0);
+    },
+    0,
+  );
+
   /**
    * Opens the confirmation modal with the provided configuration.
    * @param config - Modal content and the callback to invoke on confirmation.
@@ -312,6 +329,7 @@ const RefundsAcceptance: React.FC = () => {
           vouchers: rawVouchers.map((voucher: any) => ({
             class: voucher.class,
             amount: voucher.amount,
+            amount_mxn: voucher.amount_mxn ?? voucher.amount,
             currency: voucher.currency || "MXN",
             date: resolveVoucherPolicyDate(voucher),
             has_xml: Boolean(voucher.file_url_xml),
@@ -708,18 +726,7 @@ const RefundsAcceptance: React.FC = () => {
                     type="text"
                     readOnly
                     value={formatMoney(
-                      data?.vouchers?.reduce(
-                        (
-                          acc: number,
-                          file: { status: string; amount: number },
-                        ) => {
-                          if (file.status === "comprobante_aprobado") {
-                            return acc + +file.amount;
-                          }
-                          return acc;
-                        },
-                        0,
-                      ) ?? 0,
+                      approvedVouchersTotal,
                     )}
                     className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
                   />
@@ -751,18 +758,7 @@ const RefundsAcceptance: React.FC = () => {
                     type="text"
                     readOnly
                     value={formatMoney(
-                      (data?.vouchers?.reduce(
-                        (
-                          acc: number,
-                          file: { status: string; amount: number },
-                        ) => {
-                          if (file.status === "comprobante_aprobado") {
-                            return acc + Number(file.amount);
-                          }
-                          return acc;
-                        },
-                        0,
-                      ) ?? 0) +
+                      approvedVouchersTotal +
                         (typeof data?.advance_money === "number"
                           ? data.advance_money
                           : Number(data?.advance_money) || 0),

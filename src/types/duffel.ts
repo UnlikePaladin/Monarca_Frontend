@@ -26,6 +26,7 @@ export interface CreateOfferRequestPayload {
 export interface DuffelOffer {
   id?: string;
   offer_id?: string;
+  cabin_class?: DuffelCabinClass;
   total_emissions_kg?: string;
   total_amount: string;
   total_currency: string;

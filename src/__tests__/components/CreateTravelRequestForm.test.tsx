@@ -2,6 +2,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CreateTravelRequestForm from '../../components/travel-requests/CreateTravelRequestForm';
 
 /* ───── mocks UI ───── */
@@ -81,9 +82,19 @@ vi.mock('react-toastify', () => ({
 /* ───── helper render ───── */
 const renderPage = () =>
   render(
-    <MemoryRouter>
-      <CreateTravelRequestForm />
-    </MemoryRouter>
+    <QueryClientProvider
+      client={
+        new QueryClient({
+          defaultOptions: {
+            queries: { retry: false },
+          },
+        })
+      }
+    >
+      <MemoryRouter>
+        <CreateTravelRequestForm />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 
 /* ───── TEST ───── */

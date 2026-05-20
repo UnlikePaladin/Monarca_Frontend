@@ -67,7 +67,11 @@ export const VoucherHistory = () => {
         ...record,
         statusLabel: renderVoucherStatus(record.status),
         formattedDate: formatDate(record.date),
-        formattedAmount: formatMoney(record.amount),
+        formattedAmount: formatMoney(
+          typeof record.amount_mxn === "number"
+            ? record.amount_mxn
+            : record.amount,
+        ),
         tripTitle: record.requests?.title || "N/A",
         index,
         action: (
