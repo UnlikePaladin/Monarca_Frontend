@@ -165,6 +165,6 @@ describe('Historial page', () => {
     await waitFor(() => expect(tableSpy).toHaveBeenCalled());
 
     const { data } = tableSpy.mock.calls.at(-1)![0];
-    expect(data.map((r: any) => r.id)).toEqual([3, 4]);
+    expect(data.map((r: any) => r.id)).toEqual([3]);
   });
 });

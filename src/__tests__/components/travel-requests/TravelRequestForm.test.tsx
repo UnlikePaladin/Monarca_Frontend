@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import TravelRequestForm from "../../../components/travel-requests/TravelRequestForm";
 import { useNavigate } from "react-router-dom";
 import { useDestinations } from "../../../hooks/destinations/useDestinations";
@@ -76,13 +77,29 @@ beforeEach(() => {
   });
 });
 
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+};
+
 /* ---------------------------------------------------------------- */
 /*  Tests                                                           */
 /* ---------------------------------------------------------------- */
 
 describe("TravelRequestForm", () => {
   it("renders the form with initial values", () => {
-    render(<TravelRequestForm />);
+    renderWithProviders(<TravelRequestForm />);
 
     expect(screen.getByLabelText(/título/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/motivo/i)).toBeInTheDocument();
@@ -91,7 +108,7 @@ describe("TravelRequestForm", () => {
   });
 
   it("shows validation errors for required fields", async () => {
-    render(<TravelRequestForm />);
+    renderWithProviders(<TravelRequestForm />);
     await userEvent.click(screen.getByRole("button", { name: /crear viaje/i }));
 
     await waitFor(() => {
@@ -102,13 +119,13 @@ describe("TravelRequestForm", () => {
         screen.getByText(/escribe el motivo del viaje/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/selecciona fecha de llegada/i)
+        screen.getByText(/selecciona fecha de salida/i)
       ).toBeInTheDocument();
     });
   });
 
   it("allows adding and removing destinations", async () => {
-    render(<TravelRequestForm />);
+    renderWithProviders(<TravelRequestForm />);
 
     await userEvent.click(
       screen.getByRole("button", { name: /\+ añadir destino/i })
@@ -120,13 +137,19 @@ describe("TravelRequestForm", () => {
   });
 
   it("calculates stay days based on arrival and departure dates", async () => {
-    render(<TravelRequestForm />);
+    renderWithProviders(<TravelRequestForm />);
+    const user = userEvent.setup();
+    const roundTripSwitch = screen.getAllByRole("switch")[0];
+    await user.click(roundTripSwitch);
 
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText(/Salida de Origen/i),
       "2024-03-01",
     );
-    await userEvent.type(screen.getByLabelText(/Llegada a/i), "2024-03-05");
+    await user.type(
+      screen.getByLabelText(/Fecha de regreso/i),
+      "2024-03-05",
+    );
 
     await waitFor(() => {
       expect(screen.getByLabelText(/no\. días estancia/i)).toHaveValue(4);
@@ -140,8 +163,11 @@ describe("TravelRequestForm", () => {
       isPending: false,
     });
 
-    render(<TravelRequestForm />);
+    renderWithProviders(<TravelRequestForm />);
     const user = userEvent.setup();
+
+    const roundTripSwitch = screen.getAllByRole("switch")[0];
+    await user.click(roundTripSwitch);
 
     /* --- basic fields --- */
     await user.type(screen.getByLabelText(/título/i), "Test Trip");
@@ -172,7 +198,7 @@ describe("TravelRequestForm", () => {
     await user.type(screen.getByLabelText(/detalles/i), "Hotel details");
     await user.type(screen.getByLabelText(/Salida de City One/i), "2024-03-01");
     await user.type(
-      screen.getByLabelText(/Llegada a City Two/i),
+      screen.getByLabelText(/Fecha de regreso/i),
       "2024-03-05",
     );
 
@@ -190,7 +216,7 @@ describe("TravelRequestForm", () => {
         priority: "alta",
         advance_money: 1000,
         requirements: "",
-        is_round_trip: false,
+        is_round_trip: true,
         requests_destinations: [
           {
             id_destination: "2",
@@ -218,8 +244,11 @@ describe("TravelRequestForm", () => {
       isPending: false,
     });
 
-    render(<TravelRequestForm />);
+    renderWithProviders(<TravelRequestForm />);
     const user = userEvent.setup();
+
+    const roundTripSwitch = screen.getAllByRole("switch")[0];
+    await user.click(roundTripSwitch);
 
     // Same happy-path typing sequence as above
     await user.type(screen.getByLabelText(/título/i), "Test Trip");
@@ -246,7 +275,7 @@ describe("TravelRequestForm", () => {
     await user.type(screen.getByLabelText(/detalles/i), "Hotel details");
     await user.type(screen.getByLabelText(/Salida de City One/i), "2024-03-01");
     await user.type(
-      screen.getByLabelText(/Llegada a City Two/i),
+      screen.getByLabelText(/Fecha de regreso/i),
       "2024-03-05",
     );
 
