@@ -8,10 +8,10 @@ import CreateTravelRequest from "./pages/CreateTravelRequest.tsx";
 import EditTravelRequest from "./pages/EditTravelRequest.tsx";
 
 import {
-  ProtectedRoute,
   PermissionProtectedRoute,
   RoleProtectedRoute,
 } from "./hooks/auth/authContext";
+import { ProtectedRoute } from "./routes/ProtectedRoute";
 import "flowbite";
 
 // ******************* Styles ******************
@@ -66,10 +66,6 @@ export const router = createBrowserRouter([
   {
     path: "/unauthorized",
     element: <Unauthorized />,
-  },
-  {
-    path: "*",
-    element: <Error />,
   },
 
   // Basic protected routes (requires only authentication)
@@ -350,6 +346,10 @@ export const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  {
+    path: "*",
+    element: <Error />,
   },
 ]);
 

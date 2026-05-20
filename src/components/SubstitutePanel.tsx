@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from "react";
+import dayjs from "dayjs";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import Select from "./ui/Select";
@@ -11,6 +12,7 @@ import { useAuth } from "../hooks/auth/authContext";
 import { useGetApprovers } from "../hooks/users/useGetApprovers";
 import { useCreateSubstitute } from "../hooks/substitutes/useCreateSubstitute";
 import { toast } from "react-toastify";
+import { AxiosError } from "axios";
 
 interface FormData {
   targetUserId: string;
@@ -19,20 +21,17 @@ interface FormData {
   notes: string;
 }
 
-const addBusinessDays = (from: Date, days: number): Date => {
-  const result = new Date(from);
-  let added = 0;
-  while (added < days) {
-    result.setDate(result.getDate() + 1);
-    const day = result.getDay();
-    if (day !== 0 && day !== 6) added++;
-  }
-  return result;
-};
+const todayDateString = () => dayjs().format("YYYY-MM-DD");
 
-const MIN_START_DATE = addBusinessDays(new Date(), 2)
-  .toISOString()
-  .split("T")[0];
+const getDelegationErrorMessage = (error: unknown): string => {
+  if (error instanceof AxiosError) {
+    const message = error.response?.data?.message;
+    if (Array.isArray(message)) return message.join(", ");
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return "Ocurrió un error al activar la delegación. Intenta de nuevo.";
+};
 
 /**
  * Renders a form to select a substitute user and date range for delegations.
@@ -75,10 +74,16 @@ export const SubstitutePanel = () => {
       return;
     }
 
-    const start = new Date(formData.startDate);
-    const end = new Date(formData.endDate);
+    const start = dayjs(formData.startDate);
+    const end = dayjs(formData.endDate);
+    const today = dayjs().startOf("day");
 
-    if (end < start) {
+    if (start.isBefore(today)) {
+      setErrorMessage("La fecha de inicio no puede ser anterior a hoy.");
+      return;
+    }
+
+    if (end.isBefore(start)) {
       setErrorMessage(
         "La fecha de fin no puede ser anterior a la fecha de inicio.",
       );
@@ -88,11 +93,11 @@ export const SubstitutePanel = () => {
     createSubstitute(
       {
         originalUserId: authState.userId,
-        roleId: null,
         targetUserId: formData.targetUserId,
         startDate: formData.startDate,
         endDate: formData.endDate,
-        notes: formData.notes || undefined,
+        roleId: authState.userRoleId || undefined,
+        ...(formData.notes.trim() ? { notes: formData.notes.trim() } : {}),
       },
       {
         onSuccess: () => {
@@ -105,10 +110,10 @@ export const SubstitutePanel = () => {
           });
           setSelectedUser(null);
         },
-        onError: () => {
-          toast.error(
-            "Ocurrió un error al activar la delegación. Intenta de nuevo.",
-          );
+        onError: (error) => {
+          const message = getDelegationErrorMessage(error);
+          setErrorMessage(message);
+          toast.error(message);
         },
       },
     );
@@ -149,7 +154,7 @@ export const SubstitutePanel = () => {
             <Input
               type="date"
               value={formData.startDate}
-              min={MIN_START_DATE}
+              min={todayDateString()}
               onChange={(event) =>
                 setFormData({ ...formData, startDate: event.target.value })
               }
@@ -163,7 +168,7 @@ export const SubstitutePanel = () => {
             <Input
               type="date"
               value={formData.endDate}
-              min={formData.startDate || new Date().toISOString().split("T")[0]}
+              min={formData.startDate || todayDateString()}
               onChange={(event) =>
                 setFormData({ ...formData, endDate: event.target.value })
               }

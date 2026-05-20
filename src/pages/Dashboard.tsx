@@ -74,7 +74,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
           "upload_vouchers" as Permission,
         ) && (
           <Mosaic
-            title="Comprobar Gastos"
+            title="Comprobar gastos"
             iconPath="/assets/solicitud_de_reembolso.png"
             link="/refunds"
             id="upload_vouchers"
@@ -154,7 +154,7 @@ export const Dashboard = ({ title }: DashboardProps) => {
         )}
         {authState.userPermissions.includes("check_budgets" as Permission) && (
           <Mosaic
-            title="Gestión de Pólizas"
+            title="Gestión de pólizas"
             iconPath="/assets/policies.png"
             link="/policies"
             id="policies-card"

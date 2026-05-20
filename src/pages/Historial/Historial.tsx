@@ -196,7 +196,7 @@ export const Historial = () => {
     const fetchTravelRecords = async () => {
       try {
         const endpoint = isApproverHistoryView
-          ? "/requests/all"
+          ? "/requests/approver/history"
           : isSoiTripsToRegisterView
             ? "/requests/to-approve-SOI"
             : authState.userPermissions.includes("create_request" as Permission)
@@ -204,12 +204,7 @@ export const Historial = () => {
               : "/requests/all";
         let response = await getRequest(endpoint);
         if (isApproverHistoryView) {
-          response = response.filter(
-            (record: any) =>
-              !["Pending Review", "Denied", "Cancelled"].includes(
-                record.status
-              ) && record.id_admin === authState.userId
-          );
+          response = Array.isArray(response) ? response : [];
         } else if (
           authState.userPermissions.includes(
             "submit_reservations" as Permission

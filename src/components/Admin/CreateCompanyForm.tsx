@@ -61,7 +61,7 @@ const companySchema = z.object({
       message: "Escriba el apellido del CompanyAdmin",
     }),
     password: z.string().min(1, {
-      message: "Escriba una contrasena para el CompanyAdmin",
+      message: "Escriba una contraseña para el CompanyAdmin",
     }),
     username: z.string().trim().optional(),
   }),
@@ -287,7 +287,7 @@ function CreateCompanyForm() {
                 htmlFor="admin-password"
                 className="mb-2 block text-sm font-medium text-gray-900"
               >
-                Contrasena
+                Contraseña
               </label>
               <Input id="admin-password" type="password" {...register("admin.password")} />
               <FieldError msg={errors.admin?.password?.message} />

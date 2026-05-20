@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 
 const accountingAccountSchema = z.object({
   key: z.string().trim().min(1, { message: "Escriba la clave de la cuenta contable" }),
-  description: z.string().trim().min(1, { message: "Escriba la descripcion de la cuenta contable" }),
+  description: z.string().trim().min(1, { message: "Escriba la descripción de la cuenta contable" }),
   requiresCostCenter: z.boolean(),
   bankAccountId: z.preprocess(
     (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
@@ -142,7 +142,7 @@ function EditAccountingAccountForm({ accountingAccountId, initialData }: Props) 
             </div>
 
             <div>
-              <label htmlFor="accounting-account-description" className="mb-2 block text-sm font-medium text-gray-900">Descripcion</label>
+              <label htmlFor="accounting-account-description" className="mb-2 block text-sm font-medium text-gray-900">Descripción</label>
               <Input id="accounting-account-description" {...register("description")} />
               <FieldError msg={errors.description?.message} />
             </div>

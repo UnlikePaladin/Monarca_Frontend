@@ -69,8 +69,12 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
   const planeRate = Number(formData[destId]?.plane_rate);
   const hotelAmount = Number(formData[destId]?.hotel_price);
   const planeAmount = Number(formData[destId]?.plane_price);
-  const normalizedHotelAmount = Number.isFinite(hotelAmount) ? hotelAmount : 0;
-  const normalizedPlaneAmount = Number.isFinite(planeAmount) ? planeAmount : 0;
+  const normalizedHotelAmount = Number.isFinite(hotelAmount)
+    ? Math.max(0, hotelAmount)
+    : 0;
+  const normalizedPlaneAmount = Number.isFinite(planeAmount)
+    ? Math.max(0, planeAmount)
+    : 0;
   const hotelRateValue = hotelRateQuery.data?.rate ?? hotelRate;
   const planeRateValue = planeRateQuery.data?.rate ?? planeRate;
   const hotelMxnValue =
@@ -216,6 +220,8 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
                     onChange={(e) => onFieldChange(e, destId)}
                     name="hotel_price"
                     type="number"
+                    min={0}
+                    step="0.01"
                     id={`hotel_price_${destId}`}
                     className="flex-1"
                   />
@@ -321,8 +327,10 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
                     onChange={(e) => onFieldChange(e, destId)}
                     name="plane_price"
                     type="number"
+                    min={0}
+                    step="0.01"
                     id={`plane_price_${destId}`}
-                    className="flex-1"  
+                    className="flex-1"
                   />
                   <div className="min-w-[120px]">
                     <label

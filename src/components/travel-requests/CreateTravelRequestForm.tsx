@@ -299,7 +299,7 @@ function CreateTravelRequestForm() {
 
             <div>
               <label className="block mb-2 text-sm font-medium text-gray-900">
-                Ciudad Origen
+                Ciudad de origen
               </label>
               <Controller
                 control={control}

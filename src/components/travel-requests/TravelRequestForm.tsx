@@ -34,7 +34,13 @@ import { Destination } from "../../types/destinations";
 import { CreateRequest } from "../../types/requests";
 import GoBack from "../GoBack";
 import { ConfirmationModal } from "../ui/ConfirmationModal";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from "react";
 import formatMoney from "../../utils/formatMoney";
 import { useExchangeRate } from "../../hooks/exchange-rate/useExchangeRate";
 
@@ -54,60 +60,137 @@ const currencyCodes: string[] = [
   "CNY",
 ];
 
-const destinationSchema = z
-  .object({
-    id_destination: z.string().nullable(),
-    id_airport: z.string().nullable().optional(),
-    arrival_date: z
-      .string()
-      .nonempty({ message: "Selecciona fecha de llegada" }),
-    departure_date: z
-      .string()
-      .nonempty({ message: "Selecciona fecha de salida" }),
-    stay_days: z.number().int(),
-    // .positive({ message: "Number of days must be positive" }),
-    is_hotel_required: z.boolean(),
-    is_plane_required: z.boolean(),
-    details: z.string().nonempty({ message: "Agrega detalles" }),
-  })
-  .superRefine((value, ctx) => {
-    if (value.is_plane_required && !value.id_airport) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["id_airport"],
-        message: "Selecciona un aeropuerto para el tramo con vuelo",
-      });
-    }
+const todayInputDate = () => dayjs().format("YYYY-MM-DD");
 
-    if (!value.is_plane_required && value.id_airport) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["id_airport"],
-        message: "El aeropuerto debe omitirse cuando no se requiere vuelo",
-      });
+const ORIGIN_DISPLAY_NAME = "Origen";
+
+/** Etiqueta del campo de salida: mantiene "origen" en minúscula solo en el placeholder. */
+const originDepartureLabel = (name: string) =>
+  name === ORIGIN_DISPLAY_NAME ? "origen" : name;
+
+const minArrivalInputDate = (departureDate?: string) => {
+  const today = todayInputDate();
+  if (!departureDate) return today;
+  const departure = dayjs(departureDate).format("YYYY-MM-DD");
+  return dayjs(departure).isBefore(dayjs(today), "day") ? today : departure;
+};
+
+/** Bloquea escritura manual; la fecha se elige solo con el calendario nativo. */
+const preventDateTypingProps = {
+  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => {
+    const navigationKeys = ["Tab", "Escape", "Shift", "Enter"];
+    if (
+      navigationKeys.includes(e.key) ||
+      e.key.startsWith("Arrow") ||
+      e.ctrlKey ||
+      e.metaKey
+    ) {
+      return;
     }
+    if (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") {
+      e.preventDefault();
+    }
+  },
+  onPaste: (e: ClipboardEvent<HTMLInputElement>) => e.preventDefault(),
+  className: "cursor-pointer",
+} as const;
+
+const buildDestinationSchema = (blockPastDates: boolean) =>
+  z
+    .object({
+      id_destination: z.string().nullable(),
+      id_airport: z.string().nullable().optional(),
+      arrival_date: z
+        .string()
+        .nonempty({ message: "Selecciona fecha de llegada" }),
+      departure_date: z
+        .string()
+        .nonempty({ message: "Selecciona fecha de salida" }),
+      stay_days: z.number().int(),
+      is_hotel_required: z.boolean(),
+      is_plane_required: z.boolean(),
+      details: z.string().nonempty({ message: "Agrega detalles" }),
+    })
+    .superRefine((value, ctx) => {
+      if (value.is_plane_required && !value.id_airport) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["id_airport"],
+          message: "Selecciona un aeropuerto para el tramo con vuelo",
+        });
+      }
+
+      if (!value.is_plane_required && value.id_airport) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["id_airport"],
+          message: "El aeropuerto debe omitirse cuando no se requiere vuelo",
+        });
+      }
+
+      const today = dayjs().startOf("day");
+
+      if (blockPastDates) {
+        if (
+          value.departure_date &&
+          dayjs(value.departure_date).startOf("day").isBefore(today)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["departure_date"],
+            message: "La fecha de salida no puede ser anterior a hoy",
+          });
+        }
+
+        if (
+          value.arrival_date &&
+          dayjs(value.arrival_date).startOf("day").isBefore(today)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["arrival_date"],
+            message: "La fecha no puede ser anterior a hoy",
+          });
+        }
+      }
+
+      if (
+        value.arrival_date &&
+        value.departure_date &&
+        dayjs(value.arrival_date)
+          .startOf("day")
+          .isBefore(dayjs(value.departure_date).startOf("day"))
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["arrival_date"],
+          message:
+            "La fecha de llegada debe ser igual o posterior a la de salida",
+        });
+      }
+    });
+
+const buildFormSchema = (blockPastDates: boolean) =>
+  z.object({
+    id_origin_city: z.string().nullable(),
+    id_origin_airport: z.string().nullable().optional(),
+    motive: z.string().nonempty({ message: "Escribe el motivo del viaje" }),
+    title: z.string().nonempty({ message: "Escribe el título del viaje" }),
+    priority: z.enum(["alta", "media", "baja"]),
+    requirements: z.string().optional(),
+    advance_currency: z.enum([...currencyCodes] as [string, ...string[]], {
+      message: "Selecciona una divisa válida",
+    }),
+    advance_money: z
+      .number()
+      .int()
+      .nonnegative({ message: "El dinero adelantado debe ser positivo" }),
+    requests_destinations: z
+      .array(buildDestinationSchema(blockPastDates))
+      .min(1, "Al menos un destino"),
   });
 
-const formSchema = z.object({
-  id_origin_city: z.string().nullable(),
-  id_origin_airport: z.string().nullable().optional(),
-  motive: z.string().nonempty({ message: "Escribe el motivo del viaje" }),
-  title: z.string().nonempty({ message: "Escribe el título del viaje" }),
-  priority: z.enum(["alta", "media", "baja"]),
-  requirements: z.string().optional(),
-  advance_currency: z.enum([...currencyCodes] as [string, ...string[]], {
-    message: "Selecciona una divisa válida",
-  }),
-  advance_money: z
-    .number()
-    .int()
-    .nonnegative({ message: "El dinero adelantado debe ser positivo" }),
-  requests_destinations: z
-    .array(destinationSchema)
-    .min(1, "Al menos un destino"),
-});
-
-type RawFormValues = z.infer<typeof formSchema>;
+type RawFormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 interface TravelRequestFormProps {
   initialData?: CreateRequest;
@@ -129,6 +212,7 @@ interface DestinationFieldsProps {
   isLast: boolean;
   isRoundTrip: boolean;
   originName: string;
+  blockPastDates: boolean;
 }
 
 function DestinationFields({
@@ -146,6 +230,7 @@ function DestinationFields({
   isLast,
   isRoundTrip,
   originName,
+  blockPastDates,
 }: DestinationFieldsProps) {
   const arrivalDate = useWatch({
     control,
@@ -197,6 +282,12 @@ function DestinationFields({
   }, [hideArrival, departureDate, idx, setValue]);
 
   const destinationErrors = errors?.[idx];
+  const minDepartureDate = blockPastDates && idx === 0 ? todayInputDate() : undefined;
+  const minArrivalDate = blockPastDates
+    ? minArrivalInputDate(departureDate)
+    : departureDate
+      ? dayjs(departureDate).format("YYYY-MM-DD")
+      : undefined;
 
   return (
     <div className="rounded-md p-4 mb-6 space-y-4 bg-white shadow-sm">
@@ -296,7 +387,7 @@ function DestinationFields({
             htmlFor={`departure-${idx}`}
             className="block mb-2 text-sm font-medium text-gray-900"
           >
-            Salida de {legOriginName}
+            Salida de {originDepartureLabel(legOriginName)}
           </label>
           <Controller
             control={control}
@@ -305,13 +396,16 @@ function DestinationFields({
               <Input
                 id={`departure-${idx}`}
                 type="date"
+                min={minDepartureDate}
                 value={
                   field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
                 }
                 onChange={(e) => field.onChange(e.target.value)}
-                readOnly={idx > 0}
+                {...(idx === 0 ? preventDateTypingProps : {})}
                 className={
-                  idx > 0 ? "bg-gray-100 cursor-not-allowed text-gray-500" : ""
+                  idx > 0
+                    ? "bg-gray-100 cursor-not-allowed text-gray-500"
+                    : preventDateTypingProps.className
                 }
               />
             )}
@@ -343,6 +437,7 @@ function DestinationFields({
                 <Input
                   id={`arrival-${idx}`}
                   type="date"
+                  min={minArrivalDate}
                   value={
                     field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
                   }
@@ -350,6 +445,7 @@ function DestinationFields({
                     field.onChange(e.target.value);
                     onArrivalDateChange(e.target.value);
                   }}
+                  {...preventDateTypingProps}
                 />
               )}
             />
@@ -437,6 +533,11 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
 
   const isEditing = !!requestId;
   const isPending = isEditing ? isUpdating : isCreating;
+  const blockPastDates = !isEditing;
+  const formSchema = useMemo(
+    () => buildFormSchema(blockPastDates),
+    [blockPastDates],
+  );
 
   const {
     control,
@@ -771,7 +872,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                     htmlFor="id_origin_city"
                     className="block mb-2 text-sm font-medium text-gray-900"
                   >
-                    Ciudad Origen
+                    Ciudad de origen
                   </label>
                   <Controller
                     control={control}
@@ -945,7 +1046,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                       : watchedDestinations[idx - 1]?.id_destination;
                   const legOriginName =
                     getDestinationName(legOriginId) ||
-                    (idx === 0 ? "Origen" : `Destino ${idx}`);
+                    (idx === 0 ? ORIGIN_DISPLAY_NAME : `Destino ${idx}`);
 
                   return (
                     <DestinationFields
@@ -962,7 +1063,10 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                       isLoadingDestinations={isLoadingDestinations}
                       isLast={idx === fields.length - 1}
                       isRoundTrip={isRoundTrip}
-                      originName={getDestinationName(originCityId) || "Origen"}
+                      originName={
+                        getDestinationName(originCityId) || ORIGIN_DISPLAY_NAME
+                      }
+                      blockPastDates={blockPastDates}
                       onArrivalDateChange={(date) => {
                         if (idx < fields.length - 1) {
                           setValue(
@@ -983,7 +1087,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                   const lastDestName =
                     getDestinationName(lastDestId) || "Último destino";
                   const originName =
-                    getDestinationName(originCityId) || "Origen";
+                    getDestinationName(originCityId) || ORIGIN_DISPLAY_NAME;
                   return (
                     <div className="rounded-md p-4 mb-6 bg-blue-50 border border-blue-200">
                       <div className="flex items-center gap-3">
@@ -1057,7 +1161,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                     : watchedDestinations[idx - 1]?.id_destination;
                 const legOriginName =
                   getDestinationName(legOriginId) ||
-                  (idx === 0 ? "Origen" : "—");
+                  (idx === 0 ? ORIGIN_DISPLAY_NAME : "—");
                 const destName =
                   getDestinationName(dest?.id_destination) || "—";
                 const dep = dest?.departure_date;
@@ -1106,7 +1210,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                       ?.id_destination;
                   const lastDestName = getDestinationName(lastDestId) || "—";
                   const originName =
-                    getDestinationName(originCityId) || "Origen";
+                    getDestinationName(originCityId) || ORIGIN_DISPLAY_NAME;
                   return (
                     <div className="flex flex-col gap-y-1 px-4 py-3 text-sm bg-blue-50">
                       <span className="text-blue-400 text-xs">
