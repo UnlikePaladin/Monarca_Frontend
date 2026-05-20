@@ -22,7 +22,7 @@ const dashboardSteps = [
   {
     element: "#upload_vouchers",
     popover: {
-      title: "Comprobar Gastos",
+      title: "Comprobar gastos",
       description: " Carga los archivos que contienen tus facturas del viaje.",
       position: "bottom",
     },
@@ -585,8 +585,9 @@ const requestInfoSteps = [
   {
     element: "#comment-section",
     popover: {
-      title: "Comentarios de la Solicitud",
-      description: "Aquí puedes ver o escribir comentarios a la solicitud de viaje.",
+      title: "Comentarios (cambios a solicitar)",
+      description:
+        "Indica aquí los cambios que el solicitante debe hacer antes de continuar con la aprobación.",
       position: "bottom",
     },
   },

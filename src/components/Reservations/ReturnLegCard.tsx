@@ -64,7 +64,9 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
   );
   const planeRate = Number(formData[returnLegId]?.plane_rate);
   const planeAmount = Number(formData[returnLegId]?.plane_price);
-  const normalizedPlaneAmount = Number.isFinite(planeAmount) ? planeAmount : 0;
+  const normalizedPlaneAmount = Number.isFinite(planeAmount)
+    ? Math.max(0, planeAmount)
+    : 0;
   const planeRateValue = planeRateQuery.data?.rate ?? planeRate;
   const planeMxnValue =
     planeCurrency === "MXN"
@@ -209,6 +211,8 @@ export const ReturnLegCard: React.FC<ReturnLegCardProps> = ({
                 onChange={(e) => onFieldChange(e, returnLegId)}
                 name="plane_price"
                 type="number"
+                min={0}
+                step="0.01"
                 className="flex-1"
               />
               <div className="min-w-[120px]">

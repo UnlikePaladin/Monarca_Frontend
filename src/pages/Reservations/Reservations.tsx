@@ -111,9 +111,17 @@ export const Reservations = () => {
     [],
 );
 
+  const sanitizePriceFieldValue = (value: string): string => {
+    if (value === "" || value === "-") return "";
+    const parsed = Number(value);
+    if (Number.isNaN(parsed)) return value;
+    if (parsed < 0) return "0";
+    return value;
+  };
+
   const getMxnPrice = (data: any, field: "hotel" | "plane") => {
     const rawAmount = Number(data?.[`${field}_price`]);
-    if (Number.isNaN(rawAmount)) return NaN;
+    if (Number.isNaN(rawAmount) || rawAmount < 0) return NaN;
 
     const currency = String(data?.[`${field}_currency`] || "MXN");
     if (currency === "MXN") return rawAmount;
@@ -261,11 +269,15 @@ export const Reservations = () => {
     id: string,
   ) => {
     const { name, value } = e.target;
+    const nextValue =
+      name.endsWith("_price") && typeof value === "string"
+        ? sanitizePriceFieldValue(value)
+        : value;
     const updatedFormData = {
       ...formData,
       [id]: {
         ...formData[id],
-        [name]: value,
+        [name]: nextValue,
       },
     };
     setFormData(updatedFormData);

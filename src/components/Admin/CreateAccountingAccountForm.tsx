@@ -23,7 +23,7 @@ const accountingAccountSchema = z.object({
     message: "Escriba la clave de la cuenta contable",
   }),
   description: z.string().trim().min(1, {
-    message: "Escriba la descripcion de la cuenta contable",
+    message: "Escriba la descripción de la cuenta contable",
   }),
   requiresCostCenter: z.boolean(),
   bankAccountId: z.preprocess(
@@ -228,7 +228,7 @@ function CreateAccountingAccountForm() {
                 htmlFor="accounting-account-description"
                 className="mb-2 block text-sm font-medium text-gray-900"
               >
-                Descripcion
+                Descripción
               </label>
               <Input id="accounting-account-description" {...register("description")} />
               <FieldError msg={errors.description?.message} />

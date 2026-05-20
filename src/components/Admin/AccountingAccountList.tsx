@@ -160,7 +160,7 @@ function AccountingAccountsList() {
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Clave</th>
-                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Descripcion</th>
+                      <th className="py-3 px-4 text-sm font-medium text-gray-600">Descripción</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Cuenta bancaria</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Requiere centro de costos</th>
                       <th className="py-3 px-4 text-sm font-medium text-gray-600">Acciones</th>

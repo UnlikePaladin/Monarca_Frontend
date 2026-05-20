@@ -5,9 +5,7 @@ The handleLogout function calls /login/logout and resets the authentication stat
 import React, { createContext, useContext, ReactNode, useEffect } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 
-import Layout from "../../components/Layout";
 import { getRequest, postRequest } from "../../utils/apiService";
-import { AppProvider } from "../app/appContext";
 
 // Define permissions
 export type Permission = string;
@@ -201,19 +199,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   );
 };
 
-// Basic protected route wrapper component with Layout
-export const ProtectedRoute: React.FC = () => {
-  return (
-    <AuthProvider>
-      <AppProvider>
-        <Layout>
-          <Outlet />
-        </Layout>
-      </AppProvider>
-    </AuthProvider>
-  );
-};
-
 // Permission-based protected route component
 interface PermissionProtectedRouteProps {
   requiredPermissions: Permission[];
@@ -248,12 +233,7 @@ export const PermissionProtectedRoute: React.FC<
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // If authenticated and authorized, render the route
-  return (
-    <AuthProvider>
-      <Outlet />
-    </AuthProvider>
-  );
+  return <Outlet />;
 };
 
 export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
