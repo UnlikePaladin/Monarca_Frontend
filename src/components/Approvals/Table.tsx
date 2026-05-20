@@ -21,6 +21,7 @@ interface TableProps {
   }>;
   itemsPerPage?: number;
   link: string;
+  linkState?: unknown;
 }
 
 /**
@@ -35,6 +36,7 @@ interface TableProps {
   data,
   itemsPerPage = 5,
   link,
+  linkState,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedRowId, setExpandedRowId] = useState<number | null>(null);
@@ -120,6 +122,7 @@ interface TableProps {
                   <td className="text-sm">
                     <Link
                       to={`${link}/${row.id}`}
+                      state={linkState}
                       className="bg-[var(--white)] text-[var(--blue)] p-1 rounded-sm"
                     >
                       Ver detalles
