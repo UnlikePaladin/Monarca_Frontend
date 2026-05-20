@@ -289,10 +289,10 @@ const createBankAccountsSteps = [
     {
       element: "#bank-account-iban",
       popover: {
-        title: "IBAN",
-        description: "Ingresa el IBAN (alfanumérico, 15-34 caracteres) de la cuenta bancaria.",
-        position: "bottom",
-      },
+          title: "Identificador de cuenta",
+          description: "Ingresa el identificador de cuenta apropiado: IBAN, SWIFT/BIC, CLABE (MX), BSB (AU/NZ) o número de tránsito/institución según el país.",
+          position: "bottom",
+        },
   },
   {
     element: "#create_bank_account",
