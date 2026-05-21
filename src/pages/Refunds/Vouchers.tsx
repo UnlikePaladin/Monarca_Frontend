@@ -794,6 +794,7 @@ export const Vouchers = () => {
             placeholder="Ingrese"
             className="w-28 text-center py-1.5"
             wrapperClassName="flex flex-col mb-1"
+            onWheel={(e) => e.currentTarget.blur()}
           />
           <AmountMxnNote
             amount={Number(value)}

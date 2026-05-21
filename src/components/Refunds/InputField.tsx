@@ -10,7 +10,7 @@ import React, { ChangeEvent, useState } from "react";
 /**
  * InputFieldProps interface to define the structure of the props for the InputField component.
  */
-interface InputFieldProps {
+interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   id?: string;
   name?: string;
   type?:
@@ -70,6 +70,7 @@ const InputField: React.FC<InputFieldProps> = ({
   validateField,
   selectedFileName,
   wrapperClassName = "flex flex-col mb-4",
+  ...rest
 }) => {
   // Set default placeholder for date inputs
   const effectivePlaceholder =
@@ -217,6 +218,7 @@ const InputField: React.FC<InputFieldProps> = ({
             onFocus={handleFocus}
             aria-invalid={!!errorMessage}
             aria-required={required}
+            {...rest}
           />
           {label && (
             <label
@@ -258,6 +260,7 @@ const InputField: React.FC<InputFieldProps> = ({
               onFocus={handleFocus}
               aria-invalid={!!errorMessage}
               aria-required={required}
+              {...rest}
             />
             {selectedFileName && (
               <div className="mt-2 text-sm text-gray-600">
@@ -299,6 +302,7 @@ const InputField: React.FC<InputFieldProps> = ({
             aria-invalid={!!errorMessage}
             aria-required={required}
             role={type === "date" ? "spinbutton" : undefined}
+            {...rest}
           />
         </div>
       </>
