@@ -18,44 +18,44 @@ import { useUpdateRefundPolicy } from "../../hooks/refundPolicies/useUpdateRefun
 import { toast } from "react-toastify";
 
 const EXPENSE_CLASS_OPTIONS = [
-  { id: "ALIF", name: "ALIF - Alimentación" },
-  { id: "CAPA", name: "CAPA - Capacitación" },
-  { id: "CPF", name: "CPF - Caseta (peaje)" },
-  { id: "FIDP", name: "FIDP - Ficha de depósito" },
-  { id: "GAS", name: "GAS - Gasolina" },
-  { id: "HTLP", name: "HTLP - Hotel pagado" },
-  { id: "LAUN", name: "LAUN - Lavandería" },
-  { id: "NDPR", name: "NDPR - No deducible" },
-  { id: "NDVA", name: "NDVA - No deducible vale azul" },
-  { id: "REAU", name: "REAU - Renta de automóvil" },
-  { id: "TCCF", name: "TCCF - Taxi con comprobante fiscal" },
-  { id: "TSCF", name: "TSCF - Taxi sin comprobante fiscal" },
-  { id: "TRAA", name: "TRAA - Transporte automóvil y/o autobús" },
-  { id: "AIRP", name: "AIRP - Vuelo pagado" },
-  { id: "TODAS", name: "TODAS - Regla de nivel solicitud" },
+  { id: "ALIF", name: "Alimentación" },
+  { id: "CAPA", name: "Capacitación" },
+  { id: "CPF", name: "Caseta (peaje)" },
+  { id: "FIDP", name: "Ficha de depósito" },
+  { id: "GAS", name: "Gasolina" },
+  { id: "HTLP", name: "Hotel pagado" },
+  { id: "LAUN", name: "Lavandería" },
+  { id: "NDPR", name: "No deducible" },
+  { id: "NDVA", name: "No deducible vale azul" },
+  { id: "REAU", name: "Renta de automóvil" },
+  { id: "TCCF", name: "Taxi con comprobante fiscal" },
+  { id: "TSCF", name: "Taxi sin comprobante fiscal" },
+  { id: "TRAA", name: "Transporte automóvil y/o autobús" },
+  { id: "AIRP", name: "Vuelo pagado" },
+  { id: "TODAS", name: "Regla de nivel solicitud" },
 ];
 
 const OPERATOR_OPTIONS = [
-  { id: "MISSING_XML", name: "MISSING_XML - Falta XML" },
-  { id: "MISSING_PDF", name: "MISSING_PDF - Falta PDF" },
-  { id: "MISSING_FILE", name: "MISSING_FILE - Faltan XML y PDF" },
-  { id: "LT", name: "LT - Menor que" },
-  { id: "LTE", name: "LTE - Menor o igual que" },
-  { id: "GT", name: "GT - Mayor que" },
-  { id: "GTE", name: "GTE - Mayor o igual que" },
-  { id: "TOTAL_LTE_ADVANCE", name: "TOTAL_LTE_ADVANCE - Total vs anticipo" },
-  { id: "TOTAL_VOUCHERS_LIMIT", name: "TOTAL_VOUCHERS_LIMIT - Límite total vouchers" },
-  { id: "TOTAL_VOUCHERS_LTE_ADVANCE", name: "TOTAL_VOUCHERS_LTE_ADVANCE - Vouchers <= anticipo" },
-  { id: "DAYS_EXCEEDED", name: "DAYS_EXCEEDED - Días excedidos" },
-  { id: "TIME_LIMIT", name: "TIME_LIMIT - Límite de tiempo" },
+  { id: "MISSING_XML", name: "Falta XML" },
+  { id: "MISSING_PDF", name: "Falta PDF" },
+  { id: "MISSING_FILE", name: "Faltan XML y PDF" },
+  { id: "LT", name: "Menor que" },
+  { id: "LTE", name: "Menor o igual que" },
+  { id: "GT", name: "Mayor que" },
+  { id: "GTE", name: "Mayor o igual que" },
+  { id: "TOTAL_LTE_ADVANCE", name: "Total vs anticipo" },
+  { id: "TOTAL_VOUCHERS_LIMIT", name: "Límite total vouchers" },
+  { id: "TOTAL_VOUCHERS_LTE_ADVANCE", name: "Vouchers <= anticipo" },
+  { id: "DAYS_EXCEEDED", name: "Días excedidos" },
+  { id: "TIME_LIMIT", name: "Límite de tiempo" },
   {
     id: "VOUCHER_DATE_WITHIN_TRIP_WINDOW",
-    name: "VOUCHER_DATE_WITHIN_TRIP_WINDOW - Fecha dentro del viaje",
+    name: "Fecha dentro del viaje",
   },
 ];
 
-const CONSEQUENCE_OPTIONS = ["WARNING", "POLICY_VIOLATION"];
-const UNIT_OPTIONS = ["MXN", "DAYS", "USD"];
+const CONSEQUENCE_OPTIONS = [{ id: "WARNING", name: "Advertencia" }, { id: "POLICY_VIOLATION", name: "Violación de política" }];
+const UNIT_OPTIONS = [{ id: "MXN", name: "MXN" }, { id: "USD", name: "USD" }, { id: "EUR", name: "EUR" }, { id: "JPY", name: "JPY" }, { id: "DAYS", name: "DÍAS" }];
 
 const REQUEST_LEVEL_OPERATORS = new Set([
   "TOTAL_LTE_ADVANCE",
@@ -89,8 +89,8 @@ const toOptions = (items: string[]) =>
 
 const expenseClassOptions = EXPENSE_CLASS_OPTIONS;
 const operatorOptions = OPERATOR_OPTIONS;
-const consequenceOptions = toOptions(CONSEQUENCE_OPTIONS);
-const unitOptions = toOptions(UNIT_OPTIONS);
+const consequenceOptions = CONSEQUENCE_OPTIONS;
+const unitOptions = UNIT_OPTIONS;
 
 const operatorHelpMap: Record<
   string,
@@ -103,67 +103,67 @@ const operatorHelpMap: Record<
   MISSING_XML: {
     scope: "Comprobante",
     description: "Falla si falta el archivo XML del comprobante.",
-    thresholdHint: "No usa valor umbral.",
+    thresholdHint: "No requiere un valor límite.",
   },
   MISSING_PDF: {
     scope: "Comprobante",
     description: "Falla si falta el archivo PDF del comprobante.",
-    thresholdHint: "No usa valor umbral.",
+    thresholdHint: "No requiere un valor límite.",
   },
   MISSING_FILE: {
     scope: "Comprobante",
     description: "Falla cuando no existen XML y PDF.",
-    thresholdHint: "No usa valor umbral.",
+    thresholdHint: "No requiere un valor límite.",
   },
   LT: {
     scope: "Comprobante",
-    description: "Evalúa monto menor que el umbral configurado.",
-    thresholdHint: "Requiere valor umbral.",
+    description: "Evalúa un monto menor que el límite configurado.",
+    thresholdHint: "Requiere valor límite.",
   },
   LTE: {
     scope: "Comprobante",
-    description: "Evalúa monto menor o igual que el umbral.",
-    thresholdHint: "Requiere valor umbral.",
+    description: "Evalúa un monto menor o igual que el límite.",
+    thresholdHint: "Requiere valor límite.",
   },
   GT: {
     scope: "Comprobante",
-    description: "Evalúa monto mayor que el umbral configurado.",
-    thresholdHint: "Requiere valor umbral.",
+    description: "Evalúa un monto mayor que el límite configurado.",
+    thresholdHint: "Requiere valor límite.",
   },
   GTE: {
     scope: "Comprobante",
-    description: "Evalúa monto mayor o igual que el umbral.",
-    thresholdHint: "Requiere valor umbral.",
+    description: "Evalúa un monto mayor o igual que el límite.",
+    thresholdHint: "Requiere valor límite.",
   },
   TOTAL_LTE_ADVANCE: {
     scope: "Solicitud",
     description: "Compara total de comprobantes contra el anticipo de la solicitud.",
-    thresholdHint: "No usa valor umbral.",
+    thresholdHint: "No requiere un valor límite.",
   },
   TOTAL_VOUCHERS_LIMIT: {
     scope: "Solicitud",
     description: "Limita el total acumulado de comprobantes.",
-    thresholdHint: "Requiere valor umbral.",
+    thresholdHint: "Requiere valor límite.",
   },
   TOTAL_VOUCHERS_LTE_ADVANCE: {
     scope: "Solicitud",
     description: "Valida que el total de comprobantes no supere el anticipo.",
-    thresholdHint: "No usa valor umbral.",
+    thresholdHint: "No requiere un valor límite.",
   },
   DAYS_EXCEEDED: {
     scope: "Solicitud",
     description: "Controla días máximos permitidos para comprobación.",
-    thresholdHint: "Requiere umbral en DAYS.",
+    thresholdHint: "Requiere un valor en DÍAS.",
   },
   TIME_LIMIT: {
     scope: "Solicitud",
     description: "Evalúa si se excede el tiempo límite configurado.",
-    thresholdHint: "Requiere umbral en DAYS.",
+    thresholdHint: "Requiere un valor en DÍAS.",
   },
   VOUCHER_DATE_WITHIN_TRIP_WINDOW: {
     scope: "Solicitud",
     description: "Valida que la fecha del comprobante esté dentro de la ventana del viaje.",
-    thresholdHint: "No usa valor umbral.",
+    thresholdHint: "No requiere un valor límite.",
   },
 };
 
@@ -185,7 +185,7 @@ const recommendedUnitForOperator = (operator?: string): string => {
 
 const ruleSchema = z.object({
   expense_class: z.string().min(1, "La clase de gasto es requerida"),
-  operator: z.string().min(1, "El operador es requerido"),
+  operator: z.string().min(1, "La condición es requerida"),
   threshold_value: z.union([z.number(), z.null()]).optional(),
   threshold_unit: z.string().optional(),
   consequence: z.string().optional(),
@@ -197,7 +197,7 @@ const ruleSchema = z.object({
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["expense_class"],
-      message: "Para operadores de nivel solicitud, la clase de gasto debe ser TODAS.",
+      message: "Para condiciones de nivel solicitud, la clase de gasto debe ser TODAS.",
     });
   }
 
@@ -206,7 +206,7 @@ const ruleSchema = z.object({
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["threshold_value"],
-        message: "Este operador requiere valor umbral numérico.",
+        message: "Esta condición requiere intervalo numérico.",
       });
     }
   }
@@ -468,24 +468,11 @@ export const RefundPolicyForm = ({
         </summary>
         <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-700">
           <p><strong>Clase de gasto:</strong> categoría de comprobante a la que aplica la regla.</p>
-          <p><strong>Operador:</strong> condición que se evaluará.</p>
-          <p><strong>Valor umbral:</strong> número límite cuando el operador lo requiere.</p>
-          <p><strong>Unidad umbral:</strong> unidad del umbral, por ejemplo MXN o DAYS.</p>
-          <p><strong>Consecuencia:</strong> WARNING avisa; POLICY_VIOLATION bloquea el flujo.</p>
+          <p><strong>Condición:</strong> condición que se evaluará.</p>
+          <p><strong>Valor límite:</strong> Valor límite cuando la condición lo requiere.</p>
+          <p><strong>Unidad:</strong> Por ejemplo MXN o DÍAS.</p>
+          <p><strong>Consecuencia:</strong> ADVERTENCIA no bloquea el flujo. Violación de política si.</p>
           <p><strong>Regla activa:</strong> define si la regla participa en evaluación.</p>
-        </div>
-        <div className="mt-4 rounded-md border border-slate-200 bg-white p-3">
-          <p className="text-xs font-semibold text-slate-800">
-            Clase de gasto (código canónico y significado)
-          </p>
-          <p className="text-[11px] text-slate-600 mt-1">
-            Se muestra una descripción amigable, pero siempre se envía el código corto al backend.
-          </p>
-          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-[11px] text-slate-700">
-            {expenseClassOptions.map((item) => (
-              <p key={item.id}>{item.name}</p>
-            ))}
-          </div>
         </div>
       </details>
 
@@ -642,25 +629,20 @@ export const RefundPolicyForm = ({
                             }
                             onChange={(option) => classField.onChange(String(option.id))}
                             isDisabled={lockExpenseClass}
-                            placeholder="Selecciona clase de gasto"
+                            placeholder="Selecciona una clase de gasto"
                           />
                         )}
                       />
                       {lockExpenseClass && (
                         <p className="mt-1 text-xs text-gray-500">
-                          Para este operador se fuerza automáticamente la clase TODAS.
-                        </p>
-                      )}
-                      {!lockExpenseClass && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          Se muestra nombre amigable, pero se enviará el código (ej. HTLP) al backend.
+                          Para esta condición se fuerza esta clase automáticamente.
                         </p>
                       )}
                       <FieldError msg={errors.rules?.[index]?.expense_class?.message} />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Operador</label>
+                      <label className="block text-xs text-gray-600 mb-1">Condición</label>
                       <Controller
                         control={control}
                         name={`rules.${index}.operator`}
@@ -690,7 +672,7 @@ export const RefundPolicyForm = ({
                                   shouldValidate: true,
                                 });
                                 toast.info(
-                                  "Este operador no usa valor umbral. Se limpiaron esos campos.",
+                                  "Esta condición no requiere un valor límite. Se limpiaron esos campos.",
                                   { position: "top-right", autoClose: 3000 }
                                 );
                               }
@@ -703,7 +685,7 @@ export const RefundPolicyForm = ({
                                 );
                               }
                             }}
-                            placeholder="Selecciona operador"
+                            placeholder="Selecciona una condición"
                           />
                         )}
                       />
@@ -718,7 +700,7 @@ export const RefundPolicyForm = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Valor umbral</label>
+                      <label className="block text-xs text-gray-600 mb-1">Valor límite</label>
                       <Input
                         type="number"
                         step="any"
@@ -726,7 +708,7 @@ export const RefundPolicyForm = ({
                         placeholder={
                           operatorRequiresThreshold
                             ? "Captura un valor numérico"
-                            : "No aplica para este operador"
+                            : "No aplica para esta condición"
                         }
                         {...register(`rules.${index}.threshold_value`, {
                           setValueAs: (value) => {
@@ -738,14 +720,14 @@ export const RefundPolicyForm = ({
                       />
                       {operatorRequiresThreshold && (
                         <p className="mt-1 text-xs text-gray-500">
-                          Este operador requiere valor umbral numérico.
+                          Esta condición requiere un valor límite numérico.
                         </p>
                       )}
                       <FieldError msg={errors.rules?.[index]?.threshold_value?.message} />
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Unidad umbral</label>
+                      <label className="block text-xs text-gray-600 mb-1">Unidad</label>
                       <Controller
                         control={control}
                         name={`rules.${index}.threshold_unit`}
@@ -757,7 +739,7 @@ export const RefundPolicyForm = ({
                             }
                             onChange={(option) => unitField.onChange(String(option.id))}
                             isDisabled={operatorBlocksThreshold}
-                            placeholder="Selecciona unidad"
+                            placeholder="Selecciona una unidad"
                           />
                         )}
                       />
@@ -777,13 +759,10 @@ export const RefundPolicyForm = ({
                               ) ?? null
                             }
                             onChange={(option) => consequenceField.onChange(String(option.id))}
-                            placeholder="Selecciona consecuencia"
+                            placeholder="Selecciona una consecuencia"
                           />
                         )}
                       />
-                      <p className="mt-1 text-xs text-gray-500">
-                        WARNING no bloquea. POLICY_VIOLATION bloquea el flujo.
-                      </p>
                     </div>
 
                     <div className="flex items-center gap-2 pt-5">
@@ -805,10 +784,6 @@ export const RefundPolicyForm = ({
               )})
             )}
           </div>
-        </div>
-
-        <div id="refund_policy_replace_warning" className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-          Al editar reglas, el backend recibe el conjunto completo actual de reglas.
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
