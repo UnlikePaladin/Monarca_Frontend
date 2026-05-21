@@ -441,7 +441,7 @@ export const Vouchers = () => {
     setShowSubmitModal(true);
   };
 
-  const handleSubmitRefund = async () => {
+  const handleSubmitRefund = async (finalize: boolean) => {
     let currentStep: "upload" | "finish" = "upload";
     setPolicyViolations([]);
     setIsSubmitting(true);
@@ -682,23 +682,30 @@ export const Vouchers = () => {
         return;
       }
 
-      currentStep = "finish";
-      const response = await patchRequest(
-        `/requests/finished-uploading-vouchers/${id}`,
-        {},
-      );
+      if(finalize) {
+        currentStep = "finish";
+        const response = await patchRequest(
+          `/requests/finished-uploading-vouchers/${id}`,
+          {},
+        );
 
-      showEmailAwareToast(
-        response,
-        "Solicitud de reembolso enviada con éxito.",
-        "Reembolso enviado. No se pudo enviar la notificación por correo.",
-      );
+        showEmailAwareToast(
+          response,
+          "Solicitud de reembolso enviada con éxito.",
+          "Reembolso enviado. No se pudo enviar la notificación por correo.",
+        );
 
-      setFormData([]);
+        setFormData([]);
 
-      setTimeout(() => {
-        navigate("/refunds");
-      }, 800);
+        setTimeout(() => {
+          navigate("/refunds");
+        }, 800);
+      } else {
+        toast.success("Comprobantes enviados correctamente. ");
+        setTimeout(()=>{
+          navigate("/refunds");
+        }, 800);
+      }
     } catch (err) {
       console.error(
         "Error al enviar la solicitud de reembolso: ",
@@ -1099,7 +1106,21 @@ export const Vouchers = () => {
             >
               Cancelar
             </Link>
-            <button
+            <div className="flex gap-3">
+              <button
+                id="submit-partial-refund"
+                disabled={isSubmitting || isPreviewingPolicy}
+                className={`px-4 py-2 text-white rounded-md transition-colors ${
+                  isSubmitting || isPreviewingPolicy
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-gray-500 hover:bg-gray-600 hover:cursor-pointer"
+                }`}
+                onClick={()=> handleSubmitRefund(false)}
+              >
+                {isSubmitting ? "Procesando..." : "Enviar avance"}
+                
+              </button>
+              <button
               id="submit-refund"
               disabled={isSubmitting || isPreviewingPolicy}
               className={`px-4 py-2 text-white rounded-md transition-colors ${
@@ -1115,6 +1136,9 @@ export const Vouchers = () => {
                   ? "Enviar de todos modos"
                   : "Enviar Solicitud"}
             </button>
+
+            </div>
+            
           </div>
         </div>
       </Tutorial>
@@ -1123,7 +1147,7 @@ export const Vouchers = () => {
         onClose={() => setShowSubmitModal(false)}
         onConfirm={() => {
           setShowSubmitModal(false);
-          handleSubmitRefund();
+          handleSubmitRefund(true);
         }}
         title="Enviar comprobantes de gasto"
         description="Estás a punto de enviar todos los comprobantes listados para revisión contable. Asegúrate de que los archivos XML/PDF y montos sean correctos antes de continuar."
