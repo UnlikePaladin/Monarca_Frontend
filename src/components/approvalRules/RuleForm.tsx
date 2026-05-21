@@ -49,7 +49,11 @@ export const RuleForm = ({ rule, onClose }: RuleFormProps) => {
     rule?.steps?.find((s) => s.stepType === "hierarchy")?.hierarchyLevel ?? 1;
 
   const [conditions, setConditions] = useState<RuleCondition[]>(
-    rule?.conditions ?? [],
+    rule?.conditions?.map(({ field, operator, value }) => ({
+      field,
+      operator,
+      value,
+    })) ?? [],
   );
   const [requiredLevels, setRequiredLevels] = useState<number>(initialLevel);
 
