@@ -139,9 +139,6 @@ function RefundPolicies() {
         <div className="max-w-6xl mx-auto space-y-6">
           <div id="refund_policies_overview">
             <h1 className="text-2xl font-bold text-gray-900">Políticas de Reembolso</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Administra reglas de reembolso agrupadas por compañía para SuperAdmin y CompanyAdmin.
-            </p>
             <p className="text-xs text-gray-500 mt-2">Total actual: {totalPolicies} políticas</p>
           </div>
 

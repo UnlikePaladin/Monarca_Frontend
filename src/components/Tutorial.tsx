@@ -394,7 +394,7 @@ const refundPoliciesSteps = [
     popover: {
       title: "Cómo crear una regla correcta",
       description:
-        "Selecciona clase de gasto y operador desde catálogo. Si el operador requiere umbral, captura valor y unidad.",
+        "Selecciona clase de gasto y operador desde catálogo. Si el operador requiere valor límite, captura valor y unidad.",
       position: "bottom",
     },
   },
@@ -403,7 +403,7 @@ const refundPoliciesSteps = [
     popover: {
       title: "Qué significa Consecuencia",
       description:
-        "WARNING muestra observación sin bloquear. POLICY_VIOLATION bloquea el flujo hasta corregir.",
+        "ADVERTENCIA muestra observación sin bloquear. Violación de política bloquea el flujo hasta corregir.",
       position: "bottom",
     },
   },
