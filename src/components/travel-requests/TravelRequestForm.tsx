@@ -983,6 +983,7 @@ function TravelRequestForm({ initialData, requestId }: TravelRequestFormProps) {
                       type="number"
                       min={0}
                       className="flex-1"
+                      onWheel={(e) => e.currentTarget.blur()}
                       {...register("advance_money", { valueAsNumber: true })}
                     />
                     <div className="min-w-[120px]">
