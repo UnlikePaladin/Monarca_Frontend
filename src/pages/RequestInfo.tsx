@@ -645,7 +645,7 @@ const RequestInfo: React.FC = () => {
                         className={`px-4 py-2 rounded-md hover:cursor-pointer ${
                           currentIndexRes === 0
                             ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                            : "bg-[var(--blue)] text-white hover:bg-[var(--light-blue)]"
                         }`}
                       >
                         Anterior
@@ -660,7 +660,7 @@ const RequestInfo: React.FC = () => {
                           currentIndexRes ===
                           (data?.reservations?.length ?? 0) - 1
                             ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                            : "bg-[var(--blue)] text-white hover:bg-[var(--light-blue)]"
                         }`}
                       >
                         Siguiente
@@ -734,7 +734,7 @@ const RequestInfo: React.FC = () => {
                         className={`px-4 py-2 rounded-md hover:cursor-pointer ${
                           currentIndex === 0
                             ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                            : "bg-[var(--blue)] text-white hover:bg-[var(--light-blue)]"
                         }`}
                       >
                         Anterior
@@ -747,7 +747,7 @@ const RequestInfo: React.FC = () => {
                         className={`px-4 py-2 rounded-md hover:cursor-pointer ${
                           currentIndex === (data?.vouchers?.length ?? 0) - 1
                             ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                            : "bg-[var(--blue)] text-white hover:bg-[var(--light-blue)]"
                         }`}
                       >
                         Siguiente

@@ -597,10 +597,9 @@ const RefundsAcceptance: React.FC = () => {
                 </h2>
                 {/* Display the existing PDF using an iframe */}
                 <Swiper
-                  modules={[Navigation, Pagination]}
+                  modules={[Navigation]}
                   spaceBetween={50}
                   slidesPerView={1}
-                  pagination={{ clickable: true }}
                   onBeforeInit={(swiper: any) => {
                     if (typeof swiper.params.navigation !== "boolean") {
                       swiper.params.navigation.prevEl = prevRef.current;
@@ -634,7 +633,7 @@ const RefundsAcceptance: React.FC = () => {
                           />
                         </section>
                       )}
-                      <div className="flex space-x-4 justify-end mt-6 absolute z-50 bottom-0 right-4">
+                      <div className="flex space-x-4 justify-end mt-6">
                         <button
                           disabled={file?.status !== "comprobante_pendiente"}
                           className={`px-4 py-2 text-white rounded-md  hover:cursor-pointer 
@@ -692,7 +691,7 @@ const RefundsAcceptance: React.FC = () => {
                     className={`px-4 py-2 rounded-md hover:cursor-pointer ${
                       currentIndex === 0
                         ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                        : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                        : "bg-[var(--blue)] text-white hover:bg-[var(--light-blue)]"
                     }`}
                   >
                     Anterior
@@ -705,7 +704,7 @@ const RefundsAcceptance: React.FC = () => {
                     className={`px-4 py-2 rounded-md hover:cursor-pointer ${
                       currentIndex === (data?.vouchers?.length ?? 0) - 1
                         ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                        : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                        : "bg-[var(--blue)] text-white hover:bg-[var(--light-blue)]"
                     }`}
                     id="next-voucher"
                   >

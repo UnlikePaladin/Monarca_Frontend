@@ -224,6 +224,7 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
                     step="0.01"
                     id={`hotel_price_${destId}`}
                     className="flex-1"
+                    onWheel={(e) => e.currentTarget.blur()}
                   />
                 <div className="min-w-[120px]">
                   <label
@@ -331,6 +332,7 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
                     step="0.01"
                     id={`plane_price_${destId}`}
                     className="flex-1"
+                    onWheel={(e) => e.currentTarget.blur()}
                   />
                   <div className="min-w-[120px]">
                     <label
