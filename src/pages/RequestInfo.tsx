@@ -385,7 +385,10 @@ const RequestInfo: React.FC = () => {
   };
 
   const approvedVouchersTotal = (data?.vouchers ?? []).reduce(
-    (acc: number, file: { status: string; amount?: number; amount_mxn?: number }) => {
+    (
+      acc: number,
+      file: { status: string; amount?: number; amount_mxn?: number },
+    ) => {
       if (file.status !== "Voucher Approved") {
         return acc;
       }
@@ -440,135 +443,139 @@ const RequestInfo: React.FC = () => {
               <p className="block text-sm font-medium text-gray-700 mb-4">
                 Detalles de los destinos
               </p>
-              {[...(data?.requests_destinations ?? [])]
-                .sort(
+
+              {(() => {
+                const sortedDestinations = [
+                  ...(data?.requests_destinations ?? []),
+                ].sort(
                   (a: any, b: any) => a.destination_order - b.destination_order,
-                )
-                .map((dest: any, index: number) => (
-                  <div
-                    className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8"
-                    key={dest.id}
-                  >
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">
-                        Lugar
-                      </label>
-                      <input
-                        id={`destination-${index}`}
-                        type="text"
-                        readOnly
-                        value={dest.destination.city}
-                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">
-                        Fecha de llegada
-                      </label>
-                      <input
-                        id={`arrival-${index}`}
-                        type="text"
-                        readOnly
-                        value={formatDate(dest.departure_date)}
-                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">
-                        Fecha de salida
-                      </label>
-                      <input
-                        id={`departure-${index}`}
-                        type="text"
-                        readOnly
-                        value={formatDate(dest.arrival_date)}
-                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">
-                        Detalles
-                      </label>
-                      <input
-                        id={`details-${index}`}
-                        type="text"
-                        readOnly
-                        value={dest.details}
-                        className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                      />
-                    </div>
-                    <div className="flex items-center justify-start gap-1">
-                      {dest.is_hotel_required && (
-                        <p
-                          id={`hotel-${index}`}
-                          className="text-sm bg-[var(--yellow)] rounded-full px-2 py-1 w-fit"
+                );
+                const originCity = data?.destination?.city ?? "";
+
+                return (
+                  <>
+                    {sortedDestinations.map((dest: any, index: number) => {
+                      const fromCity =
+                        index === 0
+                          ? originCity
+                          : (sortedDestinations[index - 1].destination?.city ??
+                            "");
+                      const toCity = dest.destination?.city ?? "";
+
+                      return (
+                        <div
+                          key={dest.id}
+                          className="flex gap-4 mb-3 p-4 rounded-xl border border-gray-200 bg-gray-50"
                         >
-                          Hotel
-                        </p>
-                      )}
-                      {dest.is_plane_required && (
-                        <p
-                          id={`plane-${index}`}
-                          className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
-                        >
-                          Avión
-                        </p>
-                      )}
-                      {dest.stay_days && (
-                        <p
-                          id={`stay-days-${index}`}
-                          className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit"
-                        >
-                          {dest.stay_days} días
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              {data?.is_round_trip &&
-                (() => {
-                  const sorted = [...(data?.requests_destinations ?? [])].sort(
-                    (a: any, b: any) =>
-                      a.destination_order - b.destination_order,
-                  );
-                  const lastDest = sorted[sorted.length - 1];
-                  return (
-                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-8">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">
-                          Lugar
-                        </label>
-                        <input
-                          type="text"
-                          readOnly
-                          value={data?.destination?.city ?? "Origen"}
-                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-500 mb-1">
-                          Fecha de salida
-                        </label>
-                        <input
-                          type="text"
-                          readOnly
-                          value={formatDate(lastDest?.arrival_date)}
-                          className="w-full bg-gray-100 text-gray-800 rounded-lg px-3 py-2 border border-gray-200"
-                        />
-                      </div>
-                      <div />
-                      <div />
-                      <div className="flex items-center justify-start gap-1">
-                        <p className="text-sm bg-[var(--blue)] text-[var(--white)] rounded-full px-2 py-1 w-fit">
-                          Avión
-                        </p>
-                        <p className="text-sm bg-[var(--green)] text-[var(--white)] rounded-full px-2 py-1 w-fit">
-                          Regreso
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })()}
+                          {/* Step badge */}
+                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--blue)] text-white flex items-center justify-center text-sm font-bold">
+                            {index + 1}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            {/* Route: origin city → destination city */}
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="font-semibold text-gray-700">
+                                {fromCity}
+                              </span>
+                              <span className="text-[var(--blue)]">✈</span>
+                              <span className="font-semibold text-[var(--blue)]">
+                                {toCity}
+                              </span>
+                            </div>
+
+                            {/* Date range and stay duration */}
+                            <p className="text-sm text-gray-500 mb-2">
+                              {formatDate(dest.departure_date)}
+                              {dest.arrival_date && (
+                                <> &rarr; {formatDate(dest.arrival_date)}</>
+                              )}
+                              {dest.stay_days && (
+                                <span className="ml-2 text-gray-400">
+                                  • {dest.stay_days} días
+                                </span>
+                              )}
+                            </p>
+
+                            {/* Service chips and details */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {dest.is_hotel_required && (
+                                <span
+                                  id={`hotel-${index}`}
+                                  className="text-xs bg-[var(--yellow)] rounded-full px-3 py-1"
+                                >
+                                  Hotel
+                                </span>
+                              )}
+                              {dest.is_plane_required && (
+                                <span
+                                  id={`plane-${index}`}
+                                  className="text-xs bg-[var(--blue)] text-white rounded-full px-3 py-1"
+                                >
+                                  Avión
+                                </span>
+                              )}
+                              {dest.details && (
+                                <span className="text-xs text-gray-500 italic">
+                                  {dest.details}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Round-trip return leg */}
+                    {data?.is_round_trip &&
+                      sortedDestinations.length > 0 &&
+                      (() => {
+                        const lastDest =
+                          sortedDestinations[sortedDestinations.length - 1];
+                        const returnFromCity =
+                          lastDest?.destination?.city ?? "";
+                        const returnToCity = originCity;
+                        const returnDate = formatDate(lastDest?.arrival_date);
+
+                        return (
+                          <div className="flex gap-4 mb-3 p-4 rounded-xl border border-[var(--green)] bg-green-50">
+                            {/* Step badge */}
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[var(--green)] text-white flex items-center justify-center text-sm font-bold">
+                              {sortedDestinations.length + 1}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              {/* Return route */}
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <span className="font-semibold text-gray-700">
+                                  {returnFromCity}
+                                </span>
+                                <span className="text-[var(--green)]">✈</span>
+                                <span className="font-semibold text-[var(--green)]">
+                                  {returnToCity}
+                                </span>
+                              </div>
+
+                              <p className="text-sm text-gray-500 mb-2">
+                                {returnDate}
+                              </p>
+
+                              {/* Return leg chips */}
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs bg-[var(--blue)] text-white rounded-full px-3 py-1">
+                                  Avión
+                                </span>
+                                <span className="text-xs bg-[var(--green)] text-white rounded-full px-3 py-1">
+                                  Regreso
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                  </>
+                );
+              })()}
             </section>
 
             {data?.revisions?.length > 0 && (
@@ -787,7 +794,8 @@ const RequestInfo: React.FC = () => {
                         {(typeof data?.advance_money === "number"
                           ? data.advance_money
                           : Number(data?.advance_money) || 0) -
-                          approvedVouchersTotal < 0
+                          approvedVouchersTotal <
+                        0
                           ? "a favor"
                           : "en contra"}
                       </label>
@@ -808,7 +816,8 @@ const RequestInfo: React.FC = () => {
                         (typeof data?.advance_money === "number"
                           ? data.advance_money
                           : Number(data?.advance_money) || 0) -
-                          approvedVouchersTotal > 0
+                          approvedVouchersTotal >
+                        0
                           ? "text-red-500"
                           : "text-green-600"
                       }`}
@@ -886,109 +895,111 @@ const RequestInfo: React.FC = () => {
             {/* Botones de acción */}
             {authState.userPermissions.includes(
               "approve_request" as Permission,
-            ) && !isHistoryEntry && (
-              <>
-                {data.status === "Pending Review" && (
-                  <section className="mb-10">
-                    <h1 className="text-2xl font-bold text-gray-800 mb-4">
-                      Información importante
-                    </h1>
-                    <p className="text-sm text-gray-600">
-                      - Para aprobar esta solicitud, debes seleccionar una
-                      agencia de viaje.
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      - Si la solicitud requiere cambios, descríbelos en
-                      Comentarios (cambios a solicitar) y usa el botón
-                      Solicitar cambios.
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      - Si deseas denegar la solicitud, puedes hacerlo
-                      directamente.
-                    </p>
-                  </section>
-                )}
-                <footer className="flex flex-col sm:flex-row gap-4">
-                  <button
-                    onClick={() =>
-                      openConfirm({
-                        title: "Aprobar solicitud de viaje",
-                        description:
-                          "Estás a punto de aprobar esta solicitud. La agencia de viaje seleccionada recibirá la confirmación y procederá con las reservaciones.",
-                        warningNote:
-                          "Esta acción es irreversible. No podrás revertir la aprobación una vez confirmada.",
-                        confirmText: "Sí, aprobar",
-                        isDestructive: false,
-                        onConfirm: approve,
-                      })
-                    }
-                    disabled={
-                      !selectedAgency || data.status !== "Pending Review"
-                    }
-                    className={`flex-1 py-3 rounded-lg font-semibold transition ${
-                      !selectedAgency || data.status !== "Pending Review"
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700 text-white"
-                    }`}
-                    id="approve-request-button"
-                  >
-                    Aprobar
-                  </button>
-                  <button
-                    onClick={() =>
-                      openConfirm({
-                        title: "Solicitar cambios al viajero",
-                        description:
-                          "Se pausará el proceso de aprobación y el viajero recibirá una notificación con tu comentario para que realice los ajustes necesarios.",
-                        confirmText: "Sí, solicitar cambios",
-                        isDestructive: false,
-                        onConfirm: requestChanges,
-                      })
-                    }
-                    disabled={
-                      !comment.trim() || data.status !== "Pending Review"
-                    }
-                    className={`flex-1 py-3 rounded-lg font-semibold transition
+            ) &&
+              !isHistoryEntry && (
+                <>
+                  {data.status === "Pending Review" && (
+                    <section className="mb-10">
+                      <h1 className="text-2xl font-bold text-gray-800 mb-4">
+                        Información importante
+                      </h1>
+                      <p className="text-sm text-gray-600">
+                        - Para aprobar esta solicitud, debes seleccionar una
+                        agencia de viaje.
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        - Si la solicitud requiere cambios, descríbelos en
+                        Comentarios (cambios a solicitar) y usa el botón
+                        Solicitar cambios.
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        - Si deseas denegar la solicitud, puedes hacerlo
+                        directamente.
+                      </p>
+                    </section>
+                  )}
+                  <footer className="flex flex-col sm:flex-row gap-4">
+                    <button
+                      onClick={() =>
+                        openConfirm({
+                          title: "Aprobar solicitud de viaje",
+                          description:
+                            "Estás a punto de aprobar esta solicitud. La agencia de viaje seleccionada recibirá la confirmación y procederá con las reservaciones.",
+                          warningNote:
+                            "Esta acción es irreversible. No podrás revertir la aprobación una vez confirmada.",
+                          confirmText: "Sí, aprobar",
+                          isDestructive: false,
+                          onConfirm: approve,
+                        })
+                      }
+                      disabled={
+                        !selectedAgency || data.status !== "Pending Review"
+                      }
+                      className={`flex-1 py-3 rounded-lg font-semibold transition ${
+                        !selectedAgency || data.status !== "Pending Review"
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700 text-white"
+                      }`}
+                      id="approve-request-button"
+                    >
+                      Aprobar
+                    </button>
+                    <button
+                      onClick={() =>
+                        openConfirm({
+                          title: "Solicitar cambios al viajero",
+                          description:
+                            "Se pausará el proceso de aprobación y el viajero recibirá una notificación con tu comentario para que realice los ajustes necesarios.",
+                          confirmText: "Sí, solicitar cambios",
+                          isDestructive: false,
+                          onConfirm: requestChanges,
+                        })
+                      }
+                      disabled={
+                        !comment.trim() || data.status !== "Pending Review"
+                      }
+                      className={`flex-1 py-3 rounded-lg font-semibold transition
                     ${
                       comment.trim() && data.status === "Pending Review"
                         ? "bg-yellow-500 hover:bg-yellow-600 text-white"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
-                    id="changes-request-button"
-                  >
-                    Solicitar cambios
-                  </button>
-                  <button
-                    onClick={() =>
-                      openConfirm({
-                        title: "Denegar solicitud de viaje",
-                        description:
-                          "Estás a punto de denegar esta solicitud. El solicitante será notificado y deberá iniciar una nueva solicitud si desea continuar.",
-                        warningNote:
-                          "Esta acción es irreversible. Una vez denegada, no podrás revertirla.",
-                        confirmText: "Sí, denegar",
-                        isDestructive: true,
-                        onConfirm: deny,
-                      })
-                    }
-                    disabled={data.status !== "Pending Review"}
-                    className={`flex-1 py-3 rounded-lg font-semibold transition
+                      id="changes-request-button"
+                    >
+                      Solicitar cambios
+                    </button>
+                    <button
+                      onClick={() =>
+                        openConfirm({
+                          title: "Denegar solicitud de viaje",
+                          description:
+                            "Estás a punto de denegar esta solicitud. El solicitante será notificado y deberá iniciar una nueva solicitud si desea continuar.",
+                          warningNote:
+                            "Esta acción es irreversible. Una vez denegada, no podrás revertirla.",
+                          confirmText: "Sí, denegar",
+                          isDestructive: true,
+                          onConfirm: deny,
+                        })
+                      }
+                      disabled={data.status !== "Pending Review"}
+                      className={`flex-1 py-3 rounded-lg font-semibold transition
                     ${
                       data.status === "Pending Review"
                         ? "bg-red-600 hover:bg-red-700 text-white"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
-                    id="deny-request-button"
-                  >
-                    Denegar
-                  </button>
-                </footer>
-              </>
-            )}
+                      id="deny-request-button"
+                    >
+                      Denegar
+                    </button>
+                  </footer>
+                </>
+              )}
 
             {authState.userPermissions.includes(
               "create_request" as Permission,
-            ) && !isApprovalsEntry &&
+            ) &&
+              !isApprovalsEntry &&
               authState.userId === (data.id_user ?? data.user?.id) && (
                 <footer className="flex flex-col sm:flex-row gap-4">
                   <button
@@ -1117,7 +1128,8 @@ export default RequestInfo;
 /*
 Modification History:
 - 2026-04-11 | Fabrizio | Added policy violations audit section to provide transparency for the approver role.
-- 2026-04-18 | Juan de Dios Gastélum Flores | Added confirmation modals for all irreversible actions (approve, deny, cancel, register, complete).
+- 2026-04-18 | Juan de Dios Gastélum | Added confirmation modals for all irreversible actions (approve, deny, cancel, register, complete).
 - 2026-04-23 | Juan de Dios Gastélum | Fixed destination sort order and added return leg row for round trips.
-- 2026-04-29 | Juan de Dios Gastélum Flores | Added email warning toast handling for request status actions.
+- 2026-04-29 | Juan de Dios Gastélum | Added email warning toast handling for request status actions.
+- 2026-05-20 | Juan de Dios Gastélum | Redesigned destinations section as trip-leg cards showing origin-to-destination route, date range, and tags.
 */
